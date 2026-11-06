@@ -1,0 +1,30 @@
+{
+  "name": "QNU Events - Spring Boot",
+  "dockerComposeFile": ["../compose.yaml", "compose.yaml"],
+  "service": "workspace",
+  "runServices": ["workspace", "postgres"],
+  "workspaceFolder": "/workspaces/QNU-Events-BE",
+  "remoteUser": "vscode",
+  "shutdownAction": "stopCompose",
+  "forwardPorts": [8080],
+  "portsAttributes": {
+    "8080": {
+      "label": "QNU Events API",
+      "onAutoForward": "notify"
+    }
+  },
+  "remoteEnv": {
+    "SPRING_PROFILES_ACTIVE": "dev"
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "vscjava.vscode-java-pack",
+        "vmware.vscode-boot-dev-pack",
+        "redhat.vscode-yaml",
+        "humao.rest-client"
+      ]
+    }
+  },
+  "postCreateCommand": "bash .devcontainer/post-create.sh"
+}

@@ -1,0 +1,14 @@
+services:
+  workspace:
+    image: mcr.microsoft.com/devcontainers/java:1-21-bookworm
+    command: sleep infinity
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/${DB_NAME:-qnu_events}
+      DB_USERNAME: ${DB_USERNAME:-qnu_events}
+      DB_PASSWORD: ${DB_PASSWORD:-qnu_events_dev}
+    volumes:
+      # Compose resolves paths relative to the first file, ../compose.yaml.
+      - .:/workspaces/QNU-Events-BE:cached
+    depends_on:
+      postgres:
+        condition: service_healthy
