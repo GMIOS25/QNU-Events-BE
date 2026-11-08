@@ -1,5 +1,5 @@
 QNU-Events BE.code-workspace
-
+.agents
 # Build and local development
 target/
 .env
