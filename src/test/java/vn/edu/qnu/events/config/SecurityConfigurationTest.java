@@ -12,12 +12,29 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(properties = {
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@WebMvcTest(controllers = SecurityConfigurationTest.SecurityTestController.class, properties = {
         "app.cors.allowed-origins=http://localhost:5173",
         "springdoc.api-docs.enabled=false"
 })
 @Import({SecurityConfiguration.class, ClockConfiguration.class})
 class SecurityConfigurationTest {
+
+    @RestController
+    static class SecurityTestController {
+        @GetMapping("/api/v1/events")
+        public String getEvents() {
+            return "events";
+        }
+
+        @PostMapping("/api/v1/events")
+        public String postEvents() {
+            return "created";
+        }
+    }
 
     @Autowired
     MockMvc mockMvc;

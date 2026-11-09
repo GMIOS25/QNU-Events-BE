@@ -2,6 +2,7 @@ package vn.edu.qnu.events.common;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,7 +16,9 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
-import vn.edu.qnu.events.support.TestAuth;
+import vn.edu.qnu.events.auth.AuthService;
+import vn.edu.qnu.events.auth.LoginRequest;
+import vn.edu.qnu.events.auth.LoginResponse;
 
 import java.util.List;
 import java.util.UUID;
@@ -36,6 +39,17 @@ class SharedKernelSecurityIT {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private AuthService authService;
+
+    private String studentToken;
+
+    @BeforeEach
+    void setUp() {
+        LoginResponse response = authService.login(new LoginRequest("sv001", "Demo@12345"));
+        studentToken = response.accessToken();
+    }
 
     @RestController
     static class TestController {
@@ -76,8 +90,6 @@ class SharedKernelSecurityIT {
     @DisplayName("403 trả về cấu trúc lỗi ApiError JSON chuẩn khi sai vai trò")
     void forbiddenReturnsJsonErrorEnvelope() throws Exception {
         // Sinh viên gọi endpoint tạo sự kiện của EVENT_OWNER -> 403 FORBIDDEN
-        String studentToken = TestAuth.createStudentToken(UUID.randomUUID(), UUID.randomUUID());
-
         mockMvc.perform(post("/api/v1/events")
                         .header("Authorization", "Bearer " + studentToken)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -92,8 +104,6 @@ class SharedKernelSecurityIT {
     @Test
     @DisplayName("400 validation trả về cấu trúc lỗi VALIDATION_FAILED kèm details.fields")
     void validationFailureReturnsDetailsFields() throws Exception {
-        String studentToken = TestAuth.createStudentToken(UUID.randomUUID(), UUID.randomUUID());
-
         mockMvc.perform(post("/api/v1/test-validation")
                         .header("Authorization", "Bearer " + studentToken)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -107,8 +117,6 @@ class SharedKernelSecurityIT {
     @Test
     @DisplayName("500 server error trả về INTERNAL_ERROR chung, không làm lộ stack trace hay thông tin nhạy cảm")
     void serverErrorDoesNotLeakStackTraceOrInternalMessage() throws Exception {
-        String studentToken = TestAuth.createStudentToken(UUID.randomUUID(), UUID.randomUUID());
-
         mockMvc.perform(get("/api/v1/test-server-error")
                         .header("Authorization", "Bearer " + studentToken))
                 .andExpect(status().isInternalServerError())
@@ -121,8 +129,6 @@ class SharedKernelSecurityIT {
     @Test
     @DisplayName("ApiException trả về đúng mã lỗi và HTTP status nghiệp vụ")
     void apiExceptionReturnsCorrectStatusAndCode() throws Exception {
-        String studentToken = TestAuth.createStudentToken(UUID.randomUUID(), UUID.randomUUID());
-
         mockMvc.perform(get("/api/v1/test-business-error")
                         .header("Authorization", "Bearer " + studentToken))
                 .andExpect(status().isConflict())
