@@ -16,7 +16,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "app.cors.allowed-origins=http://localhost:5173",
         "springdoc.api-docs.enabled=false"
 })
-@Import(SecurityConfiguration.class)
+@Import({SecurityConfiguration.class, ClockConfiguration.class})
 class SecurityConfigurationTest {
 
     @Autowired
