@@ -40,15 +40,16 @@ class AuthIT {
     @Test
     @DisplayName("Tài khoản LOCKED bị từ chối đăng nhập với 403 FORBIDDEN")
     void loginWithLockedUserReturnsForbidden() throws Exception {
-        AppUser lockedUser = new AppUser(
-                java.util.UUID.randomUUID(),
-                "locked_user_01",
-                "$2a$12$e8x1KqIkn.wQnU4Bqg4K9.z9vA9oK5iQ8g5k7mZ4x1p2q3r4s5t6u",
-                "Người Dùng Bị Khóa",
-                null,
-                null,
-                java.util.Set.of("STUDENT")
-        );
+        AppUser lockedUser = appUserRepository.findByLoginId("locked_user_01")
+                .orElseGet(() -> new AppUser(
+                        java.util.UUID.randomUUID(),
+                        "locked_user_01",
+                        "$2a$12$e8x1KqIkn.wQnU4Bqg4K9.z9vA9oK5iQ8g5k7mZ4x1p2q3r4s5t6u",
+                        "Người Dùng Bị Khóa",
+                        null,
+                        null,
+                        java.util.Set.of("STUDENT")
+                ));
         lockedUser.setStatus(UserStatus.LOCKED);
         appUserRepository.save(lockedUser);
 
