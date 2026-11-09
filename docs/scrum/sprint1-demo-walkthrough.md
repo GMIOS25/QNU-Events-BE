@@ -111,3 +111,4 @@ UPDATE audit_logs SET action = 'HACKED';
 ## 3. Phương án dự phòng (Contingency Plans)
 - **Nếu camera laptop không nhận:** Sử dụng ô *"Dán chuỗi token dự phòng"* đã được tích hợp sẵn ngay bên dưới khung quét camera.
 - **Nếu cần reset lại dữ liệu ban đầu:** Chạy script nạp lại demo data hoặc khởi động lại backend với profile `dev`.
+

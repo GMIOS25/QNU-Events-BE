@@ -105,3 +105,4 @@
 1. **Độ tin cậy kỹ thuật:** Toàn bộ 10 User Story / Jira Key thuộc phạm vi Sprint 1 (`QE-64`, `QE-65`, `QE-66`, `QE-70`, `QE-71`, `QE-56`, `QE-57`, `QE-61`, `QE-72`, `QE-28`) đã được hiện thực hóa hoàn chỉnh, đáp ứng 100% tiêu chí chấp nhận (Acceptance Criteria).
 2. **Khả năng chịu tải & An toàn dữ liệu:** Bảo đảm an toàn tuyệt đối trước các lỗi Race Condition nhờ cơ chế `SELECT FOR UPDATE` / Native Atomic Query và Optimistic Locking; mã QR động được ký bằng HMAC-SHA256 chống chụp màn hình chia sẻ mã; bảng `audit_logs` có trigger PL/pgSQL bảo đảm tính bất biến phục vụ thanh tra.
 3. **Mức độ sẵn sàng Demo:** Cả hai kho mã nguồn Backend và Frontend đều đã vượt qua toàn bộ các bước kiểm tra tự động (Lint, Typecheck, Unit Test, Integration Test, Build, E2E), sẵn sàng 100% cho buổi nghiệm thu Sprint 1 ngày 11/11/2026.
+
