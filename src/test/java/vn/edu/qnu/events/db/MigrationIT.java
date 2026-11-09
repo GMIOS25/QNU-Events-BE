@@ -28,11 +28,11 @@ class MigrationIT {
         jdbcClient.sql("DELETE FROM attendances").update();
         jdbcClient.sql("DELETE FROM registrations").update();
         jdbcClient.sql("DELETE FROM event_audience").update();
-        jdbcClient.sql("DELETE FROM events").update();
-        jdbcClient.sql("DELETE FROM user_role").update();
-        jdbcClient.sql("DELETE FROM auth_session").update();
-        jdbcClient.sql("DELETE FROM app_user").update();
-        jdbcClient.sql("DELETE FROM org_class").update();
+        jdbcClient.sql("DELETE FROM events WHERE title = 'Test Event'").update();
+        jdbcClient.sql("DELETE FROM user_role WHERE user_id NOT IN (SELECT id FROM app_user WHERE login_id IN ('owner01', 'owner02', 'sv001', 'sv002', 'sv003', 'admin01'))").update();
+        jdbcClient.sql("DELETE FROM auth_session WHERE user_id NOT IN (SELECT id FROM app_user WHERE login_id IN ('owner01', 'owner02', 'sv001', 'sv002', 'sv003', 'admin01'))").update();
+        jdbcClient.sql("DELETE FROM app_user WHERE login_id NOT IN ('owner01', 'owner02', 'sv001', 'sv002', 'sv003', 'admin01')").update();
+        jdbcClient.sql("DELETE FROM org_class WHERE code NOT IN ('K49CNTT1', 'K49CNTT2')").update();
     }
 
     @Test
