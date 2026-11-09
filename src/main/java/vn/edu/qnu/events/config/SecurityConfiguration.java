@@ -20,8 +20,11 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
+import org.springframework.security.oauth2.core.OAuth2TokenValidator;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.JwtTimestampValidator;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.AuthenticationEntryPoint;
@@ -31,6 +34,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import vn.edu.qnu.events.audit.AuditService;
+import vn.edu.qnu.events.auth.SessionJwtValidator;
 import vn.edu.qnu.events.common.ApiError;
 import vn.edu.qnu.events.common.ErrorCode;
 import vn.edu.qnu.events.common.GlobalExceptionHandler;
@@ -136,12 +140,23 @@ public class SecurityConfiguration {
     }
 
     @Bean
-    JwtDecoder jwtDecoder(@Value("${app.security.jwt-secret:}") String jwtSecret) {
+    JwtDecoder jwtDecoder(
+            @Value("${app.security.jwt-secret:}") String jwtSecret,
+            ObjectProvider<SessionJwtValidator> sessionJwtValidatorProvider
+    ) {
         String secret = (jwtSecret != null && jwtSecret.length() >= 32)
                 ? jwtSecret
                 : "qnu-events-dev-secret-key-must-be-at-least-256-bits-long-for-hmac-sha256!";
         SecretKey key = new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
-        return NimbusJwtDecoder.withSecretKey(key).build();
+        NimbusJwtDecoder decoder = NimbusJwtDecoder.withSecretKey(key).build();
+        sessionJwtValidatorProvider.ifAvailable(validator -> {
+            OAuth2TokenValidator<Jwt> withSession = new DelegatingOAuth2TokenValidator<>(
+                    new JwtTimestampValidator(),
+                    validator
+            );
+            decoder.setJwtValidator(withSession);
+        });
+        return decoder;
     }
 
     @Bean
@@ -149,9 +164,16 @@ public class SecurityConfiguration {
         ObjectMapper objectMapper = objectMapperProvider.getIfAvailable(() -> new ObjectMapper().findAndRegisterModules());
         return (request, response, authException) -> {
             String traceId = GlobalExceptionHandler.resolveTraceId(request);
+            ErrorCode errorCode = ErrorCode.UNAUTHENTICATED;
+            if (authException != null) {
+                String message = authException.getMessage();
+                if (message != null && (message.contains("SESSION_REVOKED") || message.contains("session_revoked"))) {
+                    errorCode = ErrorCode.SESSION_REVOKED;
+                }
+            }
             ApiError error = new ApiError(
-                    ErrorCode.UNAUTHENTICATED.name(),
-                    ErrorCode.UNAUTHENTICATED.getDefaultMessage(),
+                    errorCode.name(),
+                    errorCode.getDefaultMessage(),
                     Map.of(),
                     traceId,
                     Instant.now()
