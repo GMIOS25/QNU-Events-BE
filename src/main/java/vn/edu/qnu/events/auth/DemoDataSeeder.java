@@ -66,6 +66,7 @@ public class DemoDataSeeder implements ApplicationRunner {
         String hash = passwordEncoder.encode(demoPassword);
 
         seedUser("owner01", hash, "Nguyễn Văn Chủ Sự Kiện", null, null, Set.of("EVENT_OWNER"));
+        seedUser("owner02", hash, "Lê Văn Chủ Sự Kiện 2", null, null, Set.of("EVENT_OWNER"));
         seedUser("sv001", hash, "Trần Sinh Viên 1", "4901040001", class1.getId(), Set.of("STUDENT"));
         seedUser("sv002", hash, "Lê Sinh Viên 2", "4901040002", class1.getId(), Set.of("STUDENT"));
         seedUser("sv003", hash, "Phạm Sinh Viên 3", "4901040003", class2.getId(), Set.of("STUDENT"));
@@ -75,10 +76,24 @@ public class DemoDataSeeder implements ApplicationRunner {
     }
 
     private void seedUser(String loginId, String passwordHash, String fullName, String studentCode, UUID classId, Set<String> roles) {
-        if (!appUserRepository.existsByLoginId(loginId)) {
+        appUserRepository.findByLoginId(loginId).ifPresentOrElse(user -> {
+            boolean dirty = false;
+            if (roles != null && !roles.isEmpty() && (user.getRoles() == null || !user.getRoles().containsAll(roles))) {
+                user.getRoles().clear();
+                user.getRoles().addAll(roles);
+                dirty = true;
+            }
+            if (classId != null && !classId.equals(user.getClassId())) {
+                user.setClassId(classId);
+                dirty = true;
+            }
+            if (dirty) {
+                appUserRepository.save(user);
+            }
+        }, () -> {
             AppUser user = new AppUser(UUID.randomUUID(), loginId, passwordHash, fullName, studentCode, classId, roles);
             appUserRepository.save(user);
-        }
+        });
     }
 }
 
