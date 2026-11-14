@@ -30,7 +30,12 @@ class ApplicationIT {
     void developmentOpenApiIsGenerated() throws Exception {
         mockMvc.perform(get("/v3/api-docs"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.info.title").value("QNU Events API"));
+                .andExpect(jsonPath("$.info.title").value("QNU Events API"))
+                .andExpect(jsonPath("$.components.securitySchemes.bearerAuth.type").value("http"))
+                .andExpect(jsonPath("$.components.securitySchemes.bearerAuth.scheme").value("bearer"))
+                .andExpect(jsonPath("$.components.securitySchemes.bearerAuth.bearerFormat").value("JWT"))
+                .andExpect(jsonPath("$.security[0].bearerAuth").isArray())
+                .andExpect(jsonPath("$.paths['/api/v1/auth/login'].post.security").isEmpty());
     }
 
     @Test
