@@ -1,6 +1,7 @@
 package vn.edu.qnu.events.attendance;
 
-import jakarta.validation.Valid;
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -11,6 +12,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.UUID;
+
+import static vn.edu.qnu.events.common.GlobalExceptionHandler.resolveTraceId;
 
 @RestController
 @RequestMapping("/api/v1/events/{id}")
@@ -29,13 +32,18 @@ public class AttendanceController {
     }
 
     @PostMapping("/attendance/qr")
-    public ResponseEntity<CheckInResponse> checkInWithQr(
+    public ResponseEntity<String> checkInWithQr(
             @PathVariable("id") UUID id,
             @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
-            @Valid @RequestBody CheckInRequest request
+            @RequestBody CheckInRequest request,
+            HttpServletRequest httpRequest
     ) {
-        CheckInResponse response = attendanceService.checkInWithQr(id, idempotencyKey, request);
-        return ResponseEntity.ok(response);
+        CheckInResult result = attendanceService.checkInWithQr(
+                id, idempotencyKey, request, resolveTraceId(httpRequest)
+        );
+        return ResponseEntity.status(result.httpStatus())
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(result.responseBody());
     }
 }
 

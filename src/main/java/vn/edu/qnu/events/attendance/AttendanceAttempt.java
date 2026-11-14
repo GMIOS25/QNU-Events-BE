@@ -62,7 +62,8 @@ public class AttendanceAttempt {
             String reasonCode,
             boolean counted,
             short httpStatus,
-            String responseBody
+            String responseBody,
+            Instant createdAt
     ) {
         this.id = id != null ? id : UUID.randomUUID();
         this.eventId = eventId;
@@ -74,7 +75,7 @@ public class AttendanceAttempt {
         this.counted = counted;
         this.httpStatus = httpStatus;
         this.responseBody = responseBody != null ? responseBody : "{}";
-        this.createdAt = Instant.now();
+        this.createdAt = createdAt != null ? createdAt : Instant.now();
     }
 
     public UUID getId() { return id; }

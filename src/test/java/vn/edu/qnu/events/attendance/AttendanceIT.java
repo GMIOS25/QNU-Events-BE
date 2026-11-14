@@ -29,8 +29,16 @@ import vn.edu.qnu.events.student.OrgClassRepository;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.emptyOrNullString;
@@ -413,6 +421,195 @@ class AttendanceIT {
                         .content(validPayload))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("ATTEMPT_LIMIT_REACHED"));
+
+        assertThat(attemptRepository.countByEventIdAndStudentIdAndCountedTrue(event.getId(), student2Id))
+                .isEqualTo(3L);
+    }
+
+    @Test
+    @DisplayName("12. Replay lỗi cùng Idempotency-Key trả nguyên response và không tăng số lần thử")
+    void rejectedAttemptReplayReturnsStoredResponse() throws Exception {
+        Instant now = Instant.now();
+        Event event = createEventWithAttendanceWindow(
+                now.minus(10, ChronoUnit.MINUTES), now.plus(1, ChronoUnit.HOURS)
+        );
+        registerStudent(event.getId(), student1Id);
+
+        String idempotencyKey = "rejected-replay-" + UUID.randomUUID();
+        String invalidToken = "qr1.not-a-uuid.100.invalid";
+        String payload = "{\"token\":\"" + invalidToken + "\"}";
+
+        MvcResult first = mockMvc.perform(post("/api/v1/events/" + event.getId() + "/attendance/qr")
+                        .header("Authorization", "Bearer " + student1Token)
+                        .header("Idempotency-Key", idempotencyKey)
+                        .header("X-Request-Id", "first-request")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payload))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value("QR_MALFORMED"))
+                .andReturn();
+
+        MvcResult replay = mockMvc.perform(post("/api/v1/events/" + event.getId() + "/attendance/qr")
+                        .header("Authorization", "Bearer " + student1Token)
+                        .header("Idempotency-Key", idempotencyKey)
+                        .header("X-Request-Id", "second-request")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payload))
+                .andExpect(status().isUnprocessableEntity())
+                .andReturn();
+
+        assertThat(replay.getResponse().getContentAsString())
+                .isEqualTo(first.getResponse().getContentAsString());
+        assertThat(attemptRepository.countByEventIdAndStudentIdAndCountedTrue(event.getId(), student1Id))
+                .isEqualTo(1L);
+
+        AttendanceAttempt attempt = attemptRepository
+                .findByEventIdAndStudentIdAndIdempotencyKey(event.getId(), student1Id, idempotencyKey)
+                .orElseThrow();
+        assertThat(attempt.getResponseBody()).doesNotContain(invalidToken);
+
+        var audit = auditLogRepository.findByTargetTypeAndTargetIdOrderByOccurredAtAsc(
+                "EVENT", event.getId().toString()
+        );
+        assertThat(audit).hasSize(1);
+        assertThat(audit.getFirst().getAction()).isEqualTo("ATTENDANCE_QR_REJECT");
+        assertThat(audit.getFirst().getDetails().get("tokenHash"))
+                .isEqualTo(qrTokenService.fingerprint(invalidToken));
+        assertThat(audit.getFirst().getDetails().toString()).doesNotContain(invalidToken);
+    }
+
+    @Test
+    @DisplayName("13. Token rỗng được xử lý là QR_MALFORMED và tính một lần thử")
+    void blankTokenIsCountedAsMalformedQrAttempt() throws Exception {
+        Instant now = Instant.now();
+        Event event = createEventWithAttendanceWindow(
+                now.minus(10, ChronoUnit.MINUTES), now.plus(1, ChronoUnit.HOURS)
+        );
+        registerStudent(event.getId(), student1Id);
+
+        mockMvc.perform(post("/api/v1/events/" + event.getId() + "/attendance/qr")
+                        .header("Authorization", "Bearer " + student1Token)
+                        .header("Idempotency-Key", UUID.randomUUID().toString())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"token\":\"\"}"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value("QR_MALFORMED"));
+
+        assertThat(attemptRepository.countByEventIdAndStudentIdAndCountedTrue(event.getId(), student1Id))
+                .isEqualTo(1L);
+    }
+
+    @Test
+    @DisplayName("14. Idempotency-Key dài hơn giới hạn DB bị từ chối 400 thay vì lỗi 500")
+    void oversizedIdempotencyKeyFailsValidation() throws Exception {
+        Instant now = Instant.now();
+        Event event = createEventWithAttendanceWindow(
+                now.minus(10, ChronoUnit.MINUTES), now.plus(1, ChronoUnit.HOURS)
+        );
+        registerStudent(event.getId(), student1Id);
+        String token = qrTokenService.issue(event.getId(), now, event.getQrRotationSeconds());
+
+        mockMvc.perform(post("/api/v1/events/" + event.getId() + "/attendance/qr")
+                        .header("Authorization", "Bearer " + student1Token)
+                        .header("Idempotency-Key", "x".repeat(101))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"token\":\"" + token + "\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"));
+    }
+
+    @Test
+    @DisplayName("15. Mười request đồng thời chỉ tạo đúng một attendance ACCEPTED")
+    void concurrentValidRequestsCreateOnlyOneAttendance() throws Exception {
+        Instant now = Instant.now();
+        Event event = createEventWithAttendanceWindow(
+                now.minus(10, ChronoUnit.MINUTES), now.plus(1, ChronoUnit.HOURS)
+        );
+        registerStudent(event.getId(), student1Id);
+        String token = qrTokenService.issue(event.getId(), now, event.getQrRotationSeconds());
+        String payload = "{\"token\":\"" + token + "\"}";
+
+        int requestCount = 10;
+        CountDownLatch ready = new CountDownLatch(requestCount);
+        CountDownLatch start = new CountDownLatch(1);
+        ExecutorService executor = Executors.newFixedThreadPool(requestCount);
+        List<Callable<MvcResult>> calls = new ArrayList<>();
+        for (int i = 0; i < requestCount; i++) {
+            String key = "concurrent-" + i + "-" + UUID.randomUUID();
+            calls.add(() -> {
+                ready.countDown();
+                start.await(5, TimeUnit.SECONDS);
+                return mockMvc.perform(post("/api/v1/events/" + event.getId() + "/attendance/qr")
+                                .header("Authorization", "Bearer " + student1Token)
+                                .header("Idempotency-Key", key)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(payload))
+                        .andReturn();
+            });
+        }
+
+        List<MvcResult> responses = new ArrayList<>();
+        try {
+            List<Future<MvcResult>> futures = new ArrayList<>();
+            for (Callable<MvcResult> call : calls) {
+                futures.add(executor.submit(call));
+            }
+            assertThat(ready.await(5, TimeUnit.SECONDS)).isTrue();
+            start.countDown();
+            for (Future<MvcResult> future : futures) {
+                responses.add(future.get(15, TimeUnit.SECONDS));
+            }
+        } finally {
+            start.countDown();
+            executor.shutdownNow();
+        }
+
+        assertThat(responses).filteredOn(result -> result.getResponse().getStatus() == 200).hasSize(1);
+        assertThat(responses).filteredOn(result -> result.getResponse().getStatus() == 409).hasSize(9);
+        for (MvcResult rejected : responses.stream()
+                .filter(result -> result.getResponse().getStatus() == 409)
+                .toList()) {
+            JsonNode body = objectMapper.readTree(rejected.getResponse().getContentAsString());
+            assertThat(body.path("code").asText()).isEqualTo("ALREADY_CHECKED_IN");
+        }
+        assertThat(attendanceRepository.countByEventIdAndStatus(event.getId(), "ACCEPTED"))
+                .isEqualTo(1L);
+    }
+
+    @Test
+    @DisplayName("16. Audit ACCEPT dùng đúng action, tokenHash và không lưu token đầy đủ")
+    void acceptedCheckInAuditDoesNotLeakToken() throws Exception {
+        Instant now = Instant.now();
+        Event event = createEventWithAttendanceWindow(
+                now.minus(10, ChronoUnit.MINUTES), now.plus(1, ChronoUnit.HOURS)
+        );
+        registerStudent(event.getId(), student1Id);
+        String token = qrTokenService.issue(event.getId(), now, event.getQrRotationSeconds());
+        String idempotencyKey = "audit-accept-" + UUID.randomUUID();
+
+        mockMvc.perform(post("/api/v1/events/" + event.getId() + "/attendance/qr")
+                        .header("Authorization", "Bearer " + student1Token)
+                        .header("Idempotency-Key", idempotencyKey)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"token\":\"" + token + "\"}"))
+                .andExpect(status().isOk());
+
+        Attendance attendance = attendanceRepository
+                .findByEventIdAndStudentIdAndStatus(event.getId(), student1Id, "ACCEPTED")
+                .orElseThrow();
+        var audit = auditLogRepository.findByTargetTypeAndTargetIdOrderByOccurredAtAsc(
+                "ATTENDANCE", attendance.getId().toString()
+        );
+        assertThat(audit).hasSize(1);
+        assertThat(audit.getFirst().getAction()).isEqualTo("ATTENDANCE_QR_ACCEPT");
+        assertThat(audit.getFirst().getDetails().get("tokenHash"))
+                .isEqualTo(qrTokenService.fingerprint(token));
+        assertThat(audit.getFirst().getDetails().toString()).doesNotContain(token);
+
+        AttendanceAttempt attempt = attemptRepository
+                .findByEventIdAndStudentIdAndIdempotencyKey(event.getId(), student1Id, idempotencyKey)
+                .orElseThrow();
+        assertThat(attempt.getResponseBody()).doesNotContain(token);
     }
 }
 

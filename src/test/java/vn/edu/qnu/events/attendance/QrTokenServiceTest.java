@@ -9,6 +9,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class QrTokenServiceTest {
 
@@ -125,6 +126,38 @@ class QrTokenServiceTest {
                 .isEqualTo(ErrorCode.QR_MALFORMED);
         assertThat(qrTokenService.verify("qr1." + eventId + ".not-a-number.sig", eventId, now, rotationSeconds, graceSeconds).errorCode())
                 .isEqualTo(ErrorCode.QR_MALFORMED);
+    }
+
+    @Test
+    @DisplayName("9. Token khai event khác nhưng chữ ký giả -> QR_BAD_SIGNATURE trước khi xét event")
+    void forgedWrongEventTokenFailsSignatureValidation() {
+        Instant now = Instant.ofEpochSecond(1005);
+        UUID anotherEventId = UUID.randomUUID();
+        String forgedToken = "qr1." + anotherEventId + ".100.forged-signature";
+
+        var result = qrTokenService.verify(forgedToken, eventId, now, rotationSeconds, graceSeconds);
+
+        assertThat(result.isValid()).isFalse();
+        assertThat(result.errorCode()).isEqualTo(ErrorCode.QR_BAD_SIGNATURE);
+    }
+
+    @Test
+    @DisplayName("10. Fingerprint audit là 8 ký tự hex và không chứa token gốc")
+    void tokenFingerprintIsShortSha256Prefix() {
+        String token = qrTokenService.issue(eventId, Instant.ofEpochSecond(1005), rotationSeconds);
+
+        String fingerprint = qrTokenService.fingerprint(token);
+
+        assertThat(fingerprint).matches("[0-9a-f]{8}");
+        assertThat(token).doesNotContain(fingerprint);
+    }
+
+    @Test
+    @DisplayName("11. Secret ngắn hơn 32 byte bị từ chối")
+    void shortSigningSecretIsRejected() {
+        assertThatThrownBy(() -> new QrTokenService("too-short"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("32 byte");
     }
 }
 
