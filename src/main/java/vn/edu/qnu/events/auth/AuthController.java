@@ -1,6 +1,5 @@
 package vn.edu.qnu.events.auth;
 
-import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -21,7 +20,6 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    @SecurityRequirements
     public LoginResponse login(@Valid @RequestBody LoginRequest request) {
         return authService.login(request);
     }
