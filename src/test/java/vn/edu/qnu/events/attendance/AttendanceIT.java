@@ -577,7 +577,55 @@ class AttendanceIT {
     }
 
     @Test
-    @DisplayName("16. Audit ACCEPT dùng đúng action, tokenHash và không lưu token đầy đủ")
+    @DisplayName("16. Request đồng thời cùng key trả cùng response và chỉ lưu một attempt")
+    void concurrentRequestsWithSameKeyReturnIdenticalResponse() throws Exception {
+        Instant now = Instant.now();
+        Event event = createEventWithAttendanceWindow(
+                now.minus(10, ChronoUnit.MINUTES), now.plus(1, ChronoUnit.HOURS)
+        );
+        registerStudent(event.getId(), student1Id);
+        String token = qrTokenService.issue(event.getId(), now, event.getQrRotationSeconds());
+        String payload = "{\"token\":\"" + token + "\"}";
+        String key = "same-key-" + UUID.randomUUID();
+
+        CountDownLatch ready = new CountDownLatch(2);
+        CountDownLatch start = new CountDownLatch(1);
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        try {
+            Callable<MvcResult> call = () -> {
+                ready.countDown();
+                start.await(5, TimeUnit.SECONDS);
+                return mockMvc.perform(post("/api/v1/events/" + event.getId() + "/attendance/qr")
+                                .header("Authorization", "Bearer " + student1Token)
+                                .header("Idempotency-Key", key)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(payload))
+                        .andReturn();
+            };
+            Future<MvcResult> first = executor.submit(call);
+            Future<MvcResult> second = executor.submit(call);
+            assertThat(ready.await(5, TimeUnit.SECONDS)).isTrue();
+            start.countDown();
+
+            MvcResult firstResult = first.get(15, TimeUnit.SECONDS);
+            MvcResult secondResult = second.get(15, TimeUnit.SECONDS);
+            assertThat(firstResult.getResponse().getStatus()).isEqualTo(200);
+            assertThat(secondResult.getResponse().getStatus()).isEqualTo(200);
+            assertThat(firstResult.getResponse().getContentAsString())
+                    .isEqualTo(secondResult.getResponse().getContentAsString());
+            assertThat(attendanceRepository.countByEventIdAndStatus(event.getId(), "ACCEPTED"))
+                    .isEqualTo(1L);
+            assertThat(attemptRepository.countByEventIdAndStudentIdAndIdempotencyKey(
+                    event.getId(), student1Id, key
+            )).isEqualTo(1L);
+        } finally {
+            start.countDown();
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
+    @DisplayName("17. Audit ACCEPT dùng đúng action, tokenHash và không lưu token đầy đủ")
     void acceptedCheckInAuditDoesNotLeakToken() throws Exception {
         Instant now = Instant.now();
         Event event = createEventWithAttendanceWindow(
