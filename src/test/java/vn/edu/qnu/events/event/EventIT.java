@@ -12,6 +12,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import vn.edu.qnu.events.audit.AuditLog;
 import vn.edu.qnu.events.audit.AuditLogRepository;
 import vn.edu.qnu.events.auth.AuthService;
 import vn.edu.qnu.events.auth.LoginRequest;
@@ -66,12 +67,17 @@ class EventIT {
     }
 
     private String buildValidEventUpsert(String title) {
+        return buildValidEventUpsert(title, null);
+    }
+
+    private String buildValidEventUpsert(String title, Integer version) {
         Instant now = Instant.now();
         Instant startAt = now.plus(1, ChronoUnit.DAYS);
         Instant endAt = startAt.plus(2, ChronoUnit.HOURS);
         Instant regDeadline = startAt.minus(2, ChronoUnit.HOURS);
         Instant attOpen = startAt.minus(15, ChronoUnit.MINUTES);
         Instant attClose = endAt.plus(30, ChronoUnit.MINUTES);
+        String versionField = version == null ? "" : ",\n                    \"version\": " + version;
 
         return String.format("""
                 {
@@ -87,9 +93,9 @@ class EventIT {
                     "quotaTotal": 50,
                     "audienceClassIds": ["%s"],
                     "activityType": "Hội thảo học thuật",
-                    "activityPoints": 5
+                    "activityPoints": 5%s
                 }
-                """, title, startAt, endAt, regDeadline, attOpen, attClose, k49ClassId);
+                """, title, startAt, endAt, regDeadline, attOpen, attClose, k49ClassId, versionField);
     }
 
     @Test
@@ -317,8 +323,8 @@ class EventIT {
                         .header("Authorization", "Bearer " + ownerToken))
                 .andExpect(status().isOk());
 
-        // 3. Sửa sự kiện -> version tăng lên 1
-        String updatePayload = buildValidEventUpsert("Sự kiện cập nhật tiêu đề mới");
+        // 3. Sửa sự kiện (kèm version hiện tại) -> version tăng lên 1
+        String updatePayload = buildValidEventUpsert("Sự kiện cập nhật tiêu đề mới", 0);
         mockMvc.perform(put("/api/v1/events/" + eventId)
                         .header("Authorization", "Bearer " + ownerToken)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -499,52 +505,229 @@ class EventIT {
         return eventId;
     }
 
+    private List<AuditLog> publishAuditLogs(String eventId) {
+        return auditLogRepository.findAll().stream()
+                .filter(log -> eventId.equals(log.getTargetId()))
+                .filter(log -> log.getAction().startsWith("EVENT_PUBLISH"))
+                .toList();
+    }
+
     @Test
-    @DisplayName("12. remainingQuota/registrationOpen/attendanceOpen tính đúng theo cửa sổ thời gian của từng sự kiện")
+    @DisplayName("11. PUT thiếu version -> 400 VALIDATION_FAILED; sai version -> 409 VERSION_CONFLICT; đúng version -> 200")
+    void updateRequiresMatchingVersion() throws Exception {
+        String createPayload = buildValidEventUpsert("Sự kiện kiểm tra version");
+        MvcResult createRes = mockMvc.perform(post("/api/v1/events")
+                        .header("Authorization", "Bearer " + ownerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(createPayload))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        String eventId = objectMapper.readTree(createRes.getResponse().getContentAsString()).get("id").asText();
+
+        // 1. PUT thiếu version -> 400 VALIDATION_FAILED kèm details.fields.version
+        mockMvc.perform(put("/api/v1/events/" + eventId)
+                        .header("Authorization", "Bearer " + ownerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(buildValidEventUpsert("Thiếu version khi sửa")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.details.fields.version", not(emptyOrNullString())));
+
+        // 2. PUT với version sai -> 409 VERSION_CONFLICT
+        mockMvc.perform(put("/api/v1/events/" + eventId)
+                        .header("Authorization", "Bearer " + ownerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(buildValidEventUpsert("Sai version khi sửa", 99)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("VERSION_CONFLICT"));
+
+        // 3. PUT với đúng version 0 -> 200 và version tăng lên 1
+        mockMvc.perform(put("/api/v1/events/" + eventId)
+                        .header("Authorization", "Bearer " + ownerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(buildValidEventUpsert("Đúng version khi sửa", 0)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.version").value(1))
+                .andExpect(jsonPath("$.title").value("Đúng version khi sửa"));
+    }
+
+    @Test
+    @DisplayName("12. Publish ghi audit EVENT_PUBLISH; bị chặn ghi EVENT_PUBLISH_DENIED kèm reasonCode; publish lặp không sinh audit trùng")
+    void publishRecordsAuditTrail() throws Exception {
+        String createPayload = buildValidEventUpsert("Sự kiện kiểm tra audit publish");
+        MvcResult createRes = mockMvc.perform(post("/api/v1/events")
+                        .header("Authorization", "Bearer " + ownerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(createPayload))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        String eventId = objectMapper.readTree(createRes.getResponse().getContentAsString()).get("id").asText();
+
+        // 1. Publish khi chưa preview -> bị chặn, ghi EVENT_PUBLISH_DENIED / PREVIEW_REQUIRED
+        mockMvc.perform(post("/api/v1/events/" + eventId + "/publish")
+                        .header("Authorization", "Bearer " + ownerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                    "confirm": true,
+                                    "previewVersion": 0
+                                }
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("PREVIEW_REQUIRED"));
+
+        List<AuditLog> deniedLogs = publishAuditLogs(eventId);
+        assertEquals(1, deniedLogs.size(), "Lần chặn đầu tiên phải ghi đúng 1 audit");
+        assertEquals("EVENT_PUBLISH_DENIED", deniedLogs.get(0).getAction());
+        assertEquals("DENIED", deniedLogs.get(0).getOutcome());
+        assertEquals("PREVIEW_REQUIRED", deniedLogs.get(0).getReasonCode());
+
+        // 2. Preview -> sửa (version tăng) -> publish với previewVersion cũ -> PREVIEW_OUTDATED
+        mockMvc.perform(get("/api/v1/events/" + eventId + "/preview")
+                        .header("Authorization", "Bearer " + ownerToken))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(put("/api/v1/events/" + eventId)
+                        .header("Authorization", "Bearer " + ownerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(buildValidEventUpsert("Sự kiện kiểm tra audit publish (đã sửa)", 0)))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/v1/events/" + eventId + "/publish")
+                        .header("Authorization", "Bearer " + ownerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                    "confirm": true,
+                                    "previewVersion": 0
+                                }
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("PREVIEW_OUTDATED"));
+
+        deniedLogs = publishAuditLogs(eventId);
+        assertEquals(2, deniedLogs.size(), "Lần chặn thứ hai phải ghi thêm 1 audit");
+        assertEquals("PREVIEW_OUTDATED", deniedLogs.get(1).getReasonCode());
+
+        // 3. Preview lại -> publish thành công -> ghi EVENT_PUBLISH / SUCCESS
+        mockMvc.perform(get("/api/v1/events/" + eventId + "/preview")
+                        .header("Authorization", "Bearer " + ownerToken))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/v1/events/" + eventId + "/publish")
+                        .header("Authorization", "Bearer " + ownerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                    "confirm": true,
+                                    "previewVersion": 1
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("PUBLISHED"));
+
+        List<AuditLog> successLogs = publishAuditLogs(eventId).stream()
+                .filter(log -> "EVENT_PUBLISH".equals(log.getAction()))
+                .toList();
+        assertEquals(1, successLogs.size(), "Publish thành công ghi đúng 1 audit EVENT_PUBLISH");
+        assertEquals("SUCCESS", successLogs.get(0).getOutcome());
+        assertNull(successLogs.get(0).getReasonCode());
+
+        // 4. Publish lặp (idempotent) -> không sinh thêm audit
+        mockMvc.perform(post("/api/v1/events/" + eventId + "/publish")
+                        .header("Authorization", "Bearer " + ownerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                    "confirm": true,
+                                    "previewVersion": 1
+                                }
+                                """))
+                .andExpect(status().isOk());
+
+        assertEquals(3, publishAuditLogs(eventId).size(), "Publish lặp không được sinh audit mới (vẫn 2 DENIED + 1 SUCCESS)");
+    }
+
+    @Test
+    @DisplayName("13. Owner B gọi preview/publish sự kiện của Owner A -> 403 FORBIDDEN")
+    void ownerBCannotPreviewOrPublishOwnerAEvent() throws Exception {
+        String createPayload = buildValidEventUpsert("Sự kiện riêng phục vụ test 403");
+        MvcResult createRes = mockMvc.perform(post("/api/v1/events")
+                        .header("Authorization", "Bearer " + ownerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(createPayload))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        String eventId = objectMapper.readTree(createRes.getResponse().getContentAsString()).get("id").asText();
+
+        mockMvc.perform(get("/api/v1/events/" + eventId + "/preview")
+                        .header("Authorization", "Bearer " + owner2Token))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"));
+
+        mockMvc.perform(post("/api/v1/events/" + eventId + "/publish")
+                        .header("Authorization", "Bearer " + owner2Token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                    "confirm": true,
+                                    "previewVersion": 0
+                                }
+                                """))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"));
+
+        // Sự kiện vẫn ở trạng thái DRAFT và chưa từng được preview bởi người khác
+        mockMvc.perform(get("/api/v1/events/" + eventId)
+                        .header("Authorization", "Bearer " + ownerToken))
+                .andExpect(status().isOk())
+                        .andExpect(jsonPath("$.status").value("DRAFT"));
+
+    @Test
+    @DisplayName("14. remainingQuota/registrationOpen/attendanceOpen tính đúng theo cửa sổ thời gian của từng sự kiện")
     void computedFieldsMatchServerTimeWindows() throws Exception {
-        Instant now = Instant.now();
+                Instant now = Instant.now();
 
-        // Sự kiện A: còn hạn đăng ký, chưa tới giờ điểm danh -> registrationOpen=true, attendanceOpen=false
-        String eventA = createPublishedEvent(
-                "Sự kiện A còn hạn đăng ký",
-                now.plus(210, ChronoUnit.MINUTES), now.plus(330, ChronoUnit.MINUTES),
-                now.plus(120, ChronoUnit.MINUTES), now.plus(180, ChronoUnit.MINUTES),
-                now.plus(300, ChronoUnit.MINUTES), 5);
+                String eventA = createPublishedEvent(
+                        "Sự kiện A còn hạn đăng ký",
+                        now.plus(210, ChronoUnit.MINUTES), now.plus(330, ChronoUnit.MINUTES),
+                        now.plus(120, ChronoUnit.MINUTES), now.plus(180, ChronoUnit.MINUTES),
+                        now.plus(300, ChronoUnit.MINUTES), 5);
 
-        mockMvc.perform(get("/api/v1/events/" + eventA)
-                        .header("Authorization", "Bearer " + studentToken))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.remainingQuota").value(5))
-                .andExpect(jsonPath("$.registrationOpen").value(true))
-                .andExpect(jsonPath("$.attendanceOpen").value(false));
+                mockMvc.perform(get("/api/v1/events/" + eventA)
+                                .header("Authorization", "Bearer " + studentToken))
+                        .andExpect(status().isOk())
+                        .andExpect(jsonPath("$.remainingQuota").value(5))
+                        .andExpect(jsonPath("$.registrationOpen").value(true))
+                        .andExpect(jsonPath("$.attendanceOpen").value(false));
 
-        // Sự kiện B: hết hạn đăng ký, đang trong cửa sổ điểm danh -> registrationOpen=false, attendanceOpen=true
-        String eventB = createPublishedEvent(
-                "Sự kiện B đang điểm danh",
-                now.minus(90, ChronoUnit.MINUTES), now.plus(90, ChronoUnit.MINUTES),
-                now.minus(30, ChronoUnit.MINUTES), now.minus(60, ChronoUnit.MINUTES),
-                now.plus(60, ChronoUnit.MINUTES), 10);
+                String eventB = createPublishedEvent(
+                        "Sự kiện B đang điểm danh",
+                        now.minus(90, ChronoUnit.MINUTES), now.plus(90, ChronoUnit.MINUTES),
+                        now.minus(30, ChronoUnit.MINUTES), now.minus(60, ChronoUnit.MINUTES),
+                        now.plus(60, ChronoUnit.MINUTES), 10);
 
-        mockMvc.perform(get("/api/v1/events/" + eventB)
-                        .header("Authorization", "Bearer " + studentToken))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.remainingQuota").value(10))
-                .andExpect(jsonPath("$.registrationOpen").value(false))
-                .andExpect(jsonPath("$.attendanceOpen").value(true));
+                mockMvc.perform(get("/api/v1/events/" + eventB)
+                                .header("Authorization", "Bearer " + studentToken))
+                        .andExpect(status().isOk())
+                        .andExpect(jsonPath("$.remainingQuota").value(10))
+                        .andExpect(jsonPath("$.registrationOpen").value(false))
+                        .andExpect(jsonPath("$.attendanceOpen").value(true));
 
-        // Sự kiện C: mọi cửa sổ đã đóng -> cả hai đều false
-        String eventC = createPublishedEvent(
-                "Sự kiện C đã kết thúc",
-                now.minus(180, ChronoUnit.MINUTES), now.minus(60, ChronoUnit.MINUTES),
-                now.minus(210, ChronoUnit.MINUTES), now.minus(150, ChronoUnit.MINUTES),
-                now.minus(30, ChronoUnit.MINUTES), 8);
+                String eventC = createPublishedEvent(
+                        "Sự kiện C đã kết thúc",
+                        now.minus(180, ChronoUnit.MINUTES), now.minus(60, ChronoUnit.MINUTES),
+                        now.minus(210, ChronoUnit.MINUTES), now.minus(150, ChronoUnit.MINUTES),
+                        now.minus(30, ChronoUnit.MINUTES), 8);
 
-        mockMvc.perform(get("/api/v1/events/" + eventC)
-                        .header("Authorization", "Bearer " + studentToken))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.remainingQuota").value(8))
-                .andExpect(jsonPath("$.registrationOpen").value(false))
-                .andExpect(jsonPath("$.attendanceOpen").value(false));
+                mockMvc.perform(get("/api/v1/events/" + eventC)
+                                .header("Authorization", "Bearer " + studentToken))
+                        .andExpect(status().isOk())
+                        .andExpect(jsonPath("$.remainingQuota").value(8))
+                        .andExpect(jsonPath("$.registrationOpen").value(false))
+                        .andExpect(jsonPath("$.attendanceOpen").value(false));
     }
 }
-
