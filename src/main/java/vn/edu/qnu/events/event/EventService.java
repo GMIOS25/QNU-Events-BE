@@ -78,7 +78,15 @@ public class EventService {
             throw new ApiException(ErrorCode.VERSION_CONFLICT, "Chỉ có thể chỉnh sửa sự kiện ở trạng thái bản nháp.");
         }
 
-        if (upsert.version() != null && !upsert.version().equals(event.getVersion())) {
+        if (upsert.version() == null) {
+            throw new ApiException(
+                    ErrorCode.VALIDATION_FAILED,
+                    "Cần truyền version hiện tại của sự kiện khi chỉnh sửa.",
+                    Map.of("fields", Map.of("version", "Trường version là bắt buộc khi cập nhật sự kiện."))
+            );
+        }
+
+        if (!upsert.version().equals(event.getVersion())) {
             throw new ApiException(ErrorCode.VERSION_CONFLICT);
         }
 
