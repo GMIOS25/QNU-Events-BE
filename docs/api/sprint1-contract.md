@@ -62,7 +62,7 @@ Mọi phản hồi lỗi (HTTP status ≥ 400) đều trả về cấu trúc Api
 | `GET` | `/api/v1/events/{id}/registrations/me` | STUDENT | — | 200 `{id, status, registeredAt}` | Trả về trạng thái đăng ký của bản thân |
 | `GET` | `/api/v1/events/{id}/qr` | EVENT_OWNER | — | 200 `{token, epoch, validUntil, rotationSeconds, serverTime}` | Tạo mã QR động HMAC theo epoch |
 | `POST` | `/api/v1/events/{id}/attendance/qr` | STUDENT | `{token}` + Header: `Idempotency-Key` (bắt buộc) | 200 `{status: "ACCEPTED", acceptedAt}` | Điểm danh QR động, tối đa 3 lần thử |
-| `GET` | `/api/v1/me/history` | STUDENT | — | 200 `[HistoryItem]` | Lịch sử tham gia và điểm rèn luyện |
+| `GET` | `/api/v1/me/history` | STUDENT | Query params: `academicYear`, `semester`, `attendanceStatus`, `upcoming`, `activityType`, `page`, `size`, `sort` | 200 `Page<HistoryItem>` | Lịch sử tham gia có hỗ trợ phân trang và bộ lọc nâng cao |
 
 ---
 
