@@ -433,6 +433,78 @@ class EventIT {
                 .andExpect(jsonPath("$.content[?(@.title =~ /.*Khởi nghiệp.*/i)]", not(empty())));
     }
 
+    @Test
+    @DisplayName("11. Sinh viên không thấy sự kiện DRAFT: gọi trực tiếp -> 404, không có trong danh sách")
+    void studentCannotSeeDraftEvent() throws Exception {
+        String uniqueTitle = "Sự kiện nháp chưa công bố " + UUID.randomUUID().toString().substring(0, 8);
+        MvcResult createRes = mockMvc.perform(post("/api/v1/events")
+                        .header("Authorization", "Bearer " + ownerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(buildValidEventUpsert(uniqueTitle)))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        String eventId = objectMapper.readTree(createRes.getResponse().getContentAsString()).get("id").asText();
+
+        // 1. Sinh viên đúng lớp đối tượng gọi trực tiếp chi tiết -> 404, không lộ sự tồn tại của bản nháp
+        mockMvc.perform(get("/api/v1/events/" + eventId)
+                        .header("Authorization", "Bearer " + studentToken))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("NOT_FOUND"));
+
+        // 2. Không xuất hiện trong danh sách của sinh viên kể cả khi tìm đúng tiêu đề
+        mockMvc.perform(get("/api/v1/events").param("q", uniqueTitle)
+                        .header("Authorization", "Bearer " + studentToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content", empty()));
+    }
+
+    private String createPublishedEvent(String title, Instant startAt, Instant endAt,
+                                        Instant regDeadline, Instant attOpen, Instant attClose,
+                                        int quotaTotal) throws Exception {
+        MvcResult createRes = mockMvc.perform(post("/api/v1/events")
+                        .header("Authorization", "Bearer " + ownerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(String.format("""
+                                        {
+                                            "title": "%s",
+                                            "location": "Hội trường C - Đại học Quy Nhơn",
+                                            "startAt": "%s",
+                                            "endAt": "%s",
+                                            "registrationDeadline": "%s",
+                                            "attendanceOpenAt": "%s",
+                                            "attendanceCloseAt": "%s",
+                                            "attendanceMethod": "DYNAMIC_QR",
+                                            "quotaTotal": %d,
+                                            "audienceClassIds": ["%s"],
+                                            "activityType": "Workshop",
+                                            "activityPoints": 3
+                                        }
+                                        """,
+                                title, startAt, endAt, regDeadline, attOpen, attClose, quotaTotal, k49ClassId)))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        String eventId = objectMapper.readTree(createRes.getResponse().getContentAsString()).get("id").asText();
+
+        mockMvc.perform(get("/api/v1/events/" + eventId + "/preview")
+                        .header("Authorization", "Bearer " + ownerToken))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/v1/events/" + eventId + "/publish")
+                        .header("Authorization", "Bearer " + ownerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                    "confirm": true,
+                                    "previewVersion": 0
+                                }
+                                """))
+                .andExpect(status().isOk());
+
+        return eventId;
+    }
+
     private List<AuditLog> publishAuditLogs(String eventId) {
         return auditLogRepository.findAll().stream()
                 .filter(log -> eventId.equals(log.getTargetId()))
@@ -441,7 +513,7 @@ class EventIT {
     }
 
     @Test
-    @DisplayName("11. PUT thiếu version -> 400 VALIDATION_FAILED; sai version -> 409 VERSION_CONFLICT; đúng version -> 200")
+    @DisplayName("12. PUT thiếu version -> 400 VALIDATION_FAILED; sai version -> 409 VERSION_CONFLICT; đúng version -> 200")
     void updateRequiresMatchingVersion() throws Exception {
         String createPayload = buildValidEventUpsert("Sự kiện kiểm tra version");
         MvcResult createRes = mockMvc.perform(post("/api/v1/events")
@@ -481,7 +553,7 @@ class EventIT {
     }
 
     @Test
-    @DisplayName("12. Publish ghi audit EVENT_PUBLISH; bị chặn ghi EVENT_PUBLISH_DENIED kèm reasonCode; publish lặp không sinh audit trùng")
+    @DisplayName("13. Publish ghi audit EVENT_PUBLISH; bị chặn ghi EVENT_PUBLISH_DENIED kèm reasonCode; publish lặp không sinh audit trùng")
     void publishRecordsAuditTrail() throws Exception {
         String createPayload = buildValidEventUpsert("Sự kiện kiểm tra audit publish");
         MvcResult createRes = mockMvc.perform(post("/api/v1/events")
@@ -579,7 +651,7 @@ class EventIT {
     }
 
     @Test
-    @DisplayName("13. Owner B gọi preview/publish sự kiện của Owner A -> 403 FORBIDDEN")
+    @DisplayName("14. Owner B gọi preview/publish sự kiện của Owner A -> 403 FORBIDDEN")
     void ownerBCannotPreviewOrPublishOwnerAEvent() throws Exception {
         String createPayload = buildValidEventUpsert("Sự kiện riêng phục vụ test 403");
         MvcResult createRes = mockMvc.perform(post("/api/v1/events")
@@ -614,5 +686,49 @@ class EventIT {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("DRAFT"));
     }
-}
 
+    @Test
+    @DisplayName("15. remainingQuota/registrationOpen/attendanceOpen tính đúng theo cửa sổ thời gian của từng sự kiện")
+    void computedFieldsMatchServerTimeWindows() throws Exception {
+        Instant now = Instant.now();
+
+        String eventA = createPublishedEvent(
+                "Sự kiện A còn hạn đăng ký",
+                now.plus(210, ChronoUnit.MINUTES), now.plus(330, ChronoUnit.MINUTES),
+                now.plus(120, ChronoUnit.MINUTES), now.plus(180, ChronoUnit.MINUTES),
+                now.plus(300, ChronoUnit.MINUTES), 5);
+
+        mockMvc.perform(get("/api/v1/events/" + eventA)
+                        .header("Authorization", "Bearer " + studentToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.remainingQuota").value(5))
+                .andExpect(jsonPath("$.registrationOpen").value(true))
+                .andExpect(jsonPath("$.attendanceOpen").value(false));
+
+        String eventB = createPublishedEvent(
+                "Sự kiện B đang điểm danh",
+                now.minus(90, ChronoUnit.MINUTES), now.plus(90, ChronoUnit.MINUTES),
+                now.minus(30, ChronoUnit.MINUTES), now.minus(60, ChronoUnit.MINUTES),
+                now.plus(60, ChronoUnit.MINUTES), 10);
+
+        mockMvc.perform(get("/api/v1/events/" + eventB)
+                        .header("Authorization", "Bearer " + studentToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.remainingQuota").value(10))
+                .andExpect(jsonPath("$.registrationOpen").value(false))
+                .andExpect(jsonPath("$.attendanceOpen").value(true));
+
+        String eventC = createPublishedEvent(
+                "Sự kiện C đã kết thúc",
+                now.minus(180, ChronoUnit.MINUTES), now.minus(60, ChronoUnit.MINUTES),
+                now.minus(210, ChronoUnit.MINUTES), now.minus(150, ChronoUnit.MINUTES),
+                now.minus(30, ChronoUnit.MINUTES), 8);
+
+        mockMvc.perform(get("/api/v1/events/" + eventC)
+                        .header("Authorization", "Bearer " + studentToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.remainingQuota").value(8))
+                .andExpect(jsonPath("$.registrationOpen").value(false))
+                .andExpect(jsonPath("$.attendanceOpen").value(false));
+    }
+}
