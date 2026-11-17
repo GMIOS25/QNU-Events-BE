@@ -513,7 +513,7 @@ class EventIT {
     }
 
     @Test
-    @DisplayName("11. PUT thiếu version -> 400 VALIDATION_FAILED; sai version -> 409 VERSION_CONFLICT; đúng version -> 200")
+    @DisplayName("12. PUT thiếu version -> 400 VALIDATION_FAILED; sai version -> 409 VERSION_CONFLICT; đúng version -> 200")
     void updateRequiresMatchingVersion() throws Exception {
         String createPayload = buildValidEventUpsert("Sự kiện kiểm tra version");
         MvcResult createRes = mockMvc.perform(post("/api/v1/events")
@@ -553,7 +553,7 @@ class EventIT {
     }
 
     @Test
-    @DisplayName("12. Publish ghi audit EVENT_PUBLISH; bị chặn ghi EVENT_PUBLISH_DENIED kèm reasonCode; publish lặp không sinh audit trùng")
+    @DisplayName("13. Publish ghi audit EVENT_PUBLISH; bị chặn ghi EVENT_PUBLISH_DENIED kèm reasonCode; publish lặp không sinh audit trùng")
     void publishRecordsAuditTrail() throws Exception {
         String createPayload = buildValidEventUpsert("Sự kiện kiểm tra audit publish");
         MvcResult createRes = mockMvc.perform(post("/api/v1/events")
@@ -651,7 +651,7 @@ class EventIT {
     }
 
     @Test
-    @DisplayName("13. Owner B gọi preview/publish sự kiện của Owner A -> 403 FORBIDDEN")
+    @DisplayName("14. Owner B gọi preview/publish sự kiện của Owner A -> 403 FORBIDDEN")
     void ownerBCannotPreviewOrPublishOwnerAEvent() throws Exception {
         String createPayload = buildValidEventUpsert("Sự kiện riêng phục vụ test 403");
         MvcResult createRes = mockMvc.perform(post("/api/v1/events")
@@ -684,50 +684,51 @@ class EventIT {
         mockMvc.perform(get("/api/v1/events/" + eventId)
                         .header("Authorization", "Bearer " + ownerToken))
                 .andExpect(status().isOk())
-                        .andExpect(jsonPath("$.status").value("DRAFT"));
+                .andExpect(jsonPath("$.status").value("DRAFT"));
+    }
 
     @Test
-    @DisplayName("14. remainingQuota/registrationOpen/attendanceOpen tính đúng theo cửa sổ thời gian của từng sự kiện")
+    @DisplayName("15. remainingQuota/registrationOpen/attendanceOpen tính đúng theo cửa sổ thời gian của từng sự kiện")
     void computedFieldsMatchServerTimeWindows() throws Exception {
-                Instant now = Instant.now();
+        Instant now = Instant.now();
 
-                String eventA = createPublishedEvent(
-                        "Sự kiện A còn hạn đăng ký",
-                        now.plus(210, ChronoUnit.MINUTES), now.plus(330, ChronoUnit.MINUTES),
-                        now.plus(120, ChronoUnit.MINUTES), now.plus(180, ChronoUnit.MINUTES),
-                        now.plus(300, ChronoUnit.MINUTES), 5);
+        String eventA = createPublishedEvent(
+                "Sự kiện A còn hạn đăng ký",
+                now.plus(210, ChronoUnit.MINUTES), now.plus(330, ChronoUnit.MINUTES),
+                now.plus(120, ChronoUnit.MINUTES), now.plus(180, ChronoUnit.MINUTES),
+                now.plus(300, ChronoUnit.MINUTES), 5);
 
-                mockMvc.perform(get("/api/v1/events/" + eventA)
-                                .header("Authorization", "Bearer " + studentToken))
-                        .andExpect(status().isOk())
-                        .andExpect(jsonPath("$.remainingQuota").value(5))
-                        .andExpect(jsonPath("$.registrationOpen").value(true))
-                        .andExpect(jsonPath("$.attendanceOpen").value(false));
+        mockMvc.perform(get("/api/v1/events/" + eventA)
+                        .header("Authorization", "Bearer " + studentToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.remainingQuota").value(5))
+                .andExpect(jsonPath("$.registrationOpen").value(true))
+                .andExpect(jsonPath("$.attendanceOpen").value(false));
 
-                String eventB = createPublishedEvent(
-                        "Sự kiện B đang điểm danh",
-                        now.minus(90, ChronoUnit.MINUTES), now.plus(90, ChronoUnit.MINUTES),
-                        now.minus(30, ChronoUnit.MINUTES), now.minus(60, ChronoUnit.MINUTES),
-                        now.plus(60, ChronoUnit.MINUTES), 10);
+        String eventB = createPublishedEvent(
+                "Sự kiện B đang điểm danh",
+                now.minus(90, ChronoUnit.MINUTES), now.plus(90, ChronoUnit.MINUTES),
+                now.minus(30, ChronoUnit.MINUTES), now.minus(60, ChronoUnit.MINUTES),
+                now.plus(60, ChronoUnit.MINUTES), 10);
 
-                mockMvc.perform(get("/api/v1/events/" + eventB)
-                                .header("Authorization", "Bearer " + studentToken))
-                        .andExpect(status().isOk())
-                        .andExpect(jsonPath("$.remainingQuota").value(10))
-                        .andExpect(jsonPath("$.registrationOpen").value(false))
-                        .andExpect(jsonPath("$.attendanceOpen").value(true));
+        mockMvc.perform(get("/api/v1/events/" + eventB)
+                        .header("Authorization", "Bearer " + studentToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.remainingQuota").value(10))
+                .andExpect(jsonPath("$.registrationOpen").value(false))
+                .andExpect(jsonPath("$.attendanceOpen").value(true));
 
-                String eventC = createPublishedEvent(
-                        "Sự kiện C đã kết thúc",
-                        now.minus(180, ChronoUnit.MINUTES), now.minus(60, ChronoUnit.MINUTES),
-                        now.minus(210, ChronoUnit.MINUTES), now.minus(150, ChronoUnit.MINUTES),
-                        now.minus(30, ChronoUnit.MINUTES), 8);
+        String eventC = createPublishedEvent(
+                "Sự kiện C đã kết thúc",
+                now.minus(180, ChronoUnit.MINUTES), now.minus(60, ChronoUnit.MINUTES),
+                now.minus(210, ChronoUnit.MINUTES), now.minus(150, ChronoUnit.MINUTES),
+                now.minus(30, ChronoUnit.MINUTES), 8);
 
-                mockMvc.perform(get("/api/v1/events/" + eventC)
-                                .header("Authorization", "Bearer " + studentToken))
-                        .andExpect(status().isOk())
-                        .andExpect(jsonPath("$.remainingQuota").value(8))
-                        .andExpect(jsonPath("$.registrationOpen").value(false))
-                        .andExpect(jsonPath("$.attendanceOpen").value(false));
+        mockMvc.perform(get("/api/v1/events/" + eventC)
+                        .header("Authorization", "Bearer " + studentToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.remainingQuota").value(8))
+                .andExpect(jsonPath("$.registrationOpen").value(false))
+                .andExpect(jsonPath("$.attendanceOpen").value(false));
     }
 }
