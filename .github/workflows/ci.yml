@@ -2,7 +2,7 @@ name: Backend CI
 
 on:
   push:
-    branches: [main, master, develop]
+    branches: [main, develop]
   pull_request:
 
 permissions:
@@ -38,3 +38,11 @@ jobs:
           cache: maven
       - name: Build and test with PostgreSQL
         run: bash ./mvnw -B -ntp -Pintegration verify
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: |
+            target/surefire-reports/
+            target/failsafe-reports/
