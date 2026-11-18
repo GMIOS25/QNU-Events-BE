@@ -108,17 +108,7 @@ public class AttendanceService {
             CheckInRequest request,
             String traceId
     ) {
-        return processCheckIn(eventId, "DYNAMIC_QR", idempotencyKey, request, traceId, false);
-    }
-
-    @Transactional(rollbackFor = Exception.class)
-    public CheckInResult syncOfflineQr(
-            UUID eventId,
-            String idempotencyKey,
-            CheckInRequest request,
-            String traceId
-    ) {
-        return processCheckIn(eventId, "OFFLINE_QR", idempotencyKey, request, traceId, true);
+        return processCheckIn(eventId, "DYNAMIC_QR", idempotencyKey, request, traceId);
     }
 
     private CheckInResult processCheckIn(
@@ -126,8 +116,7 @@ public class AttendanceService {
             String method,
             String idempotencyKey,
             CheckInRequest request,
-            String traceId,
-            boolean isOfflineSync
+            String traceId
     ) {
         CurrentUser currentUser = CurrentUserProvider.require();
         if (!currentUser.hasRole("STUDENT")) {
@@ -165,20 +154,11 @@ public class AttendanceService {
             );
         }
 
-        if (!isOfflineSync) {
-            if (now.isBefore(event.getAttendanceOpenAt()) || now.isAfter(event.getAttendanceCloseAt())) {
-                return reject(
-                        eventId, studentId, method, idempotencyKey, ErrorCode.ATTENDANCE_NOT_OPEN,
-                        false, "REJECTED", now, traceId, Map.of("eventId", eventId.toString())
-                );
-            }
-        } else {
-            if (now.isBefore(event.getAttendanceOpenAt())) {
-                return reject(
-                        eventId, studentId, method, idempotencyKey, ErrorCode.ATTENDANCE_NOT_OPEN,
-                        false, "REJECTED", now, traceId, Map.of("eventId", eventId.toString())
-                );
-            }
+        if (now.isBefore(event.getAttendanceOpenAt()) || now.isAfter(event.getAttendanceCloseAt())) {
+            return reject(
+                    eventId, studentId, method, idempotencyKey, ErrorCode.ATTENDANCE_NOT_OPEN,
+                    false, "REJECTED", now, traceId, Map.of("eventId", eventId.toString())
+            );
         }
 
         boolean hasRegistration = registrationRepository.findActiveByEventAndStudent(eventId, studentId)

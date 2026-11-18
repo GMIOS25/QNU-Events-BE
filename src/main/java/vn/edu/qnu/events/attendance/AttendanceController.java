@@ -45,20 +45,5 @@ public class AttendanceController {
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(result.responseBody());
     }
-
-    @PostMapping("/attendance/offline-sync")
-    public ResponseEntity<String> syncOfflineAttendance(
-            @PathVariable("id") UUID id,
-            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
-            @RequestBody CheckInRequest request,
-            HttpServletRequest httpRequest
-    ) {
-        CheckInResult result = attendanceService.syncOfflineQr(
-                id, idempotencyKey, request, resolveTraceId(httpRequest)
-        );
-        return ResponseEntity.status(result.httpStatus())
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(result.responseBody());
-    }
 }
 
