@@ -9,11 +9,15 @@ import vn.edu.qnu.events.common.ApiException;
 import vn.edu.qnu.events.common.CurrentUser;
 import vn.edu.qnu.events.common.CurrentUserProvider;
 import vn.edu.qnu.events.common.ErrorCode;
+import vn.edu.qnu.events.registration.Registration;
+import vn.edu.qnu.events.registration.RegistrationRepository;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class EventService {
@@ -22,17 +26,20 @@ public class EventService {
     private final EventValidator eventValidator;
     private final AuditService auditService;
     private final Clock clock;
+    private final RegistrationRepository registrationRepository;
 
     public EventService(
             EventRepository eventRepository,
             EventValidator eventValidator,
             AuditService auditService,
-            Clock clock
+            Clock clock,
+            RegistrationRepository registrationRepository
     ) {
         this.eventRepository = eventRepository;
         this.eventValidator = eventValidator;
         this.auditService = auditService;
         this.clock = clock;
+        this.registrationRepository = registrationRepository;
     }
 
     @Transactional
@@ -207,6 +214,7 @@ public class EventService {
     public EventDetail getEventDetail(UUID id) {
         CurrentUser currentUser = CurrentUserProvider.require();
         Event event;
+        String myRegistrationStatus = null;
 
         if (currentUser.roles().contains("EVENT_OWNER")) {
             event = eventRepository.findById(id)
@@ -218,32 +226,59 @@ public class EventService {
             }
             event = eventRepository.findPublishedByIdAndClass(id, currentUser.classId())
                     .orElseThrow(() -> new ApiException(ErrorCode.NOT_FOUND));
+
+            myRegistrationStatus = registrationRepository
+                    .findLatestByEventAndStudent(id, currentUser.userId())
+                    .map(r -> r.getStatus().name())
+                    .orElse(null);
         } else {
             throw new ApiException(ErrorCode.NOT_FOUND);
         }
 
-        return toDetail(event);
+        return toDetail(event, myRegistrationStatus);
     }
 
     @Transactional(readOnly = true)
-    public Page<EventSummary> listEvents(String q, Pageable pageable) {
+    public Page<EventSummary> listEvents(String q, String activityType, Pageable pageable) {
         CurrentUser currentUser = CurrentUserProvider.require();
 
         if (currentUser.roles().contains("EVENT_OWNER")) {
-            return eventRepository.findByOwnerId(currentUser.userId(), q, pageable)
+            return eventRepository.findByOwnerId(currentUser.userId(), q, activityType, pageable)
                     .map(this::toSummary);
         } else if (currentUser.roles().contains("STUDENT")) {
             if (currentUser.classId() == null) {
                 return Page.empty(pageable);
             }
-            return eventRepository.findPublishedForClass(currentUser.classId(), q, pageable)
-                    .map(this::toSummary);
+            Page<Event> page = eventRepository.findPublishedForClass(currentUser.classId(), q, activityType, pageable);
+            if (page.isEmpty()) {
+                return Page.empty(pageable);
+            }
+
+            List<UUID> eventIds = page.getContent().stream().map(Event::getId).toList();
+            Map<UUID, String> statusMap = registrationRepository.findActiveByStudentAndEventIds(currentUser.userId(), eventIds)
+                    .stream()
+                    .collect(Collectors.toMap(
+                            Registration::getEventId,
+                            r -> r.getStatus().name(),
+                            (existing, replacement) -> existing
+                    ));
+
+            return page.map(e -> toSummary(e, statusMap.get(e.getId())));
         } else {
             return Page.empty(pageable);
         }
     }
 
+    @Transactional(readOnly = true)
+    public Page<EventSummary> listEvents(String q, Pageable pageable) {
+        return listEvents(q, null, pageable);
+    }
+
     public EventDetail toDetail(Event e) {
+        return toDetail(e, null);
+    }
+
+    public EventDetail toDetail(Event e, String myRegistrationStatus) {
         Instant now = Instant.now(clock);
         int remainingQuota = Math.max(0, e.getQuotaTotal() - e.getRegisteredCount());
         boolean registrationOpen = (e.getStatus() == EventStatus.PUBLISHED)
@@ -271,7 +306,7 @@ public class EventService {
                 remainingQuota,
                 registrationOpen,
                 attendanceOpen,
-                null,
+                myRegistrationStatus,
                 e.getStatus(),
                 e.getActivityType(),
                 e.getActivityPoints(),
@@ -284,6 +319,10 @@ public class EventService {
     }
 
     public EventSummary toSummary(Event e) {
+        return toSummary(e, null);
+    }
+
+    public EventSummary toSummary(Event e, String myRegistrationStatus) {
         Instant now = Instant.now(clock);
         int remainingQuota = Math.max(0, e.getQuotaTotal() - e.getRegisteredCount());
         boolean registrationOpen = (e.getStatus() == EventStatus.PUBLISHED)
@@ -304,7 +343,7 @@ public class EventService {
                 remainingQuota,
                 registrationOpen,
                 attendanceOpen,
-                null,
+                myRegistrationStatus,
                 e.getStatus(),
                 e.getActivityType(),
                 e.getActivityPoints()

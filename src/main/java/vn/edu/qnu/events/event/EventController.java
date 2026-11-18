@@ -51,9 +51,10 @@ public class EventController {
     @GetMapping
     public Page<EventSummary> list(
             @RequestParam(required = false) String q,
+            @RequestParam(required = false) String activityType,
             @PageableDefault(size = 20) Pageable pageable
     ) {
-        return eventService.listEvents(q, pageable);
+        return eventService.listEvents(q, activityType, pageable);
     }
 
     @GetMapping("/{id}")
