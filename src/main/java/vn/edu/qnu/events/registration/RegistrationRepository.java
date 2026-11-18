@@ -6,6 +6,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -55,5 +57,15 @@ public interface RegistrationRepository extends JpaRepository<Registration, UUID
     int reserveSeat(@Param("eventId") UUID eventId);
 
     long countByEventId(UUID eventId);
+
+    @Query("""
+        SELECT r FROM Registration r
+        WHERE r.studentId = :studentId AND r.eventId IN :eventIds
+        AND r.status IN ('REGISTERED', 'WAITING_LIST')
+    """)
+    List<Registration> findActiveByStudentAndEventIds(
+            @Param("studentId") UUID studentId,
+            @Param("eventIds") Collection<UUID> eventIds
+    );
 }
 

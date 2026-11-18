@@ -56,7 +56,7 @@ Mọi phản hồi lỗi (HTTP status ≥ 400) đều trả về cấu trúc Api
 | `PUT` | `/api/v1/events/{id}` | EVENT_OWNER | `EventUpsert + version` | 200 `EventDetail` | Chỉ sửa khi `DRAFT`; lệch version → 409 |
 | `GET` | `/api/v1/events/{id}/preview` | EVENT_OWNER | — | 200 `{event: EventDetail, previewVersion: number}` | Đánh dấu `previewed_version = version` |
 | `POST` | `/api/v1/events/{id}/publish` | EVENT_OWNER | `{confirm: true, previewVersion: number}` | 200 `EventDetail` (status: `PUBLISHED`) | Kiểm tra đã preview và version khớp |
-| `GET` | `/api/v1/events` | STUDENT / EVENT_OWNER | Query params: `q`, `page`, `size` | 200 `Page<EventSummary>` | Sinh viên: chỉ thấy `PUBLISHED` và đúng lớp; Chủ sự kiện: thấy sự kiện của mình |
+| `GET` | `/api/v1/events` | STUDENT / EVENT_OWNER | Query params: `q`, `activityType`, `page`, `size` | 200 `Page<EventSummary>` | Sinh viên: chỉ thấy `PUBLISHED` và đúng lớp; Chủ sự kiện: thấy sự kiện của mình |
 | `GET` | `/api/v1/events/{id}` | STUDENT / EVENT_OWNER | — | 200 `EventDetail` | Không đủ quyền xem → 404 |
 | `POST` | `/api/v1/events/{id}/registrations` | STUDENT | — | 201 (mới) / 200 (lặp lại) `{id, status, alreadyRegistered}` | Giữ suất nguyên tử, chống race condition |
 | `GET` | `/api/v1/events/{id}/registrations/me` | STUDENT | — | 200 `{id, status, registeredAt}` | Trả về trạng thái đăng ký của bản thân |
