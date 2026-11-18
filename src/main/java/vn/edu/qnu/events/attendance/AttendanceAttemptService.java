@@ -22,6 +22,7 @@ public class AttendanceAttemptService {
     public AttendanceAttempt recordAttempt(
             UUID eventId,
             UUID studentId,
+            String method,
             String idempotencyKey,
             String outcome,
             String reasonCode,
@@ -29,11 +30,12 @@ public class AttendanceAttemptService {
             int httpStatus,
             String responseBody
     ) {
+        String resolvedMethod = (method != null && !method.isBlank()) ? method : "DYNAMIC_QR";
         AttendanceAttempt attempt = new AttendanceAttempt(
                 UUID.randomUUID(),
                 eventId,
                 studentId,
-                "DYNAMIC_QR",
+                resolvedMethod,
                 idempotencyKey,
                 outcome,
                 reasonCode,
@@ -43,6 +45,30 @@ public class AttendanceAttemptService {
                 Instant.now(clock)
         );
         return attemptRepository.save(attempt);
+    }
+
+    @Transactional
+    public AttendanceAttempt recordAttempt(
+            UUID eventId,
+            UUID studentId,
+            String idempotencyKey,
+            String outcome,
+            String reasonCode,
+            boolean counted,
+            int httpStatus,
+            String responseBody
+    ) {
+        return recordAttempt(
+                eventId,
+                studentId,
+                "DYNAMIC_QR",
+                idempotencyKey,
+                outcome,
+                reasonCode,
+                counted,
+                httpStatus,
+                responseBody
+        );
     }
 }
 
