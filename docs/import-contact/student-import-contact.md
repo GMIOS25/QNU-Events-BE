@@ -154,6 +154,42 @@ API nhận tham số `importMode` (mặc định là `UPSERT`):
 
 ---
 
+## 5. Quy tắc Mapping Khoa / Ngành / Lớp & Xử lý Giá trị Không khớp
+
+Dựa trên đặc thù dữ liệu thật của QNU trong `csv.zip` và yêu cầu `REQ-DATA-004`, `REQ-DATA-008`, `REQ-DATA-010`:
+
+### 5.1. Thứ tự Ưu tiên Phân giải Lớp sinh hoạt (`class_id` Resolution)
+
+Mỗi dòng sinh viên bắt buộc phải ánh xạ được tới một bản ghi `org_class` duy nhất trong CSDL theo thứ tự sau:
+
+1. **Bước 1 — Tra cứu theo `ClassId` (UUID)**:
+   - Nếu cột `ClassId` khác rỗng: kiểm tra định dạng UUID và tìm trong `org_class.id`.
+   - Nếu không tìm thấy trong `org_class` → Báo lỗi `ROW_CLASS_NOT_FOUND` tại trường `ClassId`.
+2. **Bước 2 — Tra cứu theo `ClassStudentName` / `ClassCode`**:
+   - Nếu `ClassId` rỗng nhưng `ClassStudentName` (hoặc `ClassCode`) khác rỗng:
+     - Chuẩn hóa chuỗi: `trim()`, gộp khoảng trắng thừa liên tiếp thành 1 dấu cách, chuẩn hóa Unicode dựng sẵn (**NFC**).
+     - Tra cứu không phân biệt hoa thường (`LOWER`) theo `org_class.code` trước, sau đó theo `org_class.name`.
+     - Nếu không tìm thấy → Báo lỗi `ROW_CLASS_NOT_FOUND` tại trường `ClassStudentName`.
+   - Nếu **cả `ClassId` và `ClassStudentName` đều có giá trị**: cả hai phải trỏ tới cùng một bản ghi `org_class`. Nếu lệch nhau → Báo lỗi `ROW_CLASS_ID_NAME_MISMATCH`.
+3. **Bước 3 — Trường hợp thiếu cả `ClassId` và `ClassStudentName`**:
+   - Thực tế trong `student/sv_k46..k49.csv` có **94/6.435 dòng** thiếu tên lớp và `ClassId` (trong đó 48 dòng rỗng cả `StudentName`, và 46 dòng là sinh viên đã `Thôi học` / `Buộc thôi học` mất thông tin lớp).
+   - Quy tắc: Vì quyền xem sự kiện (`QE-66`), đăng ký (`QE-71`) và phạm vi BCS (`QE-43`) đều phụ thuộc vào `class_id`, **dòng thiếu thông tin lớp bắt buộc bị từ chối với lỗi `ROW_MISSING_CLASS_REFERENCE`** (`REQ-DATA-004`).
+
+### 5.2. Kiểm tra Chéo Quan hệ Phân cấp `Khoa ↔ Ngành ↔ Lớp ↔ MSSV` (Cross-Field Validation)
+
+Khi đã xác định được lớp đích `targetClass` thuộc bảng `org_class`:
+
+| Trường kiểm tra chéo | Quy tắc đối chiếu | Xử lý khi không khớp |
+|---|---|---|
+| **Khoa (`DepartmentCode` / `DepartmentName`) vs Lớp (`targetClass`)** | Nếu dòng CSV có cung cấp `DepartmentName` (sau khi bỏ tiền tố `[mã] `, ví dụ `[105] Khoa Công nghệ thông tin` → `Khoa Công nghệ thông tin`) hoặc `DepartmentCode`: phải khớp với khoa của `targetClass` (`org_class.faculty_name` / `department_code`). | **Lỗi dòng (`ERROR`)**: `ROW_DEPARTMENT_CLASS_MISMATCH` — Từ chối nhập dòng này vì lớp thuộc khoa khác với khoa khai báo trên dòng sinh viên. |
+| **Ngành (`SpecializationCode`) vs Lớp (`targetClass`)** | Nếu dòng CSV có `SpecializationCode` (ví dụ `105`) và lớp đích đã gắn mã ngành: hai mã ngành phải khớp nhau (hoặc `SpecializationCode` 4 số `1051` là chuyên ngành con của ngành `105` của lớp). | **Lỗi dòng (`ERROR`)**: `ROW_SPECIALIZATION_CLASS_MISMATCH` — Từ chối nhập dòng. |
+| **Khóa học (`IntakeNo` / 2 số đầu MSSV) vs Lớp (`targetClass.cohort_year`)** | Khóa suy từ 2 số đầu của `StudentID` (`KK`) quy đổi ra `cohortYear = 1977 + KK` (hoặc `IntakeNo = KK`). Nếu lệch với `targetClass.cohort_year` (ví dụ SV khóa 46 xếp vào lớp K47 do học ghép/lưu ban): | **Cảnh báo (`WARNING`)**: `WARN_COHORT_CLASS_DIFF` — Vẫn cho phép nhập vào lớp chỉ định nếu lớp tồn tại, nhưng gắn cảnh báo để Admin rà soát. |
+| **3 chữ số ngành trong MSSV (`StudentID[3..5]`) vs `SpecializationCode` của Lớp** | Thông thường `StudentID.substring(3, 6)` trùng với `SpecializationCode` của lớp. Nếu khác (ví dụ sinh viên chuyển ngành hoặc ngành mới `412`, `502`, `503` ở K49): | **Cảnh báo (`WARNING`)**: `WARN_STUDENT_ID_SPEC_DIFF` — Không chặn import nếu `ClassId`/`ClassStudentName` đã tồn tại hợp lệ trong `org_class`. |
+| **Thiếu `IntakeProgramId` trong `khoahoc.csv`** | Trong `sv_k49.csv` có 1.730 dòng có `DataIssues = "Chưa có chương trình theo ngành/khóa tương ứng trong khoahoc.csv"`. | **Bỏ qua / Cảnh báo (`WARNING`)**: `WARN_MISSING_INTAKE_PROGRAM` — Hệ thống QNU-Events không tính điểm học phần nên việc thiếu CTĐT trong `khoahoc.csv` **không chặn** import sinh viên. |
+| **Đổi lớp (`class_id`) của sinh viên đã tồn tại (`REQ-DATA-010`)** | Nếu sinh viên đã tồn tại trong DB với `class_id = A`, mà tệp CSV cập nhật sang `class_id = B` (`A ≠ B`):<br>• Nếu cờ `allowClassTransfer=false` (mặc định an toàn): từ chối dòng với lỗi `ROW_CLASS_CHANGE_REQUIRES_CONFIRMATION`.<br>• Nếu Admin bật `allowClassTransfer=true`: cho phép cập nhật `class_id = B` và bắt buộc ghi ` AuditLog` (`STUDENT_CLASS_TRANSFER`). | Bảo đảm tuân thủ `REQ-DATA-010` (không âm thầm làm thay đổi phạm vi BCS hoặc audience của sinh viên). |
+
+---
+
 ## 6. Đặc tả Hợp đồng API & Cấu trúc Báo cáo Lỗi (Error Reporting Contract)
 
 ### 6.1. Endpoint Import Sinh viên (`QE-26` & `QE-62`)
@@ -307,3 +343,14 @@ Khi tệp hợp lệ về mặt cấu trúc (dù có dòng lỗi hay không), AP
 
 ---
 
+## 8. Tiêu chí Nghiệm thu Tự động cho `QE-26` (Automated Test Matrix)
+
+| Mã Test | Kịch bản kiểm thử (Given / When / Then) | Kết quả mong đợi |
+|---|---|---|
+| `TC-IMP-STU-01` | `SYSTEM_ADMIN` tải lên `student-valid-sample.csv` lần đầu (`UPSERT`) | HTTP 200; `createdCount=10`, `errorCount=0`; 10 bản ghi `app_user` + `user_role(STUDENT)` trong DB; `password_hash` bắt đầu bằng `$2a$`/`$2b$`. |
+| `TC-IMP-STU-02` | `SYSTEM_ADMIN` tải lại đúng `student-valid-sample.csv` lần thứ 2 (`UPSERT`) | HTTP 200; `createdCount=0, updatedCount=0, unchangedCount=10, errorCount=0`; tổng số dòng trong `app_user` không tăng thêm (`REQ-DATA-007`). |
+| `TC-IMP-STU-03` | `SYSTEM_ADMIN` tải lên `student-invalid-sample.csv` (`UPSERT`, Partial Import) | HTTP 200; `createdCount=4, errorCount=8`; 8 phần tử trong `errors[]` khớp đúng `rowNumber`, `field`, `errorCode`; 4 dòng hợp lệ vẫn được lưu vào DB (`REQ-DATA-005`). |
+| `TC-IMP-STU-04` | `SYSTEM_ADMIN` tải lên `student-invalid-sample.csv` với `dryRun=true` (`QE-62`) | HTTP 200; báo cáo trả về `createdCount=4, errorCount=8` nhưng DB không có bản ghi nào được thêm mới. |
+| `TC-IMP-STU-05` | Tải lên tệp thiếu cột `StudentID` hoặc tệp `.pdf`/`.exe` | HTTP 400 `FILE_MISSING_REQUIRED_COLUMNS` hoặc HTTP 415 `FILE_UNSUPPORTED_MEDIA_TYPE`; không thay đổi DB (`REQ-DATA-003`). |
+| `TC-IMP-STU-06` | `EVENT_OWNER` hoặc `STUDENT` gọi API import | HTTP 403 `FORBIDDEN`; không thay đổi DB (`REQ-DATA-002`). |
+| `TC-IMP-STU-07` | Sinh viên đã tồn tại ở lớp A, import tệp đổi sang lớp B khi `allowClassTransfer=false` | Dòng đó bị từ chối với `ROW_CLASS_CHANGE_REQUIRES_CONFIRMATION`; `class_id` trong DB giữ nguyên là lớp A (`REQ-DATA-010`). |
