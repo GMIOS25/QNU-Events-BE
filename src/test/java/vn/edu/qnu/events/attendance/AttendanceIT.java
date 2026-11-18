@@ -659,5 +659,336 @@ class AttendanceIT {
                 .orElseThrow();
         assertThat(attempt.getResponseBody()).doesNotContain(token);
     }
+
+    @Test
+    @DisplayName("18. Lỗi điểm danh trả về đầy đủ metadata remainingAttempts, attemptCount và canRetry")
+    void failedAttemptReturnsRemainingAttemptsMetadata() throws Exception {
+        Instant now = Instant.now();
+        Event event = createEventWithAttendanceWindow(
+                now.minus(10, ChronoUnit.MINUTES), now.plus(1, ChronoUnit.HOURS)
+        );
+        registerStudent(event.getId(), student1Id);
+
+        // Lần 1 thử sai
+        mockMvc.perform(post("/api/v1/events/" + event.getId() + "/attendance/qr")
+                        .header("Authorization", "Bearer " + student1Token)
+                        .header("Idempotency-Key", "fail-metadata-1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"token\":\"qr1.invalid.token\"}"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value("QR_MALFORMED"))
+                .andExpect(jsonPath("$.details.method").value("DYNAMIC_QR"))
+                .andExpect(jsonPath("$.details.attemptCount").value(1))
+                .andExpect(jsonPath("$.details.maxAttempts").value(3))
+                .andExpect(jsonPath("$.details.remainingAttempts").value(2))
+                .andExpect(jsonPath("$.details.canRetry").value(true));
+
+        // Lần 2 thử sai
+        mockMvc.perform(post("/api/v1/events/" + event.getId() + "/attendance/qr")
+                        .header("Authorization", "Bearer " + student1Token)
+                        .header("Idempotency-Key", "fail-metadata-2")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"token\":\"qr1.invalid.token.2\"}"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.details.attemptCount").value(2))
+                .andExpect(jsonPath("$.details.remainingAttempts").value(1))
+                .andExpect(jsonPath("$.details.canRetry").value(true));
+
+        // Lần 3 thử sai -> hết lượt (remainingAttempts = 0, canRetry = false)
+        mockMvc.perform(post("/api/v1/events/" + event.getId() + "/attendance/qr")
+                        .header("Authorization", "Bearer " + student1Token)
+                        .header("Idempotency-Key", "fail-metadata-3")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"token\":\"qr1.invalid.token.3\"}"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.details.attemptCount").value(3))
+                .andExpect(jsonPath("$.details.remainingAttempts").value(0))
+                .andExpect(jsonPath("$.details.canRetry").value(false));
+
+        // Lần 4 thử lại -> 409 ATTEMPT_LIMIT_REACHED và canRetry = false
+        mockMvc.perform(post("/api/v1/events/" + event.getId() + "/attendance/qr")
+                        .header("Authorization", "Bearer " + student1Token)
+                        .header("Idempotency-Key", "fail-metadata-4")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"token\":\"qr1.invalid.token.4\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("ATTEMPT_LIMIT_REACHED"))
+                .andExpect(jsonPath("$.details.remainingAttempts").value(0))
+                .andExpect(jsonPath("$.details.canRetry").value(false));
+    }
+
+    @Test
+    @DisplayName("19. QE-33: Offline Sync bị từ chối 409 ATTEMPT_LIMIT_REACHED nếu sinh viên đã hết 3 lần thử online")
+    void offlineSyncRejectedWhenAttemptLimitReached() throws Exception {
+        Instant now = Instant.now();
+        Event event = createEventWithAttendanceWindow(
+                now.minus(10, ChronoUnit.MINUTES), now.plus(1, ChronoUnit.HOURS)
+        );
+        registerStudent(event.getId(), student2Id);
+
+        // Tạo 3 lần thử sai online trước đó
+        for (int i = 1; i <= 3; i++) {
+            mockMvc.perform(post("/api/v1/events/" + event.getId() + "/attendance/qr")
+                            .header("Authorization", "Bearer " + student2Token)
+                            .header("Idempotency-Key", "exhaust-online-" + i)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"token\":\"qr1.fake.attempt\"}"))
+                    .andExpect(status().isUnprocessableEntity());
+        }
+
+        // Offline sync gửi lên sau đó -> vẫn bị chặn với ATTEMPT_LIMIT_REACHED
+        String validToken = qrTokenService.issue(event.getId(), now, event.getQrRotationSeconds());
+        mockMvc.perform(post("/api/v1/events/" + event.getId() + "/attendance/offline-sync")
+                        .header("Authorization", "Bearer " + student2Token)
+                        .header("Idempotency-Key", "offline-sync-blocked-" + UUID.randomUUID())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"token\":\"" + validToken + "\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("ATTEMPT_LIMIT_REACHED"))
+                .andExpect(jsonPath("$.details.remainingAttempts").value(0))
+                .andExpect(jsonPath("$.details.canRetry").value(false));
+    }
+
+    @Test
+    @DisplayName("20. QE-33: Offline Sync chống trùng với kết quả Online (Conflict Resolution - ALREADY_CHECKED_IN)")
+    void offlineSyncRejectedIfAlreadyCheckedInOnline() throws Exception {
+        Instant now = Instant.now();
+        Event event = createEventWithAttendanceWindow(
+                now.minus(10, ChronoUnit.MINUTES), now.plus(1, ChronoUnit.HOURS)
+        );
+        registerStudent(event.getId(), student1Id);
+
+        String validOnlineToken = qrTokenService.issue(event.getId(), now, event.getQrRotationSeconds());
+        // Điểm danh Online thành công
+        mockMvc.perform(post("/api/v1/events/" + event.getId() + "/attendance/qr")
+                        .header("Authorization", "Bearer " + student1Token)
+                        .header("Idempotency-Key", "online-success-" + UUID.randomUUID())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"token\":\"" + validOnlineToken + "\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("ACCEPTED"));
+
+        // Gói Offline Sync gửi lên sau đó -> trả về ALREADY_CHECKED_IN và không ghi đè
+        mockMvc.perform(post("/api/v1/events/" + event.getId() + "/attendance/offline-sync")
+                        .header("Authorization", "Bearer " + student1Token)
+                        .header("Idempotency-Key", "offline-sync-conflict-" + UUID.randomUUID())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"token\":\"" + validOnlineToken + "\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("ALREADY_CHECKED_IN"));
+
+        // Vẫn chỉ có đúng 1 bản ghi attendance với method DYNAMIC_QR ban đầu
+        Attendance attendance = attendanceRepository
+                .findByEventIdAndStudentIdAndStatus(event.getId(), student1Id, "ACCEPTED")
+                .orElseThrow();
+        assertThat(attendance.getMethod()).isEqualTo("DYNAMIC_QR");
+    }
+
+    @Test
+    @DisplayName("21. QE-33: Offline Sync thành công ghi nhận method OFFLINE_QR và Idempotent khi retry")
+    void offlineSyncSuccessfulAndIdempotent() throws Exception {
+        Instant now = Instant.now();
+        Event event = createEventWithAttendanceWindow(
+                now.minus(10, ChronoUnit.MINUTES), now.plus(1, ChronoUnit.HOURS)
+        );
+        registerStudent(event.getId(), student1Id);
+
+        String token = qrTokenService.issue(event.getId(), now, event.getQrRotationSeconds());
+        String idempotencyKey = "offline-sync-success-" + UUID.randomUUID();
+
+        // Gửi lần 1 -> 200 ACCEPTED
+        MvcResult res1 = mockMvc.perform(post("/api/v1/events/" + event.getId() + "/attendance/offline-sync")
+                        .header("Authorization", "Bearer " + student1Token)
+                        .header("Idempotency-Key", idempotencyKey)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"token\":\"" + token + "\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("ACCEPTED"))
+                .andReturn();
+
+        // Kiểm tra database lưu đúng method OFFLINE_QR
+        Attendance attendance = attendanceRepository
+                .findByEventIdAndStudentIdAndStatus(event.getId(), student1Id, "ACCEPTED")
+                .orElseThrow();
+        assertThat(attendance.getMethod()).isEqualTo("OFFLINE_QR");
+
+        // Gửi lại cùng idempotency key (mô phỏng retry truyền tải mạng) -> trả kết quả cũ, không tạo thêm bản ghi
+        MvcResult res2 = mockMvc.perform(post("/api/v1/events/" + event.getId() + "/attendance/offline-sync")
+                        .header("Authorization", "Bearer " + student1Token)
+                        .header("Idempotency-Key", idempotencyKey)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"token\":\"" + token + "\"}"))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        assertThat(res1.getResponse().getContentAsString()).isEqualTo(res2.getResponse().getContentAsString());
+        assertThat(attendanceRepository.countByEventIdAndStatus(event.getId(), "ACCEPTED")).isEqualTo(1L);
+    }
+
+    @Test
+    @DisplayName("22. Boundary Mốc 0: Sinh viên chưa điểm danh -> Counted attempts = 0 và chưa có bản ghi attendance")
+    void boundaryTest_ZeroAttempt_InitialState() {
+        Instant now = Instant.now();
+        Event event = createEventWithAttendanceWindow(
+                now.minus(10, ChronoUnit.MINUTES), now.plus(1, ChronoUnit.HOURS)
+        );
+        registerStudent(event.getId(), student1Id);
+
+        long countedAttempts = attemptRepository.countByEventIdAndStudentIdAndCountedTrue(event.getId(), student1Id);
+        assertThat(countedAttempts).isEqualTo(0L);
+
+        boolean attended = attendanceRepository.existsByEventIdAndStudentIdAndStatus(event.getId(), student1Id, "ACCEPTED");
+        assertThat(attended).isFalse();
+    }
+
+    @Test
+    @DisplayName("23. Boundary Mốc 1 -> 2: Lần 1 thử sai, Lần 2 thử đúng -> 200 ACCEPTED và ghi nhận thành công")
+    void boundaryTest_FailOnce_ThenSuccessOnSecondAttempt() throws Exception {
+        Instant now = Instant.now();
+        Event event = createEventWithAttendanceWindow(
+                now.minus(10, ChronoUnit.MINUTES), now.plus(1, ChronoUnit.HOURS)
+        );
+        registerStudent(event.getId(), student1Id);
+
+        // Lần 1: Thử sai với token lỗi -> 422 QR_MALFORMED, counted = 1, remaining = 2
+        mockMvc.perform(post("/api/v1/events/" + event.getId() + "/attendance/qr")
+                        .header("Authorization", "Bearer " + student1Token)
+                        .header("Idempotency-Key", "boundary-fail-1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"token\":\"qr1.malformed.token\"}"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.details.remainingAttempts").value(2))
+                .andExpect(jsonPath("$.details.canRetry").value(true));
+
+        assertThat(attemptRepository.countByEventIdAndStudentIdAndCountedTrue(event.getId(), student1Id)).isEqualTo(1L);
+
+        // Lần 2: Thử lại với token hợp lệ -> Phải được chấp nhận 200 ACCEPTED!
+        String validToken = qrTokenService.issue(event.getId(), now, event.getQrRotationSeconds());
+        mockMvc.perform(post("/api/v1/events/" + event.getId() + "/attendance/qr")
+                        .header("Authorization", "Bearer " + student1Token)
+                        .header("Idempotency-Key", "boundary-success-2")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"token\":\"" + validToken + "\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("ACCEPTED"));
+
+        assertThat(attendanceRepository.existsByEventIdAndStudentIdAndStatus(event.getId(), student1Id, "ACCEPTED")).isTrue();
+        // Counted attempts vẫn là 1 (lần thành công không bị phạt)
+        assertThat(attemptRepository.countByEventIdAndStudentIdAndCountedTrue(event.getId(), student1Id)).isEqualTo(1L);
+    }
+
+    @Test
+    @DisplayName("24. Boundary Mốc 2 -> 3: Lần 1 & 2 thử sai, Lần 3 (lượt cuối) thử đúng -> 200 ACCEPTED")
+    void boundaryTest_FailTwice_ThenSuccessOnThirdAttempt() throws Exception {
+        Instant now = Instant.now();
+        Event event = createEventWithAttendanceWindow(
+                now.minus(10, ChronoUnit.MINUTES), now.plus(1, ChronoUnit.HOURS)
+        );
+        registerStudent(event.getId(), student1Id);
+
+        // Lần 1 sai
+        mockMvc.perform(post("/api/v1/events/" + event.getId() + "/attendance/qr")
+                        .header("Authorization", "Bearer " + student1Token)
+                        .header("Idempotency-Key", "boundary-fail-2-1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"token\":\"qr1.invalid.1\"}"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.details.remainingAttempts").value(2));
+
+        // Lần 2 sai
+        mockMvc.perform(post("/api/v1/events/" + event.getId() + "/attendance/qr")
+                        .header("Authorization", "Bearer " + student1Token)
+                        .header("Idempotency-Key", "boundary-fail-2-2")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"token\":\"qr1.invalid.2\"}"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.details.remainingAttempts").value(1));
+
+        assertThat(attemptRepository.countByEventIdAndStudentIdAndCountedTrue(event.getId(), student1Id)).isEqualTo(2L);
+
+        // Lần 3 (lượt cuối cùng): Thử đúng -> 200 ACCEPTED!
+        String validToken = qrTokenService.issue(event.getId(), now, event.getQrRotationSeconds());
+        mockMvc.perform(post("/api/v1/events/" + event.getId() + "/attendance/qr")
+                        .header("Authorization", "Bearer " + student1Token)
+                        .header("Idempotency-Key", "boundary-success-2-3")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"token\":\"" + validToken + "\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("ACCEPTED"));
+
+        assertThat(attendanceRepository.existsByEventIdAndStudentIdAndStatus(event.getId(), student1Id, "ACCEPTED")).isTrue();
+        assertThat(attemptRepository.countByEventIdAndStudentIdAndCountedTrue(event.getId(), student1Id)).isEqualTo(2L);
+    }
+
+    @Test
+    @DisplayName("25. Boundary Mốc 3 -> 4: Sai cả 3 lần -> Lần thứ 4 (kể cả gửi mã đúng) bị từ chối 409 ATTEMPT_LIMIT_REACHED")
+    void boundaryTest_FailThreeTimes_FourthAttemptBlocked() throws Exception {
+        Instant now = Instant.now();
+        Event event = createEventWithAttendanceWindow(
+                now.minus(10, ChronoUnit.MINUTES), now.plus(1, ChronoUnit.HOURS)
+        );
+        registerStudent(event.getId(), student1Id);
+
+        // Lần 1, 2, 3 đều sai
+        for (int i = 1; i <= 3; i++) {
+            mockMvc.perform(post("/api/v1/events/" + event.getId() + "/attendance/qr")
+                            .header("Authorization", "Bearer " + student1Token)
+                            .header("Idempotency-Key", "boundary-fail-3-" + i)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"token\":\"qr1.fake." + i + "\"}"))
+                    .andExpect(status().isUnprocessableEntity());
+        }
+        assertThat(attemptRepository.countByEventIdAndStudentIdAndCountedTrue(event.getId(), student1Id)).isEqualTo(3L);
+
+        // Lần 4: Gửi token hợp lệ nhưng đã chạm trần 3 lần vi phạm -> 409 ATTEMPT_LIMIT_REACHED
+        String validToken = qrTokenService.issue(event.getId(), now, event.getQrRotationSeconds());
+        mockMvc.perform(post("/api/v1/events/" + event.getId() + "/attendance/qr")
+                        .header("Authorization", "Bearer " + student1Token)
+                        .header("Idempotency-Key", "boundary-attempt-4")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"token\":\"" + validToken + "\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("ATTEMPT_LIMIT_REACHED"))
+                .andExpect(jsonPath("$.details.remainingAttempts").value(0))
+                .andExpect(jsonPath("$.details.canRetry").value(false));
+
+        // Không có bản ghi attendance hợp lệ nào được tạo
+        assertThat(attendanceRepository.existsByEventIdAndStudentIdAndStatus(event.getId(), student1Id, "ACCEPTED")).isFalse();
+        // Counted attempts vẫn chỉ là 3 (lần thứ 4 bị chặn ở vòng ngoài, counted = false)
+        assertThat(attemptRepository.countByEventIdAndStudentIdAndCountedTrue(event.getId(), student1Id)).isEqualTo(3L);
+    }
+
+    @Test
+    @DisplayName("26. Boundary Cross-channel: Lần 1 thử QR sai, Lần 2 thử Offline Sync sai -> Tổng counted attempts gộp chung = 2")
+    void boundaryTest_CrossChannel_SharedAttemptLimit() throws Exception {
+        Instant now = Instant.now();
+        Event event = createEventWithAttendanceWindow(
+                now.minus(10, ChronoUnit.MINUTES), now.plus(1, ChronoUnit.HOURS)
+        );
+        registerStudent(event.getId(), student1Id);
+
+        // Lần 1: Thử Online QR sai
+        mockMvc.perform(post("/api/v1/events/" + event.getId() + "/attendance/qr")
+                        .header("Authorization", "Bearer " + student1Token)
+                        .header("Idempotency-Key", "cross-fail-online")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"token\":\"qr1.invalid.online\"}"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.details.method").value("DYNAMIC_QR"))
+                .andExpect(jsonPath("$.details.remainingAttempts").value(2));
+
+        // Lần 2: Thử Offline Sync sai
+        mockMvc.perform(post("/api/v1/events/" + event.getId() + "/attendance/offline-sync")
+                        .header("Authorization", "Bearer " + student1Token)
+                        .header("Idempotency-Key", "cross-fail-offline")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"token\":\"qr1.invalid.offline\"}"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.details.method").value("OFFLINE_QR"))
+                .andExpect(jsonPath("$.details.remainingAttempts").value(1));
+
+        // Kiểm tra database: 2 attempt vi phạm thuộc 2 method khác nhau nhưng gộp chung cho sinh viên trong event đó
+        assertThat(attemptRepository.countByEventIdAndStudentIdAndCountedTrue(event.getId(), student1Id)).isEqualTo(2L);
+    }
 }
 
