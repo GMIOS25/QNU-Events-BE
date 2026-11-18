@@ -46,6 +46,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -510,8 +511,9 @@ class RegistrationIT {
         eventPoolRepository.save(new EventPool(
                 event.getId(), PoolScopeType.LOP, k49Class1Id.toString(), 1, 1, false, false));
 
-        String tokenA = createStudentToken("race-pool-a", k49Class1Id);
-        String tokenB = createStudentToken("race-pool-b", k49Class1Id);
+        String runTag = UUID.randomUUID().toString().substring(0, 8);
+        String tokenA = createStudentToken("race-pool-a-" + runTag, k49Class1Id);
+        String tokenB = createStudentToken("race-pool-b-" + runTag, k49Class1Id);
 
         CountDownLatch startLatch = new CountDownLatch(1);
         ExecutorService executor = Executors.newFixedThreadPool(2);
@@ -560,6 +562,114 @@ class RegistrationIT {
         EventPool pool = eventPoolRepository.findByEventIdOrderByPriorityAsc(event.getId()).get(0);
         assertThat(pool.getUsed()).isEqualTo(1);
         assertThat(registrationRepository.countByEventId(event.getId())).isEqualTo(1L);
+    }
+
+    @Test
+    @DisplayName("16. Hủy đăng ký khi còn dưới 12h trước giờ bắt đầu -> 409 từ chối")
+    void cancelInside12hWindowRejected() throws Exception {
+        Instant now = Instant.now();
+        Instant startAt = now.plus(6, ChronoUnit.HOURS); // chỉ còn 6h < hạn 12h
+        Event event = new Event(
+                UUID.randomUUID(), ownerId, "Sự kiện sát giờ hủy", "Mô tả", "Hội trường B",
+                startAt, startAt.plus(2, ChronoUnit.HOURS), now.plus(3, ChronoUnit.HOURS),
+                now.minus(15, ChronoUnit.MINUTES), startAt.plus(2, ChronoUnit.HOURS).plus(30, ChronoUnit.MINUTES),
+                AttendanceMethod.DYNAMIC_QR, 10, 3, 10, "Workshop", 5, Set.of(k49Class1Id)
+        );
+        event.setStatus(EventStatus.PUBLISHED);
+        event.setPublishedAt(now);
+        eventRepository.saveAndFlush(event);
+
+        mockMvc.perform(post("/api/v1/events/" + event.getId() + "/registrations")
+                        .header("Authorization", "Bearer " + student1Token))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(delete("/api/v1/events/" + event.getId() + "/registrations")
+                        .header("Authorization", "Bearer " + student1Token))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("REGISTRATION_CLOSED"));
+
+        // Registration vẫn nguyên trạng REGISTERED
+        UUID sv1Id = appUserRepository.findByLoginId("sv001").orElseThrow().getId();
+        Registration reg = registrationRepository.findActiveByEventAndStudent(event.getId(), sv1Id).orElseThrow();
+        assertThat(reg.getStatus()).isEqualTo(RegistrationStatus.REGISTERED);
+    }
+
+    @Test
+    @DisplayName("17. Hủy sớm: hoàn suất đúng pool + promote đúng thứ tự waiting list")
+    void cancelRefundsPoolAndPromotesInOrder() throws Exception {
+        Event event = createPublishedEvent("Sự kiện hủy và promote", 1, null, Set.of(k49Class1Id));
+        eventPoolRepository.save(new EventPool(
+                event.getId(), PoolScopeType.LOP, k49Class1Id.toString(), 1, 1, false, false));
+
+        mockMvc.perform(post("/api/v1/events/" + event.getId() + "/registrations")
+                        .header("Authorization", "Bearer " + student1Token))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.status").value("REGISTERED"));
+
+        mockMvc.perform(post("/api/v1/events/" + event.getId() + "/registrations")
+                        .header("Authorization", "Bearer " + student2Token))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.status").value("WAITING_LIST"));
+
+        String thirdToken = createStudentToken("promote-third-" + UUID.randomUUID().toString().substring(0, 8), k49Class1Id);
+        mockMvc.perform(post("/api/v1/events/" + event.getId() + "/registrations")
+                        .header("Authorization", "Bearer " + thirdToken))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.status").value("WAITING_LIST"));
+
+        // sv001 hủy -> 204
+        mockMvc.perform(delete("/api/v1/events/" + event.getId() + "/registrations")
+                        .header("Authorization", "Bearer " + student1Token))
+                .andExpect(status().isNoContent());
+
+        // sv002 (vào hàng chờ trước) được promote lên REGISTERED
+        UUID sv2Id = appUserRepository.findByLoginId("sv002").orElseThrow().getId();
+        Registration reg2 = registrationRepository.findActiveByEventAndStudent(event.getId(), sv2Id).orElseThrow();
+        assertThat(reg2.getStatus()).isEqualTo(RegistrationStatus.REGISTERED);
+        assertThat(reg2.getWaitingAt()).isNull();
+
+        // Tổng thể: 1 CANCELLED + 1 REGISTERED + 1 WAITING_LIST
+        assertThat(registrationRepository.countByEventId(event.getId())).isEqualTo(3L);
+
+        // Pool nhận lại suất rồi cấp lại cho sv002: used vẫn = 1, tổng sự kiện = 1
+        EventPool pool = eventPoolRepository.findByEventIdOrderByPriorityAsc(event.getId()).get(0);
+        assertThat(pool.getUsed()).isEqualTo(1);
+        Event updated = eventRepository.findById(event.getId()).orElseThrow();
+        assertThat(updated.getRegisteredCount()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("18. Hủy khi đang WAITING_LIST: 404 khi chưa đăng ký, 204 khi đang chờ, không hoàn/promote suất")
+    void cancelFromWaitingListDoesNotRefundSeat() throws Exception {
+        Event event = createPublishedEvent("Sự kiện hủy khi đang chờ", 2, null, Set.of(k49Class1Id));
+        eventPoolRepository.save(new EventPool(
+                event.getId(), PoolScopeType.LOP, k49Class1Id.toString(), 1, 1, false, false));
+
+        mockMvc.perform(post("/api/v1/events/" + event.getId() + "/registrations")
+                        .header("Authorization", "Bearer " + student1Token))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.status").value("REGISTERED"));
+
+        // Chưa đăng ký mà hủy -> 404
+        mockMvc.perform(delete("/api/v1/events/" + event.getId() + "/registrations")
+                        .header("Authorization", "Bearer " + student2Token))
+                .andExpect(status().isNotFound());
+
+        // sv002 vào hàng chờ rồi hủy -> 204, không ảnh hưởng suất của sv001
+        mockMvc.perform(post("/api/v1/events/" + event.getId() + "/registrations")
+                        .header("Authorization", "Bearer " + student2Token))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.status").value("WAITING_LIST"));
+
+        mockMvc.perform(delete("/api/v1/events/" + event.getId() + "/registrations")
+                        .header("Authorization", "Bearer " + student2Token))
+                .andExpect(status().isNoContent());
+
+        EventPool pool = eventPoolRepository.findByEventIdOrderByPriorityAsc(event.getId()).get(0);
+        assertThat(pool.getUsed()).isEqualTo(1);
+        Event updated = eventRepository.findById(event.getId()).orElseThrow();
+        assertThat(updated.getRegisteredCount()).isEqualTo(1);
+        assertThat(registrationRepository.countByEventId(event.getId())).isEqualTo(2L);
     }
 }
 

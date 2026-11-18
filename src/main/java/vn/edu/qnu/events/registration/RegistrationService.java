@@ -19,6 +19,7 @@ import vn.edu.qnu.events.student.OrgClassRepository;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -276,5 +277,96 @@ public class RegistrationService {
                 .orElseThrow(() -> new ApiException(ErrorCode.NOT_FOUND));
 
         return new MyRegistrationResponse(reg.getId(), reg.getStatus().name(), reg.getCreatedAt());
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void cancel(UUID eventId) {
+        CurrentUser currentUser = CurrentUserProvider.require();
+        if (!currentUser.hasRole("STUDENT")) {
+            throw new ApiException(ErrorCode.FORBIDDEN);
+        }
+
+        UUID studentId = currentUser.userId();
+        Registration registration = registrationRepository.findActiveByEventAndStudent(eventId, studentId)
+                .orElseThrow(() -> new ApiException(ErrorCode.NOT_FOUND));
+
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new ApiException(ErrorCode.NOT_FOUND));
+
+        // FR-REG-011 + R9: server tính hạn hủy từ startAt thật, không tin client
+        Instant cancelDeadline = event.getStartAt().minus(12, ChronoUnit.HOURS);
+        Instant now = Instant.now(clock);
+        if (now.isAfter(cancelDeadline)) {
+            auditService.record(
+                    studentId,
+                    "STUDENT",
+                    "REGISTRATION_CANCEL",
+                    "REGISTRATION",
+                    registration.getId().toString(),
+                    "REJECTED",
+                    "CANCEL_DEADLINE_PASSED",
+                    Map.of("eventId", eventId.toString()),
+                    null
+            );
+            throw new ApiException(ErrorCode.REGISTRATION_CLOSED,
+                    "Đã quá hạn hủy đăng ký (trước giờ bắt đầu 12 giờ).");
+        }
+
+        boolean wasRegistered = registration.getStatus() == RegistrationStatus.REGISTERED;
+        UUID poolId = registration.getPoolId();
+        registration.setStatus(RegistrationStatus.CANCELLED);
+        registration.setUpdatedAt(now);
+
+        // Hoàn suất (BR-QTA-06): đúng pool đã cấp + tổng quota của sự kiện, rồi promote người chờ đầu tiên
+        if (wasRegistered) {
+            registrationRepository.releaseEventSeat(eventId);
+            if (poolId != null) {
+                eventPoolRepository.releaseSeat(poolId);
+                promoteFirstWaiting(eventId, poolId, now);
+            }
+        }
+
+        auditService.record(
+                studentId,
+                "STUDENT",
+                "REGISTRATION_CANCEL",
+                "REGISTRATION",
+                registration.getId().toString(),
+                "SUCCESS",
+                null,
+                Map.of("eventId", eventId.toString(), "wasRegistered", wasRegistered),
+                null
+        );
+    }
+
+    private void promoteFirstWaiting(UUID eventId, UUID poolId, Instant now) {
+        registrationRepository.findFirstWaitingByPoolId(poolId).ifPresent(next -> {
+            int poolClaimed = eventPoolRepository.claimSeat(poolId);
+            int eventClaimed = registrationRepository.reserveSeat(eventId);
+            if (poolClaimed != 1 || eventClaimed != 1) {
+                // Hết chỗ giữa chừng (hiếm): hoàn các lượt vừa giữ, người chờ ở lại hàng
+                if (poolClaimed == 1) {
+                    eventPoolRepository.releaseSeat(poolId);
+                }
+                if (eventClaimed == 1) {
+                    registrationRepository.releaseEventSeat(eventId);
+                }
+                return;
+            }
+            next.setStatus(RegistrationStatus.REGISTERED);
+            next.setWaitingAt(null);
+            next.setUpdatedAt(now);
+            auditService.record(
+                    next.getStudentId(),
+                    "STUDENT",
+                    "REGISTRATION_PROMOTE",
+                    "REGISTRATION",
+                    next.getId().toString(),
+                    "SUCCESS",
+                    "WAITING_PROMOTED",
+                    Map.of("eventId", eventId.toString(), "poolId", poolId.toString()),
+                    null
+            );
+        });
     }
 }

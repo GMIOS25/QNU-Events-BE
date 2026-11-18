@@ -73,6 +73,22 @@ public interface RegistrationRepository extends JpaRepository<Registration, UUID
             @Param("now") Instant now
     );
 
+    @Modifying
+    @Query(value = """
+        UPDATE events
+        SET registered_count = registered_count - 1
+        WHERE id = :eventId AND registered_count > 0
+    """, nativeQuery = true)
+    int releaseEventSeat(@Param("eventId") UUID eventId);
+
+    @Query("""
+        SELECT r FROM Registration r
+        WHERE r.poolId = :poolId AND r.status = 'WAITING_LIST'
+        ORDER BY r.waitingAt ASC NULLS LAST, r.createdAt ASC
+        LIMIT 1
+    """)
+    Optional<Registration> findFirstWaitingByPoolId(@Param("poolId") UUID poolId);
+
     long countByEventId(UUID eventId);
 }
 
