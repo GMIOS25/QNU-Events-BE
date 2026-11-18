@@ -80,3 +80,15 @@ erDiagram
    - Do đó, **thứ tự xuất hiện của các dòng trong cùng một tệp không bao giờ làm một quan hệ hợp lệ bị báo lỗi**.
 
 ---
+
+## 3. Tóm tắt Các Quyết định Chuẩn hóa Chốt `TBD-DATA-01`
+
+| Hạng mục trong `TBD-DATA-01` | Quy định chuẩn hóa trong Hợp đồng này | Căn cứ SRS & Dữ liệu thật QNU |
+|---|---|---|
+| **Encoding & Định dạng tệp** | CSV (`UTF-8` có hoặc không có BOM, dấu phẩy `,`, quote `"`) và Excel (`.xlsx`). Bảo toàn tiếng Việt có dấu (Unicode NFC) và số `0` ở đầu (`StudentID`, `IDCard`, `DepartmentCode`). | `REQ-DATA-001`, `NFR-QUAL-012`, `OTH-I18N-001` |
+| **Giới hạn tệp & Hiệu năng** | Tối đa **10 MB**, tối đa **10.000 dòng/lần**. Thời gian xử lý 3.000 dòng sinh viên + lập báo cáo lỗi **≤ 60 giây**. | `NFR-PERF-005`, `TBD-DATA-01` |
+| **Định dạng Mã sinh viên** | Chuỗi đúng **10 chữ số** (`^\d{10}$`): `[Khóa: 2 số][Bậc: 1 số (5)][Mã ngành: 3 số][STT: 4 số]`. Ví dụ: `4651050001`. | 100% của 6.435 SV trong `sv_k46..k49.csv` |
+| **Cơ chế Giao dịch (All-or-Nothing vs Partial)** | • **Cấp Tệp (All-or-Nothing)**: Lỗi file/encoding/thiếu cột bắt buộc → Từ chối toàn bộ tệp (HTTP 4xx).<br>• **Cấp Dòng (Partial Import)**: Nhập dòng hợp lệ, bỏ qua dòng lỗi và trả về báo cáo chi tiết từng dòng lỗi (HTTP 200). Hỗ trợ `dryRun=true` cho màn hình Preview (`QE-62`). | `REQ-DATA-003`, `REQ-DATA-004`, `REQ-DATA-005` |
+| **Chính sách Trùng mã** | • **Trùng trong cùng tệp**: Xử lý dòng đầu, từ chối các dòng lặp phía sau (`ROW_DUPLICATE_*_IN_FILE`).<br>• **Trùng với DB**: Mặc định `importMode=UPSERT` (phân biệt rõ `createdCount`, `updatedCount`, `unchangedCount`), hỗ trợ thêm `CREATE_ONLY` và `SKIP_EXISTING`. Không bao giờ tạo 2 hồ sơ cho 1 MSSV. | `REQ-DATA-006`, `REQ-DATA-007` |
+| **Bảo vệ Quan hệ Tổ chức** | Đổi lớp của sinh viên đã tồn tại hoặc đổi Khoa/Ngành của Lớp đã có sinh viên/sự kiện bị chặn mặc định (`ROW_CLASS_CHANGE_REQUIRES_CONFIRMATION` / `ROW_CLASS_HIERARCHY_LOCKED`) trừ khi bật cờ xác nhận tường minh và ghi `AuditLog`. | `REQ-DATA-010`, `OTH-DATA-003` |
+| **An toàn Bảo mật Bảng tính** | Từ chối các ô văn bản bắt đầu bằng `=`, `+`, `-`, `@` (`ROW_FORMULA_INJECTION_DETECTED`) để chống CSV/Excel Formula Injection khi xuất đối soát. | `NFR-SEC-009` |

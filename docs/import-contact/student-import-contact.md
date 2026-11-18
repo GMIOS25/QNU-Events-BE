@@ -102,3 +102,208 @@ $$\underbrace{\text{KK}}_{\text{Khóa (2 số)}}\ \underbrace{\text{B}}_{\text{H
   - Tuyệt đối không ép kiểu sang số nguyên 32-bit hay số thực dấu phẩy động (`4.65105E+09` từ Excel làm hỏng dữ liệu sẽ bị từ chối với lỗi `ROW_INVALID_STUDENT_ID_FORMAT`).
 
 ---
+
+## 4. Quy tắc Trùng mã, Dòng lỗi & Ngữ nghĩa Giao dịch (Partial vs All-or-Nothing)
+
+Thực hiện nghiêm ngặt `REQ-DATA-003`, `REQ-DATA-004`, `REQ-DATA-005`, `REQ-DATA-006`, `REQ-DATA-007` và `UC025`:
+
+### 4.1. Cơ chế Giao dịch Hai Tầng (Two-Tier Transaction Semantics)
+
+```mermaid
+flowchart TD
+    A["System Admin tải tệp CSV/Excel"] --> B{"Tầng 1: Kiểm tra cấp Tệp\n(File-level Validation)"}
+    B -- "Lỗi định dạng / Encoding / Quá cỡ /\nThiếu cột bắt buộc tối thiểu" --> C["ALL-OR-NOTHING REJECT\nTrả HTTP 400 / 413 / 415 / 422\nKhông thay đổi bất kỳ dòng nào trong DB"]
+    B -- "Tệp hợp lệ cấu trúc" --> D["Tầng 2: Duyệt tuần tự từng dòng\n(Row-level Validation & Resolution)"]
+    D --> E{"Dòng thứ i hợp lệ?"}
+    E -- "Có lỗi trường / Sai FK Lớp /\nTrùng MSSV trong cùng tệp" --> F["Bỏ qua dòng i (SKIPPED_ERROR)\nGhi vào danh sách errors[]\nKhông ảnh hưởng dòng hợp lệ khác"]
+    E -- "Hợp lệ" --> G{"Chế độ chạy?"}
+    G -- "dryRun = true (QE-62 Preview)" --> H["Chỉ tính toán trạng thái dự kiến\nCREATED / UPDATED / UNCHANGED\nRollback / Không ghi DB"]
+    G -- "dryRun = false (QE-26 Commit)" --> I["PARTIAL IMPORT COMMIT\nLưu dòng hợp lệ vào DB\nTăng bộ đếm created / updated / unchanged"]
+    F --> J["Trả HTTP 200 OK kèm ImportReport\n(Tổng dòng, Thành công, Lỗi, Chi tiết dòng lỗi)"]
+    H --> J
+    I --> J
+```
+
+1. **Cấp Tệp — All-or-Nothing (`REQ-DATA-003`, `UC025-A1`)**:
+   - Nếu tệp bị hỏng, không phải CSV/XLSX, sai bảng mã UTF-8, vượt quá 10 MB / 10.000 dòng, không có dòng dữ liệu nào, hoặc thiếu các cột bắt buộc tối thiểu (`StudentID`, `StudentName` / `LastName`+`FirstName`, và ít nhất 1 trong 2 cột `ClassId` / `ClassStudentName`):
+   - **Hệ thống từ chối toàn bộ tệp ngay lập tức**, trả về HTTP 4xx (`ApiError` envelope) và giữ nguyên 100% dữ liệu hiện có trong DB.
+2. **Cấp Dòng — Partial Import (`REQ-DATA-004`, `REQ-DATA-005`, `UC025-A2`)**:
+   - Khi tệp đã qua bước kiểm tra cấu trúc tối thiểu, hệ thống xử lý độc lập từng dòng (tương đương savepoint / giao dịch theo lô hợp lệ).
+   - **Dòng hợp lệ được nhập vào DB; dòng lỗi bị bỏ qua và không làm hỏng các dòng hợp lệ khác.**
+   - Kết quả trả về HTTP `200 OK` (ngay cả khi có một số dòng lỗi hoặc 100% dòng lỗi ở tầng dữ liệu) kèm đối tượng báo cáo đối soát chi tiết: `totalRows`, `createdCount`, `updatedCount`, `unchangedCount`, `errorCount`, `warningCount`, `errors[]`, `warnings[]`.
+   - Hỗ trợ tham số `dryRun=true` (phục vụ `QE-62` — Import Preview): chạy toàn bộ pipeline kiểm tra và trả về báo cáo y hệt lúc thật nhưng không ghi xuống DB.
+
+### 4.2. Quy tắc Xử lý Trùng Mã Sinh viên (`REQ-DATA-006`, `REQ-DATA-007`, `UC025-A3`)
+
+Hệ thống phân biệt rõ **2 loại trùng mã**:
+
+#### A. Trùng lặp nội bộ trong cùng một tệp (`Intra-file Duplicate`)
+- Nếu một `StudentID` xuất hiện nhiều hơn 1 lần trong cùng một tệp import:
+  - **Dòng xuất hiện đầu tiên** (giả sử hợp lệ) được xử lý bình thường.
+  - **Tất cả các dòng xuất hiện sau** có cùng `StudentID` bị đánh dấu lỗi **`ROW_DUPLICATE_STUDENT_ID_IN_FILE`**, bị bỏ qua và báo rõ: `"Trùng mã sinh viên '4651050001' với dòng <số_dòng_đầu_tiên> trong cùng tệp."`
+  - Lý do: Tránh tình trạng dòng sau âm thầm ghi đè dòng trước do lỗi copy-paste trong bảng tính của người nhập.
+
+#### B. Trùng với Mã sinh viên đã tồn tại trong CSDL (`Existing Record Policy` — tham số `importMode`)
+API nhận tham số `importMode` (mặc định là `UPSERT`):
+
+| Giá trị `importMode` | Hành vi khi `student_code` chưa có trong DB | Hành vi khi `student_code` ĐÃ TỒN TẠI trong DB |
+|---|---|---|
+| **`UPSERT`** *(Mặc định)* | Tạo mới `AppUser` + gán role `STUDENT` → Tăng `createdCount`. | So sánh các trường (`fullName`, `classId`, `status`):<br>• Nếu **không có thay đổi** → Không chạy `UPDATE`, tăng `unchangedCount` (`REQ-DATA-007`).<br>• Nếu **có thay đổi** (và việc đổi `classId` không vi phạm quy tắc bảo vệ tổ chức `REQ-DATA-010`) → Cập nhật `fullName`, `classId`, `status`, `updatedAt`, giữ nguyên `id` và `passwordHash` → Tăng `updatedCount`. |
+| **`CREATE_ONLY`** | Tạo mới `AppUser` → Tăng `createdCount`. | Từ chối dòng đó với lỗi `ROW_STUDENT_ALREADY_EXISTS` → Tăng `errorCount`. |
+| **`SKIP_EXISTING`** | Tạo mới `AppUser` → Tăng `createdCount`. | Bỏ qua không cập nhật, giữ nguyên dữ liệu cũ → Tăng `unchangedCount`. |
+
+---
+
+## 6. Đặc tả Hợp đồng API & Cấu trúc Báo cáo Lỗi (Error Reporting Contract)
+
+### 6.1. Endpoint Import Sinh viên (`QE-26` & `QE-62`)
+
+- **Endpoint**: `POST /api/v1/admin/imports/students`
+- **Quyền hạn (RBAC)**: Chỉ `SYSTEM_ADMIN` (`ROLE_SYSTEM_ADMIN`). Nếu role khác (`EVENT_OWNER`, `STUDENT`, `CLASS_REPRESENTATIVE`) gọi → Trả `403 FORBIDDEN`; chưa đăng nhập → `401 UNAUTHENTICATED` (`REQ-DATA-002`).
+- **Content-Type**: `multipart/form-data`
+- **Form / Query Parameters**:
+  - `file` (`MultipartFile`, bắt buộc): Tệp `.csv` hoặc `.xlsx`.
+  - `importMode` (`String`, tùy chọn, mặc định `UPSERT`): `UPSERT` | `CREATE_ONLY` | `SKIP_EXISTING`.
+  - `dryRun` (` boolean`, tùy chọn, mặc định `false`): `true` = Chỉ kiểm tra và xem trước kết quả (`QE-62`), `false` = Thực thi lưu DB + ghi Audit (`QE-26`).
+  - `allowClassTransfer` (`boolean`, tùy chọn, mặc định `false`): Cho phép đổi lớp đối với sinh viên đã tồn tại (`REQ-DATA-010`).
+
+### 6.2. Cấu trúc Phản hồi Thành công & Báo cáo Lỗi Chi tiết (HTTP `200 OK`)
+
+Khi tệp hợp lệ về mặt cấu trúc (dù có dòng lỗi hay không), API trả về HTTP `200 OK` với JSON schema chuẩn sau:
+
+```json
+{
+  "entityType": "STUDENT",
+  "fileName": "student-invalid-sample.csv",
+  "dryRun": false,
+  "importMode": "UPSERT",
+  "processedAt": "2026-11-18T08:30:00Z",
+  "durationMs": 145,
+  "summary": {
+    "totalRows": 12,
+    "validRows": 4,
+    "createdCount": 3,
+    "updatedCount": 1,
+    "unchangedCount": 0,
+    "errorCount": 8,
+    "warningCount": 1
+  },
+  "errors": [
+    {
+      "rowNumber": 3,
+      "identifier": "465105009A",
+      "field": "StudentID",
+      "errorCode": "ROW_INVALID_STUDENT_ID_FORMAT",
+      "rejectedValue": "465105009A",
+      "message": "Mã sinh viên phải gồm đúng 10 chữ số (0-9)."
+    },
+    {
+      "rowNumber": 4,
+      "identifier": "4651050347",
+      "field": "StudentName",
+      "errorCode": "ROW_MISSING_REQUIRED_FIELD",
+      "rejectedValue": "",
+      "message": "Trường bắt buộc 'StudentName' (Họ và tên) không được để trống."
+    },
+    {
+      "rowNumber": 5,
+      "identifier": "4651050001",
+      "field": "StudentID",
+      "errorCode": "ROW_DUPLICATE_STUDENT_ID_IN_FILE",
+      "rejectedValue": "4651050001",
+      "message": "Trùng mã sinh viên '4651050001' với dòng 2 trong cùng tệp."
+    },
+    {
+      "rowNumber": 6,
+      "identifier": "4651050160",
+      "field": "ClassStudentName",
+      "errorCode": "ROW_MISSING_CLASS_REFERENCE",
+      "rejectedValue": "",
+      "message": "Thiếu thông tin lớp sinh hoạt (cần cung cấp ClassId hoặc ClassStudentName)."
+    },
+    {
+      "rowNumber": 7,
+      "identifier": "4651050099",
+      "field": "ClassStudentName",
+      "errorCode": "ROW_CLASS_NOT_FOUND",
+      "rejectedValue": "Công nghệ thông tin 46Z",
+      "message": "Không tìm thấy lớp 'Công nghệ thông tin 46Z' trong danh mục hệ thống."
+    },
+    {
+      "rowNumber": 8,
+      "identifier": "4651050100",
+      "field": "DepartmentCode",
+      "errorCode": "ROW_DEPARTMENT_CLASS_MISMATCH",
+      "rejectedValue": "201",
+      "message": "Khoa '201' (Khoa Sư phạm) không khớp với khoa của lớp 'Công nghệ thông tin 46E' ('105' - Khoa Công nghệ thông tin)."
+    },
+    {
+      "rowNumber": 9,
+      "identifier": "4651160033",
+      "field": "Email",
+      "errorCode": "ROW_INVALID_EMAIL",
+      "rejectedValue": "0",
+      "message": "Địa chỉ email '0' không đúng định dạng chuẩn."
+    },
+    {
+      "rowNumber": 11,
+      "identifier": "4651050188",
+      "field": "StudentName",
+      "errorCode": "ROW_FORMULA_INJECTION_DETECTED",
+      "rejectedValue": "=CMD|' /C calc'!A0",
+      "message": "Giá trị trường 'StudentName' chứa ký tự công thức bảng tính không an toàn."
+    }
+  ],
+  "warnings": [
+    {
+      "rowNumber": 12,
+      "identifier": "4951010001",
+      "field": "IntakeProgramId",
+      "warningCode": "WARN_MISSING_INTAKE_PROGRAM",
+      "value": "",
+      "message": "Chưa có chương trình đào tạo theo ngành/khóa tương ứng; sinh viên vẫn được nhập theo lớp 'Sư phạm Toán học K49B'."
+    }
+  ]
+}
+```
+
+> **Quy ước `rowNumber`**: Tính theo **số dòng thực tế trong tệp bảng tính (1-based index)**, trong đó dòng `1` là dòng Header, dòng dữ liệu đầu tiên là dòng `2`. Quy ước này giúp System Admin mở tệp bằng Excel/VS Code và nhảy tới đúng số dòng cần sửa ngay lập tức (`REQ-DATA-004`).
+
+### 6.3. Danh mục Mã Lỗi Cấp Tệp & Cấp Dòng (Error Code Catalog)
+
+#### A. Lỗi cấp Tệp (Từ chối toàn bộ tệp — All-or-Nothing)
+
+| HTTP Status | `code` trong `ApiError` | Điều kiện kích hoạt |
+|---:|---|---|
+| `400` | `FILE_EMPTY` | Tệp tải lên có kích thước 0 byte hoặc không có dòng dữ liệu nào ngoài header. |
+| `400` | `FILE_INVALID_ENCODING` | Tệp CSV không phải bảng mã UTF-8 hợp lệ (chứa chuỗi byte không giải mã được). |
+| `400` | `FILE_MALFORMED_CSV` | Cấu trúc CSV/XLSX bị hỏng (dấu nháy kép `" ` không đóng, file zip `.xlsx` lỗi). |
+| `400` | `FILE_MISSING_REQUIRED_COLUMNS` | Dòng Header thiếu các cột bắt buộc tối thiểu (`StudentID`, `StudentName`, `ClassId`/`ClassStudentName`). `details.missingColumns` liệt kê các cột thiếu. |
+| `413` | `FILE_TOO_LARGE` | Kích thước tệp vượt quá 10 MB. |
+| `415` | `FILE_UNSUPPORTED_MEDIA_TYPE` | Phần mở rộng hoặc MIME type không phải `.csv` hoặc `.xlsx`. |
+| `422` | `FILE_ROW_LIMIT_EXCEEDED` | Số dòng dữ liệu vượt quá 10.000 dòng trong 1 lần import. |
+
+#### B. Lỗi cấp Dòng (Bỏ qua dòng lỗi — Partial Import `errors[].errorCode`)
+
+| Mã lỗi (`errorCode`) | Trường (`field`) | Mô tả & Điều kiện kích hoạt |
+|---|---|---|
+| `ROW_MISSING_REQUIRED_FIELD` | `StudentID`, `StudentName` | Trường bắt buộc bị rỗng hoặc chỉ chứa khoảng trắng. |
+| `ROW_INVALID_STUDENT_ID_FORMAT` | `StudentID` | Không khớp regex `^\d{10}$` (ngắn/dài hơn 10 ký tự, chứa chữ cái, ký hiệu khoa học `4.65E+09`). |
+| `ROW_DUPLICATE_STUDENT_ID_IN_FILE` | `StudentID` | Mã sinh viên bị lặp lại từ lần thứ 2 trở đi trong cùng tệp import. |
+| `ROW_STUDENT_ALREADY_EXISTS` | `StudentID` | Mã sinh viên đã có trong DB khi chạy với `importMode=CREATE_ONLY`. |
+| `ROW_FIELD_TOO_LONG` | `StudentName`, `Email`, ... | Độ dài vượt giới hạn cột DB (`StudentName` > 150 ký tự, `Email` > 150 ký tự). |
+| `ROW_INVALID_STUDENT_NAME` | `StudentName` | Họ tên chứa chữ số, ký tự đặc biệt không hợp lệ hoặc độ dài < 2 ký tự. |
+| `ROW_MISSING_CLASS_REFERENCE` | `ClassStudentName` / `ClassId` | Cả `ClassId` và `ClassStudentName` đều để trống. |
+| `ROW_INVALID_UUID_FORMAT` | `ClassId` | Có truyền `ClassId` nhưng không đúng định dạng UUID 36 ký tự. |
+| `ROW_CLASS_NOT_FOUND` | `ClassId` / `ClassStudentName` | Lớp không tồn tại trong bảng `org_class`. |
+| `ROW_CLASS_ID_NAME_MISMATCH` | `ClassStudentName` | Cả `ClassId` và `ClassStudentName` đều được truyền nhưng trỏ tới 2 lớp khác nhau. |
+| `ROW_DEPARTMENT_CLASS_MISMATCH` | `DepartmentCode` / `DepartmentName` | Khoa khai báo trên dòng sinh viên không khớp với Khoa của lớp được tham chiếu. |
+| `ROW_SPECIALIZATION_CLASS_MISMATCH` | `SpecializationCode` | Ngành khai báo trên dòng sinh viên không khớp với Ngành của lớp được tham chiếu. |
+| `ROW_CLASS_CHANGE_REQUIRES_CONFIRMATION` | `ClassId` / `ClassStudentName` | Sinh viên đã tồn tại đang thuộc lớp khác và `allowClassTransfer=false` (`REQ-DATA-010`). |
+| `ROW_INVALID_EMAIL` | `Email` | Có giá trị nhưng sai định dạng email (ví dụ `"0"`, `"khongco"`, thiếu `@`). |
+| `ROW_INVALID_BIRTH_DATE` | `BirthDay` | Có giá trị nhưng sai định dạng ngày (`dd/MM/yyyy` hoặc `yyyy-MM-dd`) hoặc ngày không tồn tại (ví dụ `31/02/2005`). |
+| `ROW_INVALID_STUDY_STATUS` | `StudyStatusID` | Mã trạng thái học tập không nằm trong tập hợp lệ (`1, 2, 3, 4, 7` hoặc `ACTIVE, LOCKED`). |
+| `ROW_FORMULA_INJECTION_DETECTED` | Bất kỳ trường text | Giá trị bắt đầu bằng `=`, `+`, `-`, `@` có nguy cơ thực thi công thức độc hại (`NFR-SEC-009`). |
+
+---
+
