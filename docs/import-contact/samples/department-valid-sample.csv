@@ -1,0 +1,13 @@
+DepartmentCode,DepartmentId,DepartmentName,Parent,ParentID
+101,1e05a8fb-7c1c-4c29-9adc-39113d3f70c0,[101] Khoa Toán và Thống kê,,
+105,24d2865f-ad8b-4c86-8a70-745045a98fbc,[105] Khoa Công nghệ thông tin,,
+109,9808f56b-ff6f-4d64-b55c-e0b9f8f0ed84,[109] Khoa Ngoại ngữ,,
+111,3db44414-823b-4cc9-a194-ed8a56fa492b,[111] Khoa Giáo dục Tiểu học và Mầm non,,
+112,6deba5e5-ce50-42e0-9383-2eca37da9686,[112] Khoa Giáo dục thể chất,,
+113,b688c33c-b3a4-4566-b0ee-e77f44f90779,[113] Khoa Lý luận chính trị - Luật và Quản lý nhà nước,,
+114,4c666978-2e9f-4dea-b7d9-f1709b0ca011,[114] Khoa Kinh tế và Kế toán,,
+115,bccbbc59-d02a-4a3d-abbf-91529f97866a,[115] Khoa Tài chính - Ngân hàng và Quản trị kinh doanh,,
+116,8496601b-1021-497f-bf86-bbe763de6bb2,[116] Khoa Kỹ thuật và Công nghệ,,
+201,d0f597d3-f893-4967-b2da-70be84945ea7,[201] Khoa Sư phạm,,
+202,fc85891b-4d45-4ac2-8d82-2f531d4f9f93,[202] Khoa Khoa học Tự nhiên,,
+203,7fd2d04a-7550-4696-b8eb-c04a7c50e0ee,[203] Khoa Khoa học Xã hội và Nhân văn,,
