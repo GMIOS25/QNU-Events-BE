@@ -731,4 +731,79 @@ class EventIT {
                 .andExpect(jsonPath("$.registrationOpen").value(false))
                 .andExpect(jsonPath("$.attendanceOpen").value(false));
     }
+
+    @Test
+    @DisplayName("16. Tổng capacity pool vượt quotaTotal -> 400 VALIDATION_FAILED")
+    void poolTotalCapacityExceedsQuotaFails() throws Exception {
+        Instant now = Instant.now();
+        Instant startAt = now.plus(1, ChronoUnit.DAYS);
+        Instant endAt = startAt.plus(2, ChronoUnit.HOURS);
+        String payload = String.format("""
+                {
+                    "title": "Sự kiện pool sai quota",
+                    "location": "Hội trường B - Đại học Quy Nhơn",
+                    "startAt": "%s",
+                    "endAt": "%s",
+                    "registrationDeadline": "%s",
+                    "attendanceOpenAt": "%s",
+                    "attendanceCloseAt": "%s",
+                    "attendanceMethod": "DYNAMIC_QR",
+                    "quotaTotal": 10,
+                    "audienceClassIds": ["%s"],
+                    "activityType": "Workshop",
+                    "activityPoints": 3,
+                    "pools": [
+                        {"scopeType": "LOP", "scopeRef": "%s", "capacity": 8, "priority": 1},
+                        {"scopeType": "LOP", "scopeRef": "00000000-0000-0000-0000-000000000002", "capacity": 5, "priority": 2}
+                    ]
+                }
+                """, startAt, endAt, startAt.minus(2, ChronoUnit.HOURS),
+                startAt.minus(15, ChronoUnit.MINUTES), endAt.plus(30, ChronoUnit.MINUTES),
+                k49ClassId, k49ClassId);
+
+        mockMvc.perform(post("/api/v1/events")
+                        .header("Authorization", "Bearer " + ownerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payload))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.details.fields.pools", not(emptyOrNullString())));
+    }
+
+    @Test
+    @DisplayName("17. Cấu hình pool hợp lệ -> 201 tạo thành công")
+    void validPoolConfigurationSucceeds() throws Exception {
+        Instant now = Instant.now();
+        Instant startAt = now.plus(1, ChronoUnit.DAYS);
+        Instant endAt = startAt.plus(2, ChronoUnit.HOURS);
+        String payload = String.format("""
+                {
+                    "title": "Sự kiện pool hợp lệ",
+                    "location": "Hội trường B - Đại học Quy Nhơn",
+                    "startAt": "%s",
+                    "endAt": "%s",
+                    "registrationDeadline": "%s",
+                    "attendanceOpenAt": "%s",
+                    "attendanceCloseAt": "%s",
+                    "attendanceMethod": "DYNAMIC_QR",
+                    "quotaTotal": 10,
+                    "audienceClassIds": ["%s"],
+                    "activityType": "Workshop",
+                    "activityPoints": 3,
+                    "pools": [
+                        {"scopeType": "LOP", "scopeRef": "%s", "capacity": 6, "priority": 1, "mandatory": true},
+                        {"scopeType": "ALL", "capacity": 4, "priority": 2, "allowOverflow": true}
+                    ]
+                }
+                """, startAt, endAt, startAt.minus(2, ChronoUnit.HOURS),
+                startAt.minus(15, ChronoUnit.MINUTES), endAt.plus(30, ChronoUnit.MINUTES),
+                k49ClassId, k49ClassId);
+
+        mockMvc.perform(post("/api/v1/events")
+                        .header("Authorization", "Bearer " + ownerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payload))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.quotaTotal").value(10));
+    }
 }

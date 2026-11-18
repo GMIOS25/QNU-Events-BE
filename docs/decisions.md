@@ -14,3 +14,20 @@
   - `version` lệch giá trị hiện tại → 409 `VERSION_CONFLICT` (giữ nguyên như trước).
 - **Tác động:** FE form sửa sự kiện luôn đọc `version` từ `EventDetail` nên không bị ảnh hưởng; client cũ bỏ sót `version` sẽ nhận lỗi rõ ràng thay vì ghi đè ngầm. Hợp đồng API không đổi — đây là siết đúng cam kết đã đóng băng.
 - **Trạng thái:** ASSUMPTION — chờ nhóm duyệt và ghi vào SRS.
+
+---
+
+## A-003 · Ngữ nghĩa pool quota nhiều tầng (QE-12/39/40)
+
+- **Ngày:** 18/11/2026
+- **Ticket:** QE-12 · **Agent:** A1 (Hoàng)
+- **Bối cảnh:** SRS/Proposal quy định quota nhiều tầng theo phạm vi (lớp/khoa/khối/CLB/toàn trường) nhưng chưa chốt ngữ nghĩa chi tiết ở mức triển khai.
+- **Quyết định (Assumption):**
+  - Tổng capacity các pool ≤ `quotaTotal`; `quotaTotal` là trần tuyệt đối.
+  - Phân bổ suất: duyệt pool theo `priority` tăng dần (số nhỏ = ưu tiên cao), chỉ nhận pool mà sinh viên thuộc scope; `allow_overflow=true` cho phép dùng suất pool khác khi pool của mình hết.
+  - Hết pool hợp lệ → vào `WAITING_LIST` của pool ưu tiên cao nhất mà sinh viên thuộc scope, xếp theo `waiting_at`.
+  - Hủy đăng ký hoàn suất về đúng `pool_id` đã cấp (BR-QTA-06) và tự promote người đầu waiting list cùng pool trong một transaction.
+  - "Thông báo" khi promote ở Sprint 2 = ghi audit log (chưa có email/push).
+  - Bảng đặt tên `event_pools` theo quy ước số nhiều của V1 (events, registrations); `registrations.status` đã sẵn giá trị `WAITING_LIST` trong V1 nên không cần mở rộng constraint.
+- **Tác động:** Migration V2 được kèm trong PR này và cần A0 (Cường) xem xét duyệt theo R6 trước khi merge.
+- **Trạng thái:** ASSUMPTION — chờ nhóm duyệt.

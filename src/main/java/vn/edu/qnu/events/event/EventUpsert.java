@@ -1,5 +1,6 @@
 package vn.edu.qnu.events.event;
 
+import java.util.List;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
@@ -50,6 +51,18 @@ public record EventUpsert(
         @Min(value = 0, message = "Điểm rèn luyện phải lớn hơn hoặc bằng 0")
         int activityPoints,
 
-        Integer version
-) {}
+        Integer version,
+        List<PoolUpsert> pools
+) {
+    public record PoolUpsert(
+            @NotNull(message = "Loại phạm vi pool không được để trống")
+            PoolScopeType scopeType,
+            String scopeRef,
+            @Min(value = 1, message = "Capacity pool tối thiểu là 1")
+            int capacity,
+            @Min(0) int priority,
+            Boolean allowOverflow,
+            Boolean mandatory
+    ) {}
+}
 

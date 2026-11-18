@@ -6,6 +6,8 @@ import vn.edu.qnu.events.common.ErrorCode;
 import vn.edu.qnu.events.student.OrgClassRepository;
 
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.Map;
 import java.util.UUID;
 
@@ -49,6 +51,26 @@ public class EventValidator {
             for (UUID classId : upsert.audienceClassIds()) {
                 if (!orgClassRepository.existsById(classId)) {
                     fieldErrors.put("audienceClassIds", "Lớp học có ID " + classId + " không tồn tại.");
+                    break;
+                }
+            }
+        }
+        if (upsert.pools() != null && !upsert.pools().isEmpty()) {
+            int total = upsert.pools().stream().mapToInt(EventUpsert.PoolUpsert::capacity).sum();
+            if (total > upsert.quotaTotal()) {
+                fieldErrors.put("pools", "Tổng capacity các pool (" + total
+                        + ") vượt quotaTotal (" + upsert.quotaTotal() + ").");
+            }
+            Set<String> seen = new HashSet<>();
+            for (EventUpsert.PoolUpsert pool : upsert.pools()) {
+                String key = pool.scopeType() + ":" + (pool.scopeRef() == null ? "" : pool.scopeRef());
+                if (!seen.add(key)) {
+                    fieldErrors.put("pools", "Pool trùng phạm vi: " + key + ".");
+                    break;
+                }
+                if (pool.scopeType() != PoolScopeType.ALL
+                        && (pool.scopeRef() == null || pool.scopeRef().isBlank())) {
+                    fieldErrors.put("pools", "Pool " + pool.scopeType() + " phải có scope_ref.");
                     break;
                 }
             }

@@ -19,17 +19,20 @@ import java.util.UUID;
 public class EventService {
 
     private final EventRepository eventRepository;
+    private final EventPoolRepository eventPoolRepository;
     private final EventValidator eventValidator;
     private final AuditService auditService;
     private final Clock clock;
 
     public EventService(
             EventRepository eventRepository,
+            EventPoolRepository eventPoolRepository,
             EventValidator eventValidator,
             AuditService auditService,
             Clock clock
     ) {
         this.eventRepository = eventRepository;
+        this.eventPoolRepository = eventPoolRepository;
         this.eventValidator = eventValidator;
         this.auditService = auditService;
         this.clock = clock;
@@ -61,6 +64,16 @@ public class EventService {
         );
 
         Event saved = eventRepository.saveAndFlush(event);
+
+        if (upsert.pools() != null && !upsert.pools().isEmpty()) {
+            eventPoolRepository.saveAll(upsert.pools().stream()
+                    .map(p -> new EventPool(saved.getId(), p.scopeType(), p.scopeRef(),
+                            p.capacity(), p.priority(),
+                            Boolean.TRUE.equals(p.allowOverflow()),
+                            Boolean.TRUE.equals(p.mandatory())))
+                    .toList());
+        }
+
         return toDetail(saved);
     }
 
@@ -113,6 +126,19 @@ public class EventService {
         event.setUpdatedAt(Instant.now(clock));
 
         eventRepository.saveAndFlush(event);
+
+        // Sự kiện chỉ sửa được khi DRAFT nên chưa có suất đã dùng — thay toàn bộ pool an toàn.
+        // BR-QTA-10 (cấm giảm capacity dưới used) áp dụng khi có API cập nhật pool riêng (QE-39+).
+        eventPoolRepository.deleteAllInBatch(eventPoolRepository.findByEventIdOrderByPriorityAsc(event.getId()));
+        if (upsert.pools() != null && !upsert.pools().isEmpty()) {
+            eventPoolRepository.saveAll(upsert.pools().stream()
+                    .map(p -> new EventPool(event.getId(), p.scopeType(), p.scopeRef(),
+                            p.capacity(), p.priority(),
+                            Boolean.TRUE.equals(p.allowOverflow()),
+                            Boolean.TRUE.equals(p.mandatory())))
+                    .toList());
+        }
+
         return toDetail(event);
     }
 
