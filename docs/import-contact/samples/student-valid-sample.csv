@@ -1,0 +1,11 @@
+StudentID,StudentName,LastName,FirstName,Genders,BirthDay,DepartmentCode,DepartmentName,SpecializationCode,SpecializationName,IntakeNo,ClassId,ClassStudentName,Email,IDCard,StudyStatusID,StudyStatusName
+4651050001,Võ Hoài An,Võ Hoài,An,Nữ,01/03/2005,105,Khoa Công nghệ thông tin,105,Công nghệ thông tin,46,915d2d89-8562-500a-a0ab-7a4d0bc27601,Công nghệ thông tin 46E,anhoaivo101@gmail.com,052305001122,1,Còn học
+4651050002,Nguyễn Trần Ngọc Anh,Nguyễn Trần Ngọc,Anh,Nữ,22/11/2005,105,Khoa Công nghệ thông tin,105,Công nghệ thông tin,46,915d2d89-8562-500a-a0ab-7a4d0bc27601,Công nghệ thông tin 46E,,052305002233,1,Còn học
+4651050005,Trương Trần Quốc Anh,Trương Trần Quốc,Anh,Nam,29/03/2005,105,Khoa Công nghệ thông tin,105,Công nghệ thông tin,46,915d2d89-8562-500a-a0ab-7a4d0bc27601,Công nghệ thông tin 46E,panda29032005@gmail.com,052205003344,1,Còn học
+4651010001,Nguyễn Hữu An,Nguyễn Hữu,An,Nam,23/07/2005,201,Khoa Sư phạm,101,Sư phạm Toán học,46,d0d65dbf-dd99-5a30-ae58-bf889a83d1d3,Sư phạm Toán học 46,nguyenhuuan237205@gmail.com,064205001302,1,Còn học
+4651010002,Phùng Gia Bảo,Phùng Gia,Bảo,Nam,19/10/2005,201,Khoa Sư phạm,101,Sư phạm Toán học,46,d0d65dbf-dd99-5a30-ae58-bf889a83d1d3,Sư phạm Toán học 46,,052205002025,1,Còn học
+4851010001,Nguyễn Tuấn Anh,Nguyễn Tuấn,Anh,Nam,09/08/2007,201,Khoa Sư phạm,101,Sư phạm Toán học,48,7818b324-1c31-53da-8f56-faf06d9e0bb4,Sư phạm Toán học K48B,tanh75493@gmail.com,066207007578,1,Còn học
+4851010003,Võ Thanh Bình,Võ Thanh,Bình,Nam,20/10/2007,201,Khoa Sư phạm,101,Sư phạm Toán học,48,fef4a0f6-b65e-5264-885f-ab3fc056d5e8,Sư phạm Toán học K48A,vthanhbinh201007@gmail.com,056207005977,1,Còn học
+4951010001,Lê Tuấn Anh,Lê Tuấn,Anh,Nam,01/05/2008,201,Khoa Sư phạm,101,Sư phạm Toán học,49,b1d2765a-7a6b-521f-897a-cafb22da71d5,Sư phạm Toán học K49B,pinahh121@gmail.com,054208006095,1,Còn học
+4951010002,Trương Ngọc Hiền Anh,Trương Ngọc Hiền,Anh,Nữ,07/03/2008,201,Khoa Sư phạm,101,Sư phạm Toán học,49,bc65c97d-9695-5f7d-910f-f93e49683889,Sư phạm Toán học K49A,hienanhtruongngoc2008@gmail.com,067308006582,1,Còn học
+4851050001,Trần Minh Khoa,Trần Minh,Khoa,Nam,15/06/2007,105,Khoa Công nghệ thông tin,105,Công nghệ thông tin,48,2e5165f3-d6c5-5ffe-993e-53cef30514ea,Công nghệ thông tin K48A,tranminhkhoa48@gmail.com,052207009988,4,Thôi học

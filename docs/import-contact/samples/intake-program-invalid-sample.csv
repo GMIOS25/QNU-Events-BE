@@ -1,0 +1,9 @@
+IntakeProgramId,IntakeProgramCode,IntakeProgramName,ProgramLevelCode,ProgramLevelName,TrainingModeCode,TrainingModeName,IntakeName,IntakeNo,StartYear,SpecializationId,SpecializationCode,SpecializationName,DepartmentId,DepartmentCode,DepartmentName
+ec806e76-83f0-44d6-b97e-4460e746dd76,105DHCQK48,Công nghệ thông tin,DH,Đại học,CQ,Chính quy,Đại học chính quy K48,48,2025,0d03377f-f79f-4f20-840e-ef1390b4dd40,105,Công nghệ thông tin,24d2865f-ad8b-4c86-8a70-745045a98fbc,105,Khoa Công nghệ thông tin
+,BAD-CODE-48,Công nghệ thông tin Sai Mã,DH,Đại học,CQ,Chính quy,Đại học chính quy K48,48,2025,,105,Công nghệ thông tin,,105,Khoa Công nghệ thông tin
+,105DHCQK48,Công nghệ thông tin Trùng Mã,DH,Đại học,CQ,Chính quy,Đại học chính quy K48,48,2025,,105,Công nghệ thông tin,,105,Khoa Công nghệ thông tin
+,105DHCQK49,Công nghệ thông tin Lệch Ngành,DH,Đại học,CQ,Chính quy,Đại học chính quy K49,49,2026,,119,Kỹ thuật phần mềm,,105,Khoa Công nghệ thông tin
+,119DHCQK49,Kỹ thuật phần mềm Lệch Khóa,DH,Đại học,CQ,Chính quy,Đại học chính quy K48,48,2025,,119,Kỹ thuật phần mềm,,105,Khoa Công nghệ thông tin
+,410DHCQK48,Trí tuệ nhân tạo Sai Năm,DH,Đại học,CQ,Chính quy,Đại học chính quy K48,48,2030,,410,Trí tuệ nhân tạo,,105,Khoa Công nghệ thông tin
+,999DHCQK49,Ngành Không Tồn Tại,DH,Đại học,CQ,Chính quy,Đại học chính quy K49,49,2026,,999,Ngành Ảo,,105,Khoa Công nghệ thông tin
+,101DHCQK49,Sư phạm Toán học Lệch Khoa,DH,Đại học,CQ,Chính quy,Đại học chính quy K49,49,2026,,101,Sư phạm Toán học,,105,Khoa Công nghệ thông tin

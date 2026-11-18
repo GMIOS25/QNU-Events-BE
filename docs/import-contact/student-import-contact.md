@@ -343,6 +343,34 @@ Khi tệp hợp lệ về mặt cấu trúc (dù có dòng lỗi hay không), AP
 
 ---
 
+## 7. File Mẫu Hợp lệ và File Mẫu Lỗi (Sample Fixtures cho `QE-26`)
+
+Hai tệp mẫu phục vụ kiểm thử tự động đã được tạo sẵn trong thư mục [`docs/import-contact/samples/`](./samples/):
+
+1. **File mẫu hợp lệ**: [`samples/student-valid-sample.csv`](./samples/student-valid-sample.csv)
+   - Gồm **10 dòng sinh viên hợp lệ** trích xuất từ dữ liệu thực tế K46–K49 của QNU (Khoa CNTT, Khoa Sư phạm, Khoa Ngoại ngữ, Khoa Tài chính - Ngân hàng & QTKD).
+   - Bao phủ: tiếng Việt có dấu, CCCD có số `0` ở đầu (`052205002025`), trường `Email` có giá trị và để trống hợp lệ, địa chỉ chứa dấu phẩy bọc trong `"..."`, trạng thái `Còn học` (`1` → `ACTIVE`) và `Thôi học` (`4` → `LOCKED`).
+   - Kỳ vọng khi import lần đầu (`importMode=UPSERT`): `totalRows=10, createdCount=10, updatedCount=0, unchangedCount=0, errorCount=0`.
+   - Kỳ vọng khi import lại lần 2 cùng tệp: `totalRows=10, createdCount=0, updatedCount=0, unchangedCount=10, errorCount=0` (`REQ-DATA-007`).
+
+2. **File mẫu lỗi (Hỗn hợp Hợp lệ + Lỗi)**: [`samples/student-invalid-sample.csv`](./samples/student-invalid-sample.csv)
+   - Gồm **12 dòng** (4 dòng hợp lệ + 8 dòng lỗi đa dạng):
+     - Dòng 2: Hợp lệ (`4651050001` - Võ Hoài An).
+     - Dòng 3: Lỗi `ROW_INVALID_STUDENT_ID_FORMAT` (`465105009A` chứa chữ cái).
+     - Dòng 4: Lỗi `ROW_MISSING_REQUIRED_FIELD` (`4651050347` trống cả `StudentName`, `LastName`, `FirstName` — mẫu lỗi thật từ `sv_k46.csv`).
+     - Dòng 5: Lỗi `ROW_DUPLICATE_STUDENT_ID_IN_FILE` (`4651050001` lặp lại với dòng 2).
+     - Dòng 6: Lỗi `ROW_MISSING_CLASS_REFERENCE` (`4651050160` trống cả `ClassId` và `ClassStudentName` — mẫu lỗi thật từ `sv_k46.csv`).
+     - Dòng 7: Lỗi `ROW_CLASS_NOT_FOUND` (`Công nghệ thông tin 46Z` không tồn tại).
+     - Dòng 8: Lỗi `ROW_DEPARTMENT_CLASS_MISMATCH` (Lớp `Công nghệ thông tin 46E` thuộc Khoa CNTT `105` nhưng dòng khai báo `201` Khoa Sư phạm).
+     - Dòng 9: Lỗi `ROW_INVALID_EMAIL` (`Email = "0"` — mẫu lỗi thật xuất hiện 7 lần trong dữ liệu QNU).
+     - Dòng 10: Lỗi `ROW_INVALID_BIRTH_DATE` (`BirthDay = "31/02/2005"`).
+     - Dòng 11: Lỗi `ROW_FORMULA_INJECTION_DETECTED` (`StudentName = "=CMD|' /C calc'!A0"`).
+     - Dòng 12: Hợp lệ kèm cảnh báo `WARN_MISSING_INTAKE_PROGRAM` (`4951010001` - Lê Tuấn Anh).
+     - Dòng 13: Hợp lệ (`4851010001` - Nguyễn Tuấn Anh).
+   - Kỳ vọng khi import (`importMode=UPSERT`): `totalRows=12, validRows=4, createdCount=4, errorCount=8, warningCount=1`.
+
+---
+
 ## 8. Tiêu chí Nghiệm thu Tự động cho `QE-26` (Automated Test Matrix)
 
 | Mã Test | Kịch bản kiểm thử (Given / When / Then) | Kết quả mong đợi |
