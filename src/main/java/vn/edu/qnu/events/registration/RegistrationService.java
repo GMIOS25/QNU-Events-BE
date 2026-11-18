@@ -10,11 +10,16 @@ import vn.edu.qnu.events.common.CurrentUser;
 import vn.edu.qnu.events.common.CurrentUserProvider;
 import vn.edu.qnu.events.common.ErrorCode;
 import vn.edu.qnu.events.event.Event;
+import vn.edu.qnu.events.event.EventPool;
+import vn.edu.qnu.events.event.EventPoolRepository;
 import vn.edu.qnu.events.event.EventRepository;
 import vn.edu.qnu.events.event.EventStatus;
+import vn.edu.qnu.events.student.OrgClass;
+import vn.edu.qnu.events.student.OrgClassRepository;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -23,6 +28,8 @@ public class RegistrationService {
 
     private final RegistrationRepository registrationRepository;
     private final EventRepository eventRepository;
+    private final EventPoolRepository eventPoolRepository;
+    private final OrgClassRepository orgClassRepository;
     private final AppUserRepository appUserRepository;
     private final AuditService auditService;
     private final Clock clock;
@@ -30,12 +37,16 @@ public class RegistrationService {
     public RegistrationService(
             RegistrationRepository registrationRepository,
             EventRepository eventRepository,
+            EventPoolRepository eventPoolRepository,
+            OrgClassRepository orgClassRepository,
             AppUserRepository appUserRepository,
             AuditService auditService,
             Clock clock
     ) {
         this.registrationRepository = registrationRepository;
         this.eventRepository = eventRepository;
+        this.eventPoolRepository = eventPoolRepository;
+        this.orgClassRepository = orgClassRepository;
         this.appUserRepository = appUserRepository;
         this.auditService = auditService;
         this.clock = clock;
@@ -102,6 +113,101 @@ public class RegistrationService {
         }
 
         UUID newRegistrationId = UUID.randomUUID();
+        List<EventPool> pools = eventPoolRepository.findByEventIdOrderByPriorityAsc(eventId);
+
+        if (pools.isEmpty()) {
+            // Sự kiện không cấu hình pool: giữ nguyên luồng quota tổng của QE-71
+            return registerWithoutPools(eventId, studentId, newRegistrationId, now);
+        }
+
+        // Phân bổ suất theo pool (QE-39, Assumption A-003):
+        // duyệt pool theo priority tăng dần, chỉ nhận pool mà sinh viên thuộc scope.
+        UUID studentClassId = student.getClassId();
+        UUID allocatedPoolId = null;
+        for (EventPool pool : pools) {
+            if (!matchesScope(pool, studentClassId)) {
+                continue;
+            }
+            if (eventPoolRepository.claimSeat(pool.getId()) == 1) {
+                allocatedPoolId = pool.getId();
+                break;
+            }
+            // Pool đầy: pool không bắt buộc (allowOverflow mặc định) -> thử pool kế tiếp theo priority
+        }
+
+        if (allocatedPoolId != null) {
+            int rowsInserted = registrationRepository.tryInsertRegistration(newRegistrationId, eventId, studentId, now);
+            if (rowsInserted == 0) {
+                // Đã đăng ký từ trước -> hoàn suất vừa giữ và trả idempotent
+                eventPoolRepository.releaseSeat(allocatedPoolId);
+                Registration existing = registrationRepository.findActiveByEventAndStudent(eventId, studentId)
+                        .orElseThrow(() -> new ApiException(ErrorCode.INTERNAL_ERROR));
+                return new RegistrationResponse(existing.getId(), existing.getStatus().name(), true);
+            }
+            registrationRepository.setPool(newRegistrationId, allocatedPoolId);
+            // Giữ trần quotaTotal (A-003) và cho summary hiển thị đúng chỗ còn lại
+            int totalReserved = registrationRepository.reserveSeat(eventId);
+            if (totalReserved == 0) {
+                eventPoolRepository.releaseSeat(allocatedPoolId);
+                throw new ApiException(ErrorCode.CAPACITY_FULL);
+            }
+            auditService.record(
+                    studentId,
+                    "STUDENT",
+                    "REGISTRATION_CREATE",
+                    "REGISTRATION",
+                    newRegistrationId.toString(),
+                    "SUCCESS",
+                    null,
+                    Map.of("eventId", eventId.toString(), "poolId", allocatedPoolId.toString()),
+                    null
+            );
+            return new RegistrationResponse(newRegistrationId, "REGISTERED", false);
+        }
+
+        // Hết suất hợp lệ -> WAITING_LIST ở pool ưu tiên cao nhất mà sinh viên thuộc scope (A-003)
+        EventPool targetPool = pools.stream()
+                .filter(p -> matchesScope(p, studentClassId))
+                .findFirst()
+                .orElse(null);
+        if (targetPool == null) {
+            auditService.record(
+                    studentId,
+                    "STUDENT",
+                    "REGISTRATION_CREATE",
+                    "EVENT",
+                    eventId.toString(),
+                    "REJECTED",
+                    "CAPACITY_FULL",
+                    Map.of(),
+                    null
+            );
+            throw new ApiException(ErrorCode.CAPACITY_FULL);
+        }
+
+        UUID waitingId = UUID.randomUUID();
+        int waitingInserted = registrationRepository.tryInsertWaitingRegistration(
+                waitingId, eventId, studentId, targetPool.getId(), now);
+        if (waitingInserted == 0) {
+            Registration existing = registrationRepository.findActiveByEventAndStudent(eventId, studentId)
+                    .orElseThrow(() -> new ApiException(ErrorCode.INTERNAL_ERROR));
+            return new RegistrationResponse(existing.getId(), existing.getStatus().name(), true);
+        }
+        auditService.record(
+                studentId,
+                "STUDENT",
+                "REGISTRATION_CREATE",
+                "REGISTRATION",
+                waitingId.toString(),
+                "SUCCESS",
+                "WAITING_LIST",
+                Map.of("eventId", eventId.toString(), "poolId", targetPool.getId().toString()),
+                null
+        );
+        return new RegistrationResponse(waitingId, "WAITING_LIST", false);
+    }
+
+    private RegistrationResponse registerWithoutPools(UUID eventId, UUID studentId, UUID newRegistrationId, Instant now) {
         int rowsInserted = registrationRepository.tryInsertRegistration(newRegistrationId, eventId, studentId, now);
 
         if (rowsInserted == 0) {
@@ -143,6 +249,19 @@ public class RegistrationService {
         );
 
         return new RegistrationResponse(newRegistrationId, "REGISTERED", false);
+    }
+
+    private boolean matchesScope(EventPool pool, UUID studentClassId) {
+        return switch (pool.getScopeType()) {
+            case ALL -> true;
+            case LOP -> studentClassId != null && pool.getScopeRef().equals(studentClassId.toString());
+            case KHOA -> studentClassId != null && orgClassRepository.findById(studentClassId)
+                    .map(OrgClass::getFacultyName)
+                    .filter(f -> f != null && f.equalsIgnoreCase(pool.getScopeRef()))
+                    .isPresent();
+            // KHOI/CLB: chờ chuẩn hóa mã khối/CLB trong danh mục (xem A-003) - tạm không match
+            default -> false;
+        };
     }
 
     @Transactional(readOnly = true)

@@ -23,8 +23,11 @@ import vn.edu.qnu.events.auth.JwtService;
 import vn.edu.qnu.events.auth.LoginRequest;
 import vn.edu.qnu.events.event.AttendanceMethod;
 import vn.edu.qnu.events.event.Event;
+import vn.edu.qnu.events.event.EventPool;
+import vn.edu.qnu.events.event.EventPoolRepository;
 import vn.edu.qnu.events.event.EventRepository;
 import vn.edu.qnu.events.event.EventStatus;
+import vn.edu.qnu.events.event.PoolScopeType;
 import vn.edu.qnu.events.student.OrgClass;
 import vn.edu.qnu.events.student.OrgClassRepository;
 
@@ -82,6 +85,9 @@ class RegistrationIT {
 
     @Autowired
     private AuditLogRepository auditLogRepository;
+
+    @Autowired
+    private EventPoolRepository eventPoolRepository;
 
     private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 
@@ -470,6 +476,89 @@ class RegistrationIT {
 
         Event updated = eventRepository.findById(event.getId()).orElseThrow();
         assertThat(updated.getRegisteredCount()).isEqualTo(1);
+        assertThat(registrationRepository.countByEventId(event.getId())).isEqualTo(1L);
+    }
+
+    @Test
+    @DisplayName("13. Sự kiện có pool: đăng ký nhận suất theo pool, pool_id được lưu, used tăng")
+    void poolEventRegistrationAllocatesSeatInPool() throws Exception {
+        Event event = createPublishedEvent("Sự kiện có pool phân bổ suất", 5, null, Set.of(k49Class1Id));
+        eventPoolRepository.save(new EventPool(
+                event.getId(), PoolScopeType.LOP, k49Class1Id.toString(), 3, 1, false, false));
+
+        mockMvc.perform(post("/api/v1/events/" + event.getId() + "/registrations")
+                        .header("Authorization", "Bearer " + student1Token))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.status").value("REGISTERED"));
+
+        UUID sv1Id = appUserRepository.findByLoginId("sv001").orElseThrow().getId();
+        Registration reg = registrationRepository.findActiveByEventAndStudent(event.getId(), sv1Id).orElseThrow();
+        assertThat(reg.getPoolId()).isNotNull();
+        assertThat(reg.getStatus()).isEqualTo(RegistrationStatus.REGISTERED);
+
+        EventPool pool = eventPoolRepository.findByEventIdOrderByPriorityAsc(event.getId()).get(0);
+        assertThat(pool.getUsed()).isEqualTo(1);
+
+        Event updated = eventRepository.findById(event.getId()).orElseThrow();
+        assertThat(updated.getRegisteredCount()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("14. Hai sinh viên tranh suất cuối pool: đúng 1 REGISTERED, 1 WAITING_LIST, không oversell")
+    void concurrentRaceForLastPoolSeat() throws Exception {
+        Event event = createPublishedEvent("Sự kiện tranh suất pool cuối", 2, null, Set.of(k49Class1Id));
+        eventPoolRepository.save(new EventPool(
+                event.getId(), PoolScopeType.LOP, k49Class1Id.toString(), 1, 1, false, false));
+
+        String tokenA = createStudentToken("race-pool-a", k49Class1Id);
+        String tokenB = createStudentToken("race-pool-b", k49Class1Id);
+
+        CountDownLatch startLatch = new CountDownLatch(1);
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        List<Future<MvcResult>> futures = new ArrayList<>();
+        for (String token : List.of(tokenA, tokenB)) {
+            futures.add(executor.submit(() -> {
+                startLatch.await();
+                return mockMvc.perform(post("/api/v1/events/" + event.getId() + "/registrations")
+                                .header("Authorization", "Bearer " + token))
+                        .andReturn();
+            }));
+        }
+        startLatch.countDown();
+
+        List<String> statuses = new ArrayList<>();
+        for (Future<MvcResult> future : futures) {
+            MvcResult result = future.get(20, java.util.concurrent.TimeUnit.SECONDS);
+            statuses.add(objectMapper.readTree(result.getResponse().getContentAsString()).get("status").asText());
+        }
+        executor.shutdown();
+
+        assertThat(statuses).containsExactlyInAnyOrder("REGISTERED", "WAITING_LIST");
+
+        EventPool pool = eventPoolRepository.findByEventIdOrderByPriorityAsc(event.getId()).get(0);
+        assertThat(pool.getUsed()).isEqualTo(1);
+        assertThat(registrationRepository.countByEventId(event.getId())).isEqualTo(2L);
+    }
+
+    @Test
+    @DisplayName("15. Đăng ký lặp trên sự kiện có pool: idempotent, không tốn thêm suất pool")
+    void duplicateRegistrationWithPoolKeepsSingleSeat() throws Exception {
+        Event event = createPublishedEvent("Sự kiện pool đăng ký lặp", 5, null, Set.of(k49Class1Id));
+        eventPoolRepository.save(new EventPool(
+                event.getId(), PoolScopeType.LOP, k49Class1Id.toString(), 2, 1, false, false));
+
+        mockMvc.perform(post("/api/v1/events/" + event.getId() + "/registrations")
+                        .header("Authorization", "Bearer " + student1Token))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.status").value("REGISTERED"));
+
+        mockMvc.perform(post("/api/v1/events/" + event.getId() + "/registrations")
+                        .header("Authorization", "Bearer " + student1Token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.alreadyRegistered").value(true));
+
+        EventPool pool = eventPoolRepository.findByEventIdOrderByPriorityAsc(event.getId()).get(0);
+        assertThat(pool.getUsed()).isEqualTo(1);
         assertThat(registrationRepository.countByEventId(event.getId())).isEqualTo(1L);
     }
 }

@@ -33,6 +33,12 @@ public class Registration {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt = Instant.now();
 
+    @Column(name = "pool_id")
+    private UUID poolId;
+
+    @Column(name = "waiting_at")
+    private Instant waitingAt;
+
     public Registration() {}
 
     public Registration(UUID id, UUID eventId, UUID studentId, RegistrationStatus status, Instant createdAt, Instant updatedAt) {
@@ -90,6 +96,22 @@ public class Registration {
 
     public void setUpdatedAt(Instant updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public UUID getPoolId() {
+        return poolId;
+    }
+
+    public void setPoolId(UUID poolId) {
+        this.poolId = poolId;
+    }
+
+    public Instant getWaitingAt() {
+        return waitingAt;
+    }
+
+    public void setWaitingAt(Instant waitingAt) {
+        this.waitingAt = waitingAt;
     }
 }
 

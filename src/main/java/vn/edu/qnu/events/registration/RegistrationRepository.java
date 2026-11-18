@@ -54,6 +54,25 @@ public interface RegistrationRepository extends JpaRepository<Registration, UUID
     """, nativeQuery = true)
     int reserveSeat(@Param("eventId") UUID eventId);
 
+    @Modifying
+    @Query("UPDATE Registration r SET r.poolId = :poolId WHERE r.id = :id")
+    void setPool(@Param("id") UUID id, @Param("poolId") UUID poolId);
+
+    @Modifying
+    @Query(value = """
+        INSERT INTO registrations (id, event_id, student_id, status, pool_id, waiting_at, created_at, updated_at)
+        VALUES (:id, :eventId, :studentId, 'WAITING_LIST', :poolId, :now, :now, :now)
+        ON CONFLICT (event_id, student_id) WHERE status IN ('REGISTERED', 'WAITING_LIST')
+        DO NOTHING
+    """, nativeQuery = true)
+    int tryInsertWaitingRegistration(
+            @Param("id") UUID id,
+            @Param("eventId") UUID eventId,
+            @Param("studentId") UUID studentId,
+            @Param("poolId") UUID poolId,
+            @Param("now") Instant now
+    );
+
     long countByEventId(UUID eventId);
 }
 
