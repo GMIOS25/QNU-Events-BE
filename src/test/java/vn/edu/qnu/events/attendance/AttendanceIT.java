@@ -137,6 +137,35 @@ class AttendanceIT {
         return eventRepository.saveAndFlush(event);
     }
 
+    private Event createDraftEvent(Instant attOpen, Instant attClose) {
+        Instant now = Instant.now();
+        Instant startAt = now.plus(1, ChronoUnit.DAYS);
+        Instant endAt = startAt.plus(2, ChronoUnit.HOURS);
+        Instant regDeadline = startAt.minus(2, ChronoUnit.HOURS);
+
+        Event event = new Event(
+                UUID.randomUUID(),
+                ownerId,
+                "Sự kiện Nháp chưa công bố",
+                "Mô tả",
+                "Hội trường B",
+                startAt,
+                endAt,
+                regDeadline,
+                attOpen,
+                attClose,
+                AttendanceMethod.DYNAMIC_QR,
+                10,
+                3,
+                50,
+                "Workshop",
+                5,
+                Set.of(k49ClassId)
+        );
+        event.setStatus(EventStatus.DRAFT);
+        return eventRepository.saveAndFlush(event);
+    }
+
     private void registerStudent(UUID eventId, UUID studentId) {
         registrationRepository.saveAndFlush(new Registration(
                 UUID.randomUUID(),
@@ -848,6 +877,133 @@ class AttendanceIT {
         assertThat(attendanceRepository.existsByEventIdAndStudentIdAndStatus(event.getId(), student1Id, "ACCEPTED")).isFalse();
         // Counted attempts vẫn chỉ là 3 (lần thứ 4 bị chặn ở vòng ngoài, counted = false)
         assertThat(attemptRepository.countByEventIdAndStudentIdAndCountedTrue(event.getId(), student1Id)).isEqualTo(3L);
+    }
+
+    @Test
+    @DisplayName("23. Điểm danh sự kiện chưa PUBLISHED (DRAFT) -> 409 EVENT_NOT_PUBLISHED (counted = false, không trả metadata trừ lượt)")
+    void checkInWhenEventNotPublishedReturnsConflictWithoutAttemptDeduction() throws Exception {
+        Instant now = Instant.now();
+        Event draftEvent = createDraftEvent(
+                now.minus(10, ChronoUnit.MINUTES), now.plus(1, ChronoUnit.HOURS)
+        );
+        registerStudent(draftEvent.getId(), student1Id);
+
+        String token = qrTokenService.issue(draftEvent.getId(), now, draftEvent.getQrRotationSeconds());
+        String idempotencyKey = "draft-event-" + UUID.randomUUID();
+
+        mockMvc.perform(post("/api/v1/events/" + draftEvent.getId() + "/attendance/qr")
+                        .header("Authorization", "Bearer " + student1Token)
+                        .header("Idempotency-Key", idempotencyKey)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"token\":\"" + token + "\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("EVENT_NOT_PUBLISHED"))
+                .andExpect(jsonPath("$.details.remainingAttempts").doesNotExist())
+                .andExpect(jsonPath("$.details.attemptCount").doesNotExist())
+                .andExpect(jsonPath("$.details.canRetry").doesNotExist());
+
+        // Lần thử bị từ chối với counted = false (không phạt trừ lượt)
+        AttendanceAttempt attempt = attemptRepository
+                .findByEventIdAndStudentIdAndIdempotencyKey(draftEvent.getId(), student1Id, idempotencyKey)
+                .orElseThrow();
+        assertThat(attempt.isCounted()).isFalse();
+        assertThat(attempt.getOutcome()).isEqualTo("REJECTED");
+        assertThat(attempt.getReasonCode()).isEqualTo("EVENT_NOT_PUBLISHED");
+        assertThat(attemptRepository.countByEventIdAndStudentIdAndCountedTrue(draftEvent.getId(), student1Id)).isEqualTo(0L);
+    }
+
+    @Test
+    @DisplayName("24. Tranh chấp đồng thời ở biên lần 3 -> 4: Advisory lock chỉ cho tối đa 1 lần tính tiếp lên 3, phần còn lại trả 409 ATTEMPT_LIMIT_REACHED (counted = false)")
+    void concurrentFailedAttemptsAtBoundaryOnlyIncrementsToThree() throws Exception {
+        Instant now = Instant.now();
+        Event event = createEventWithAttendanceWindow(
+                now.minus(10, ChronoUnit.MINUTES), now.plus(1, ChronoUnit.HOURS)
+        );
+        registerStudent(event.getId(), student1Id);
+
+        // Chuẩn bị trạng thái ban đầu: Sinh viên đã có 2 lần thử sai (counted = 2)
+        for (int i = 1; i <= 2; i++) {
+            mockMvc.perform(post("/api/v1/events/" + event.getId() + "/attendance/qr")
+                            .header("Authorization", "Bearer " + student1Token)
+                            .header("Idempotency-Key", "initial-fail-boundary-" + i)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"token\":\"qr1.initial.bad.token." + i + "\"}"))
+                    .andExpect(status().isUnprocessableEntity())
+                    .andExpect(jsonPath("$.code").value("QR_MALFORMED"))
+                    .andExpect(jsonPath("$.details.attemptCount").value(i))
+                    .andExpect(jsonPath("$.details.remainingAttempts").value(3 - i));
+        }
+        assertThat(attemptRepository.countByEventIdAndStudentIdAndCountedTrue(event.getId(), student1Id)).isEqualTo(2L);
+
+        // Bắn đồng thời 10 request gửi mã QR sai cùng lúc (chỉ còn đúng 1 cơ hội trước khi chạm trần 3)
+        int requestCount = 10;
+        CountDownLatch ready = new CountDownLatch(requestCount);
+        CountDownLatch start = new CountDownLatch(1);
+        ExecutorService executor = Executors.newFixedThreadPool(requestCount);
+        List<Callable<MvcResult>> calls = new ArrayList<>();
+
+        for (int i = 0; i < requestCount; i++) {
+            String key = "concurrent-boundary-race-" + i + "-" + UUID.randomUUID();
+            String badPayload = "{\"token\":\"qr1.race.bad.token." + i + "\"}";
+            calls.add(() -> {
+                ready.countDown();
+                start.await(5, TimeUnit.SECONDS);
+                return mockMvc.perform(post("/api/v1/events/" + event.getId() + "/attendance/qr")
+                                .header("Authorization", "Bearer " + student1Token)
+                                .header("Idempotency-Key", key)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(badPayload))
+                        .andReturn();
+            });
+        }
+
+        List<MvcResult> responses = new ArrayList<>();
+        try {
+            List<Future<MvcResult>> futures = new ArrayList<>();
+            for (Callable<MvcResult> call : calls) {
+                futures.add(executor.submit(call));
+            }
+            assertThat(ready.await(5, TimeUnit.SECONDS)).isTrue();
+            start.countDown();
+            for (Future<MvcResult> future : futures) {
+                responses.add(future.get(15, TimeUnit.SECONDS));
+            }
+        } finally {
+            start.countDown();
+            executor.shutdownNow();
+        }
+
+        // Nhờ pg_advisory_xact_lock: Đúng 1 request được xử lý thành lần sai thứ 3 (422)
+        // và 9 request còn lại bị chặn do đã chạm trần 3 lần (409 ATTEMPT_LIMIT_REACHED)
+        List<MvcResult> unprocessable = responses.stream()
+                .filter(r -> r.getResponse().getStatus() == 422)
+                .toList();
+        List<MvcResult> conflict = responses.stream()
+                .filter(r -> r.getResponse().getStatus() == 409)
+                .toList();
+
+        assertThat(unprocessable).hasSize(1);
+        assertThat(conflict).hasSize(9);
+
+        // Kiểm tra request thứ 3 bị tính lỗi vi phạm QR
+        JsonNode unprocessableBody = objectMapper.readTree(unprocessable.getFirst().getResponse().getContentAsString());
+        assertThat(unprocessableBody.path("code").asText()).isEqualTo("QR_MALFORMED");
+        assertThat(unprocessableBody.path("details").path("attemptCount").asInt()).isEqualTo(3);
+        assertThat(unprocessableBody.path("details").path("remainingAttempts").asInt()).isEqualTo(0);
+        assertThat(unprocessableBody.path("details").path("canRetry").asBoolean()).isFalse();
+
+        // Kiểm tra 9 request còn lại bị chặn bởi ATTEMPT_LIMIT_REACHED
+        for (MvcResult res : conflict) {
+            JsonNode body = objectMapper.readTree(res.getResponse().getContentAsString());
+            assertThat(body.path("code").asText()).isEqualTo("ATTEMPT_LIMIT_REACHED");
+            assertThat(body.path("details").path("remainingAttempts").asInt()).isEqualTo(0);
+            assertThat(body.path("details").path("canRetry").asBoolean()).isFalse();
+        }
+
+        // Khẳng định chắc chắn trong DB: số lần counted = true CHÍNH XÁC là 3 (2 lần ban đầu + 1 lần lọt qua)
+        assertThat(attemptRepository.countByEventIdAndStudentIdAndCountedTrue(event.getId(), student1Id)).isEqualTo(3L);
+        // Không có bản ghi ACCEPTED nào
+        assertThat(attendanceRepository.existsByEventIdAndStudentIdAndStatus(event.getId(), student1Id, "ACCEPTED")).isFalse();
     }
 }
 
