@@ -47,28 +47,5 @@ public class AttendanceAttemptService {
         return attemptRepository.save(attempt);
     }
 
-    @Transactional
-    public AttendanceAttempt recordAttempt(
-            UUID eventId,
-            UUID studentId,
-            String idempotencyKey,
-            String outcome,
-            String reasonCode,
-            boolean counted,
-            int httpStatus,
-            String responseBody
-    ) {
-        return recordAttempt(
-                eventId,
-                studentId,
-                "DYNAMIC_QR",
-                idempotencyKey,
-                outcome,
-                reasonCode,
-                counted,
-                httpStatus,
-                responseBody
-        );
-    }
 }
 

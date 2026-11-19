@@ -118,6 +118,10 @@ public class AttendanceService {
             CheckInRequest request,
             String traceId
     ) {
+        if (!"DYNAMIC_QR".equals(method)) {
+            throw new IllegalArgumentException("Phương thức điểm danh không được hỗ trợ: " + method);
+        }
+
         CurrentUser currentUser = CurrentUserProvider.require();
         if (!currentUser.hasRole("STUDENT")) {
             throw new ApiException(ErrorCode.FORBIDDEN);
@@ -335,22 +339,6 @@ public class AttendanceService {
         );
 
         return result;
-    }
-
-    private CheckInResult reject(
-            UUID eventId,
-            UUID studentId,
-            String idempotencyKey,
-            ErrorCode errorCode,
-            boolean counted,
-            String auditOutcome,
-            Instant now,
-            String traceId,
-            Map<String, Object> auditDetails
-    ) {
-        return reject(
-                eventId, studentId, "DYNAMIC_QR", idempotencyKey, errorCode, counted, auditOutcome, now, traceId, auditDetails
-        );
     }
 
     private CheckInResult persistedResult(AttendanceAttempt attempt) {
