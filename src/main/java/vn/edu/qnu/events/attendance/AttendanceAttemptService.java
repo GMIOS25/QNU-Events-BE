@@ -1,21 +1,24 @@
 package vn.edu.qnu.events.attendance;
 
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
+import java.time.Instant;
 import java.util.UUID;
 
 @Service
 public class AttendanceAttemptService {
 
     private final AttendanceAttemptRepository attemptRepository;
+    private final Clock clock;
 
-    public AttendanceAttemptService(AttendanceAttemptRepository attemptRepository) {
+    public AttendanceAttemptService(AttendanceAttemptRepository attemptRepository, Clock clock) {
         this.attemptRepository = attemptRepository;
+        this.clock = clock;
     }
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional
     public AttendanceAttempt recordAttempt(
             UUID eventId,
             UUID studentId,
@@ -36,7 +39,8 @@ public class AttendanceAttemptService {
                 reasonCode,
                 counted,
                 (short) httpStatus,
-                responseBody
+                responseBody,
+                Instant.now(clock)
         );
         return attemptRepository.save(attempt);
     }
