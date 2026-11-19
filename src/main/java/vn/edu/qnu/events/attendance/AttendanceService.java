@@ -2,9 +2,13 @@ package vn.edu.qnu.events.attendance;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import jakarta.persistence.EntityManager;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import vn.edu.qnu.events.audit.AuditService;
+import vn.edu.qnu.events.common.ApiError;
 import vn.edu.qnu.events.common.ApiException;
 import vn.edu.qnu.events.common.CurrentUser;
 import vn.edu.qnu.events.common.CurrentUserProvider;
@@ -17,12 +21,16 @@ import vn.edu.qnu.events.registration.RegistrationStatus;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
 @Service
 public class AttendanceService {
+
+    private static final int MAX_COUNTED_ATTEMPTS = 3;
+    private static final int MAX_IDEMPOTENCY_KEY_LENGTH = 100;
 
     private final EventRepository eventRepository;
     private final RegistrationRepository registrationRepository;
@@ -32,7 +40,10 @@ public class AttendanceService {
     private final QrTokenService qrTokenService;
     private final AuditService auditService;
     private final Clock clock;
-    private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
+    private final ObjectMapper objectMapper = new ObjectMapper()
+            .findAndRegisterModules()
+            .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+    private final EntityManager entityManager;
 
     public AttendanceService(
             EventRepository eventRepository,
@@ -42,7 +53,8 @@ public class AttendanceService {
             AttendanceAttemptService attemptService,
             QrTokenService qrTokenService,
             AuditService auditService,
-            Clock clock
+            Clock clock,
+            EntityManager entityManager
     ) {
         this.eventRepository = eventRepository;
         this.registrationRepository = registrationRepository;
@@ -52,6 +64,7 @@ public class AttendanceService {
         this.qrTokenService = qrTokenService;
         this.auditService = auditService;
         this.clock = clock;
+        this.entityManager = entityManager;
     }
 
     @Transactional(readOnly = true)
@@ -79,150 +92,238 @@ public class AttendanceService {
 
         int rotationSeconds = event.getQrRotationSeconds();
         long epoch = now.getEpochSecond() / rotationSeconds;
-        Instant validUntil = Instant.ofEpochSecond((epoch + 1) * rotationSeconds);
+        Instant epochEnd = Instant.ofEpochSecond((epoch + 1) * rotationSeconds);
+        Instant validUntil = epochEnd.isBefore(event.getAttendanceCloseAt())
+                ? epochEnd
+                : event.getAttendanceCloseAt();
         String token = qrTokenService.issue(eventId, now, rotationSeconds);
 
         return new EventQrResponse(token, epoch, validUntil, rotationSeconds, now);
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public CheckInResponse checkInWithQr(UUID eventId, String idempotencyKey, CheckInRequest request) {
+    public CheckInResult checkInWithQr(
+            UUID eventId,
+            String idempotencyKey,
+            CheckInRequest request,
+            String traceId
+    ) {
         CurrentUser currentUser = CurrentUserProvider.require();
         if (!currentUser.hasRole("STUDENT")) {
             throw new ApiException(ErrorCode.FORBIDDEN);
         }
 
-        if (idempotencyKey == null || idempotencyKey.trim().isEmpty()) {
-            throw new ApiException(ErrorCode.VALIDATION_FAILED, "Header Idempotency-Key là bắt buộc.");
-        }
+        validateIdempotencyKey(idempotencyKey);
 
         UUID studentId = currentUser.userId();
-        Instant now = Instant.now(clock);
-
-        // 1. Kiểm tra Idempotency
-        Optional<AttendanceAttempt> cachedAttempt = attemptRepository.findByEventIdAndStudentIdAndIdempotencyKey(
-                eventId, studentId, idempotencyKey
-        );
-        if (cachedAttempt.isPresent()) {
-            AttendanceAttempt attempt = cachedAttempt.get();
-            if ("ACCEPTED".equals(attempt.getOutcome())) {
-                try {
-                    return objectMapper.readValue(attempt.getResponseBody(), CheckInResponse.class);
-                } catch (JsonProcessingException e) {
-                    return new CheckInResponse("ACCEPTED", attempt.getCreatedAt());
-                }
-            } else {
-                ErrorCode err = ErrorCode.valueOf(attempt.getReasonCode());
-                throw new ApiException(err);
-            }
+        Optional<AttendanceAttempt> cached = findCachedAttempt(eventId, studentId, idempotencyKey);
+        if (cached.isPresent()) {
+            return cachedResult(cached.get());
         }
 
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new ApiException(ErrorCode.NOT_FOUND));
 
-        // 2. Cửa sổ điểm danh và trạng thái PUBLISHED
-        if (event.getStatus() != EventStatus.PUBLISHED || now.isBefore(event.getAttendanceOpenAt()) || now.isAfter(event.getAttendanceCloseAt())) {
-            attemptService.recordAttempt(
-                    eventId, studentId, idempotencyKey, "REJECTED", "ATTENDANCE_NOT_OPEN", false, 409,
-                    "{\"code\":\"ATTENDANCE_NOT_OPEN\"}"
-            );
-            auditService.record(
-                    studentId, "STUDENT", "ATTENDANCE_DENIED", "EVENT", eventId.toString(),
-                    "REJECTED", "ATTENDANCE_NOT_OPEN", Map.of(), null
-            );
-            throw new ApiException(ErrorCode.ATTENDANCE_NOT_OPEN);
+        // Serialize only requests for the same event/student pair. This closes the
+        // check-then-insert races for both idempotency and accepted attendance.
+        acquireStudentEventLock(eventId, studentId);
+
+        cached = findCachedAttempt(eventId, studentId, idempotencyKey);
+        if (cached.isPresent()) {
+            return cachedResult(cached.get());
         }
 
-        // 3. Đã đăng ký (REGISTERED)
-        boolean hasRegistration = registrationRepository.findActiveByEventAndStudent(eventId, studentId)
-                .map(r -> r.getStatus() == RegistrationStatus.REGISTERED)
-                .orElse(false);
-
-        if (!hasRegistration) {
-            attemptService.recordAttempt(
-                    eventId, studentId, idempotencyKey, "REJECTED", "NOT_REGISTERED", false, 403,
-                    "{\"code\":\"NOT_REGISTERED\"}"
-            );
-            auditService.record(
-                    studentId, "STUDENT", "ATTENDANCE_DENIED", "EVENT", eventId.toString(),
-                    "DENIED", "NOT_REGISTERED", Map.of(), null
-            );
-            throw new ApiException(ErrorCode.NOT_REGISTERED);
-        }
-
-        // 4. Đã điểm danh trước đó
-        if (attendanceRepository.existsByEventIdAndStudentIdAndStatus(eventId, studentId, "ACCEPTED")) {
-            attemptService.recordAttempt(
-                    eventId, studentId, idempotencyKey, "REJECTED", "ALREADY_CHECKED_IN", false, 409,
-                    "{\"code\":\"ALREADY_CHECKED_IN\"}"
-            );
-            auditService.record(
-                    studentId, "STUDENT", "ATTENDANCE_DENIED", "EVENT", eventId.toString(),
-                    "REJECTED", "ALREADY_CHECKED_IN", Map.of(), null
-            );
-            throw new ApiException(ErrorCode.ALREADY_CHECKED_IN);
-        }
-
-        // 5. Kiểm tra giới hạn 3 lần thử sai (counted = true)
-        long failedAttempts = attemptRepository.countByEventIdAndStudentIdAndCountedTrue(eventId, studentId);
-        if (failedAttempts >= 3) {
-            attemptService.recordAttempt(
-                    eventId, studentId, idempotencyKey, "REJECTED", "ATTEMPT_LIMIT_REACHED", true, 409,
-                    "{\"code\":\"ATTEMPT_LIMIT_REACHED\"}"
-            );
-            auditService.record(
-                    studentId, "STUDENT", "ATTENDANCE_DENIED", "EVENT", eventId.toString(),
-                    "DENIED", "ATTEMPT_LIMIT_REACHED", Map.of("failedAttempts", String.valueOf(failedAttempts)), null
-            );
-            throw new ApiException(ErrorCode.ATTEMPT_LIMIT_REACHED);
-        }
-
-        // 6. Xác thực mã QR
+        entityManager.refresh(event);
+        Instant now = Instant.now(clock);
         String rawToken = request != null ? request.token() : null;
-        var verifyResult = qrTokenService.verify(
+
+        if (event.getStatus() != EventStatus.PUBLISHED
+                || now.isBefore(event.getAttendanceOpenAt())
+                || now.isAfter(event.getAttendanceCloseAt())) {
+            return reject(
+                    eventId, studentId, idempotencyKey, ErrorCode.ATTENDANCE_NOT_OPEN,
+                    false, "REJECTED", now, traceId, Map.of("eventId", eventId.toString())
+            );
+        }
+
+        boolean hasRegistration = registrationRepository.findActiveByEventAndStudent(eventId, studentId)
+                .map(registration -> registration.getStatus() == RegistrationStatus.REGISTERED)
+                .orElse(false);
+        if (!hasRegistration) {
+            return reject(
+                    eventId, studentId, idempotencyKey, ErrorCode.NOT_REGISTERED,
+                    false, "DENIED", now, traceId, Map.of("eventId", eventId.toString())
+            );
+        }
+
+        if (attendanceRepository.existsByEventIdAndStudentIdAndStatus(eventId, studentId, "ACCEPTED")) {
+            return reject(
+                    eventId, studentId, idempotencyKey, ErrorCode.ALREADY_CHECKED_IN,
+                    false, "REJECTED", now, traceId, Map.of("eventId", eventId.toString())
+            );
+        }
+
+        long failedAttempts = attemptRepository.countByEventIdAndStudentIdAndCountedTrue(eventId, studentId);
+        if (failedAttempts >= MAX_COUNTED_ATTEMPTS) {
+            return reject(
+                    eventId, studentId, idempotencyKey, ErrorCode.ATTEMPT_LIMIT_REACHED,
+                    false, "DENIED", now, traceId,
+                    Map.of("eventId", eventId.toString(), "failedAttempts", failedAttempts)
+            );
+        }
+
+        QrTokenService.VerificationResult verification = qrTokenService.verify(
                 rawToken, eventId, now, event.getQrRotationSeconds(), event.getQrGraceSeconds()
         );
-
-        String maskedToken = rawToken != null && rawToken.length() > 8
-                ? rawToken.substring(0, 8) + "***"
-                : "***";
-
-        if (!verifyResult.isValid()) {
-            ErrorCode err = verifyResult.errorCode();
-            attemptService.recordAttempt(
-                    eventId, studentId, idempotencyKey, "REJECTED", err.name(), true,
-                    err.getHttpStatus().value(), "{\"code\":\"" + err.name() + "\"}"
+        if (!verification.isValid()) {
+            return reject(
+                    eventId, studentId, idempotencyKey, verification.errorCode(),
+                    true, "REJECTED", now, traceId,
+                    Map.of(
+                            "eventId", eventId.toString(),
+                            "tokenHash", qrTokenService.fingerprint(rawToken)
+                    )
             );
-            auditService.record(
-                    studentId, "STUDENT", "ATTENDANCE_DENIED", "EVENT", eventId.toString(),
-                    "REJECTED", err.name(), Map.of("tokenMasked", maskedToken), null
-            );
-            throw new ApiException(err);
         }
 
-        // 7. Điểm danh thành công
         Attendance attendance = new Attendance(
                 UUID.randomUUID(), eventId, studentId, "DYNAMIC_QR", "ACCEPTED", now
         );
-        attendanceRepository.save(attendance);
+        attendance.setCreatedAt(now);
+        attendanceRepository.saveAndFlush(attendance);
 
         CheckInResponse response = new CheckInResponse("ACCEPTED", now);
-        String responseBody;
-        try {
-            responseBody = objectMapper.writeValueAsString(response);
-        } catch (JsonProcessingException e) {
-            responseBody = "{\"status\":\"ACCEPTED\"}";
-        }
-
-        attemptService.recordAttempt(
-                eventId, studentId, idempotencyKey, "ACCEPTED", null, false, 200, responseBody
+        String responseBody = serialize(response);
+        AttendanceAttempt attempt = attemptService.recordAttempt(
+                eventId, studentId, idempotencyKey, "ACCEPTED", null, false,
+                HttpStatus.OK.value(), responseBody
         );
+
+        CheckInResult result = persistedResult(attempt);
 
         auditService.record(
-                studentId, "STUDENT", "ATTENDANCE_CHECKIN", "ATTENDANCE", attendance.getId().toString(),
-                "SUCCESS", null, Map.of("eventId", eventId.toString(), "epoch", String.valueOf(verifyResult.epoch())), null
+                studentId,
+                "STUDENT",
+                "ATTENDANCE_QR_ACCEPT",
+                "ATTENDANCE",
+                attendance.getId().toString(),
+                "SUCCESS",
+                null,
+                Map.of(
+                        "eventId", eventId.toString(),
+                        "epoch", verification.epoch(),
+                        "tokenHash", qrTokenService.fingerprint(rawToken)
+                ),
+                traceId
         );
 
-        return response;
+        return result;
+    }
+
+    private void validateIdempotencyKey(String idempotencyKey) {
+        if (idempotencyKey == null || idempotencyKey.isBlank()) {
+            throw new ApiException(ErrorCode.VALIDATION_FAILED, "Header Idempotency-Key là bắt buộc.");
+        }
+        if (idempotencyKey.length() > MAX_IDEMPOTENCY_KEY_LENGTH) {
+            throw new ApiException(
+                    ErrorCode.VALIDATION_FAILED,
+                    "Header Idempotency-Key không được vượt quá 100 ký tự."
+            );
+        }
+    }
+
+    private Optional<AttendanceAttempt> findCachedAttempt(
+            UUID eventId,
+            UUID studentId,
+            String idempotencyKey
+    ) {
+        return attemptRepository.findByEventIdAndStudentIdAndIdempotencyKey(
+                eventId, studentId, idempotencyKey
+        );
+    }
+
+    private CheckInResult cachedResult(AttendanceAttempt attempt) {
+        HttpStatus status = HttpStatus.resolve(attempt.getHttpStatus());
+        if (status == null) {
+            throw new IllegalStateException("HTTP status đã lưu không hợp lệ: " + attempt.getHttpStatus());
+        }
+        return new CheckInResult(status, attempt.getResponseBody());
+    }
+
+    private CheckInResult reject(
+            UUID eventId,
+            UUID studentId,
+            String idempotencyKey,
+            ErrorCode errorCode,
+            boolean counted,
+            String auditOutcome,
+            Instant now,
+            String traceId,
+            Map<String, Object> auditDetails
+    ) {
+        ApiError error = new ApiError(
+                errorCode.name(),
+                errorCode.getDefaultMessage(),
+                Map.of(),
+                traceId,
+                now
+        );
+        String responseBody = serialize(error);
+
+        AttendanceAttempt attempt = attemptService.recordAttempt(
+                eventId,
+                studentId,
+                idempotencyKey,
+                "REJECTED",
+                errorCode.name(),
+                counted,
+                errorCode.getHttpStatus().value(),
+                responseBody
+        );
+
+        CheckInResult result = persistedResult(attempt);
+
+        Map<String, Object> safeDetails = new HashMap<>(auditDetails);
+        safeDetails.put("reasonCode", errorCode.name());
+        auditService.record(
+                studentId,
+                "STUDENT",
+                "ATTENDANCE_QR_REJECT",
+                "EVENT",
+                eventId.toString(),
+                auditOutcome,
+                errorCode.name(),
+                safeDetails,
+                traceId
+        );
+
+        return result;
+    }
+
+    private CheckInResult persistedResult(AttendanceAttempt attempt) {
+        attemptRepository.flush();
+        entityManager.detach(attempt);
+        AttendanceAttempt stored = attemptRepository.findById(attempt.getId())
+                .orElseThrow(() -> new IllegalStateException("Không tìm thấy attempt vừa lưu"));
+        return cachedResult(stored);
+    }
+
+    private void acquireStudentEventLock(UUID eventId, UUID studentId) {
+        entityManager.createNativeQuery("""
+                        SELECT pg_advisory_xact_lock(
+                            hashtextextended(CAST(?1 AS text) || ':' || CAST(?2 AS text), 0)
+                        )
+                        """)
+                .setParameter(1, eventId.toString())
+                .setParameter(2, studentId.toString())
+                .getSingleResult();
+    }
+
+    private String serialize(Object value) {
+        try {
+            return objectMapper.writeValueAsString(value);
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException("Không thể lưu response điểm danh", e);
+        }
     }
 }
