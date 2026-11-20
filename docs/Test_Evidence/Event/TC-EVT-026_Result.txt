@@ -1,0 +1,17 @@
+Test Case: TC-EVT-026 - RBAC block STUDENT & SYSTEM_ADMIN on all 5 endpoints + audit
+Status: PASS
+Timestamp: 2026-11-20T09:02:43.189Z
+------------------------------------------------------------
+sv001 GET /classes -> HTTP 403 (FORBIDDEN)
+sv001 POST /events -> HTTP 403 (FORBIDDEN)
+sv001 PUT /events/30698738-7835-4a2a-a1f5-83adb4cb88db -> HTTP 403 (FORBIDDEN)
+sv001 GET /events/30698738-7835-4a2a-a1f5-83adb4cb88db/preview -> HTTP 403 (FORBIDDEN)
+sv001 POST /events/30698738-7835-4a2a-a1f5-83adb4cb88db/publish -> HTTP 403 (FORBIDDEN)
+admin01 GET /classes -> HTTP 403 (FORBIDDEN)
+admin01 POST /events -> HTTP 403 (FORBIDDEN)
+admin01 PUT /events/30698738-7835-4a2a-a1f5-83adb4cb88db -> HTTP 403 (FORBIDDEN)
+admin01 GET /events/30698738-7835-4a2a-a1f5-83adb4cb88db/preview -> HTTP 403 (FORBIDDEN)
+admin01 POST /events/30698738-7835-4a2a-a1f5-83adb4cb88db/publish -> HTTP 403 (FORBIDDEN)
+DB audit_logs EVENT_PUBLISH_DENIED/FORBIDDEN count for 30698738-7835-4a2a-a1f5-83adb4cb88db -> 2
+------------------------------------------------------------
+Summary: Cả 10 lời gọi (sv001 & admin01) trả 403 FORBIDDEN; AccessDeniedHandler ghi nhận đủ audit EVENT_PUBLISH_DENIED.

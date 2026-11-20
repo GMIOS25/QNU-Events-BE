@@ -1,0 +1,10 @@
+Test Case: TC-EVT-022 - Edit after preview -> PREVIEW_OUTDATED + audit_logs
+Status: PASS
+Timestamp: 2026-11-20T09:02:42.717Z
+------------------------------------------------------------
+GET /preview -> HTTP 200, previewVersion=0
+PUT /events -> HTTP 200, version=1
+POST /publish (old previewVersion=0) -> HTTP 409 {"code":"PREVIEW_OUTDATED","message":"Nội dung sự kiện đã thay đổi, vui lòng xem trước lại.","details":{},"traceId":"1201c904-2afd-4597-b25c-6caafdae0932","timestamp":"2026-11-20T09:02:42.576965100Z"}
+DB audit_logs -> EVENT_PUBLISH_DENIED|DENIED|PREVIEW_OUTDATED
+------------------------------------------------------------
+Summary: Trả 409 PREVIEW_OUTDATED và ghi audit_logs EVENT_PUBLISH_DENIED/DENIED/PREVIEW_OUTDATED.

@@ -1,0 +1,10 @@
+Test Case: TC-EVT-013 - Boundary activityPoints -1/0 & activityType empty
+Status: PASS
+Timestamp: 2026-11-20T09:02:42.020Z
+------------------------------------------------------------
+activityPoints=-1 -> HTTP 400 {"code":"VALIDATION_FAILED","message":"Dữ liệu không hợp lệ.","details":{"fields":{"activityPoints":"Điểm rèn luyện phải lớn hơn hoặc bằng 0"}},"traceId":"25455d1d-6549-4566-afa0-c5a7b71847b5","timestamp":"2026-11-20T09:02:41.976867400Z"}
+activityType="" -> HTTP 400 {"code":"VALIDATION_FAILED","message":"Dữ liệu không hợp lệ.","details":{"fields":{"activityType":"Loại hoạt động không được để trống"}},"traceId":"dac8a4ff-9456-4439-a3b9-986d918d4e99","timestamp":"2026-11-20T09:02:41.987706700Z"}
+activityType="   " -> HTTP 400 {"code":"VALIDATION_FAILED","message":"Dữ liệu không hợp lệ.","details":{"fields":{"activityType":"Loại hoạt động không được để trống"}},"traceId":"829bed2b-12e6-48b8-a9d8-23924eb164a0","timestamp":"2026-11-20T09:02:41.999257800Z"}
+activityPoints=0 -> HTTP 201, activityPoints=0
+------------------------------------------------------------
+Summary: activityPoints=-1 và activityType rỗng trả 400 VALIDATION_FAILED; activityPoints=0 trả 201 Created.
