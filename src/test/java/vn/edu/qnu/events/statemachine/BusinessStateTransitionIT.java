@@ -393,8 +393,8 @@ class BusinessStateTransitionIT {
 
         // Lần 1: Chèn trực tiếp ACCEPTED thành công
         jdbcTemplate.update(
-                "INSERT INTO attendances (id, event_id, student_id, method, status, created_at) " +
-                        "VALUES (:id, :eventId, :studentId, 'DYNAMIC_QR', 'ACCEPTED', now())",
+                "INSERT INTO attendances (id, event_id, student_id, method, status, recorded_at, created_at) " +
+                        "VALUES (:id, :eventId, :studentId, 'DYNAMIC_QR', 'ACCEPTED', now(), now())",
                 new MapSqlParameterSource()
                         .addValue("id", UUID.randomUUID())
                         .addValue("eventId", event.getId())
@@ -404,8 +404,8 @@ class BusinessStateTransitionIT {
         // Lần 2: Cố tình chèn thêm 1 bản ghi ACCEPTED thứ hai cho cùng 1 sinh viên -> Bị CSDL ném lỗi vi phạm Unique Index
         assertThatThrownBy(() -> {
             jdbcTemplate.update(
-                    "INSERT INTO attendances (id, event_id, student_id, method, status, created_at) " +
-                            "VALUES (:id, :eventId, :studentId, 'DYNAMIC_QR', 'ACCEPTED', now())",
+                    "INSERT INTO attendances (id, event_id, student_id, method, status, recorded_at, created_at) " +
+                            "VALUES (:id, :eventId, :studentId, 'DYNAMIC_QR', 'ACCEPTED', now(), now())",
                     new MapSqlParameterSource()
                             .addValue("id", UUID.randomUUID())
                             .addValue("eventId", event.getId())
