@@ -135,7 +135,7 @@ class BusinessStateTransitionIT {
     void testRegistrationState_NoneToRegistered_WhenQuotaAvailable() throws Exception {
         Event event = createPublishedEvent(5, false);
 
-        mockMvc.perform(post("/api/v1/events/{id}/register", event.getId())
+        mockMvc.perform(post("/api/v1/events/{id}/registrations", event.getId())
                         .header("Authorization", "Bearer " + student1Token))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.status").value("REGISTERED"))
@@ -155,12 +155,12 @@ class BusinessStateTransitionIT {
         Event event = createPublishedEvent(5, false);
 
         // Đăng ký lần 1 -> 201 Created
-        mockMvc.perform(post("/api/v1/events/{id}/register", event.getId())
+        mockMvc.perform(post("/api/v1/events/{id}/registrations", event.getId())
                         .header("Authorization", "Bearer " + student1Token))
                 .andExpect(status().isCreated());
 
         // Đăng ký lần 2 -> 200 OK idempotent, giữ nguyên REGISTERED
-        mockMvc.perform(post("/api/v1/events/{id}/register", event.getId())
+        mockMvc.perform(post("/api/v1/events/{id}/registrations", event.getId())
                         .header("Authorization", "Bearer " + student1Token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("REGISTERED"))
@@ -176,7 +176,7 @@ class BusinessStateTransitionIT {
         Event event = createPublishedEvent(5, false);
 
         // Sinh viên 1 đăng ký
-        mockMvc.perform(post("/api/v1/events/{id}/register", event.getId())
+        mockMvc.perform(post("/api/v1/events/{id}/registrations", event.getId())
                         .header("Authorization", "Bearer " + student1Token))
                 .andExpect(status().isCreated());
 
@@ -255,7 +255,7 @@ class BusinessStateTransitionIT {
         Event event = createPublishedEvent(5, true);
 
         // 1. Đăng ký trước
-        mockMvc.perform(post("/api/v1/events/{id}/register", event.getId())
+        mockMvc.perform(post("/api/v1/events/{id}/registrations", event.getId())
                         .header("Authorization", "Bearer " + student1Token))
                 .andExpect(status().isCreated());
 
@@ -268,7 +268,7 @@ class BusinessStateTransitionIT {
 
         // 3. Sinh viên quét mã QR -> 200 ACCEPTED
         String body = objectMapper.writeValueAsString(new vn.edu.qnu.events.attendance.CheckInRequest(qrToken));
-        mockMvc.perform(post("/api/v1/events/{id}/checkin", event.getId())
+        mockMvc.perform(post("/api/v1/events/{id}/attendance/qr", event.getId())
                         .header("Authorization", "Bearer " + student1Token)
                         .header("Idempotency-Key", UUID.randomUUID().toString())
                         .contentType(MediaType.APPLICATION_JSON)
@@ -287,7 +287,7 @@ class BusinessStateTransitionIT {
         Event event = createPublishedEvent(5, true);
 
         // Đăng ký
-        mockMvc.perform(post("/api/v1/events/{id}/register", event.getId())
+        mockMvc.perform(post("/api/v1/events/{id}/registrations", event.getId())
                         .header("Authorization", "Bearer " + student1Token))
                 .andExpect(status().isCreated());
 
@@ -303,18 +303,18 @@ class BusinessStateTransitionIT {
 
         // 3 lần thử sai -> đều bị REJECTED
         for (int i = 1; i <= 3; i++) {
-            mockMvc.perform(post("/api/v1/events/{id}/checkin", event.getId())
+            mockMvc.perform(post("/api/v1/events/{id}/attendance/qr", event.getId())
                             .header("Authorization", "Bearer " + student1Token)
                             .header("Idempotency-Key", UUID.randomUUID().toString())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(badBody))
-                    .andExpect(status().isConflict())
+                    .andExpect(status().isUnprocessableEntity())
                     .andExpect(jsonPath("$.code").value("QR_BAD_SIGNATURE"));
         }
 
         // Lần thử thứ 4 (kể cả dùng mã QR hợp lệ) -> Bị chặn 409 ATTEMPT_LIMIT_REACHED
         String validBody = objectMapper.writeValueAsString(new vn.edu.qnu.events.attendance.CheckInRequest(validToken));
-        mockMvc.perform(post("/api/v1/events/{id}/checkin", event.getId())
+        mockMvc.perform(post("/api/v1/events/{id}/attendance/qr", event.getId())
                         .header("Authorization", "Bearer " + student1Token)
                         .header("Idempotency-Key", UUID.randomUUID().toString())
                         .contentType(MediaType.APPLICATION_JSON)
@@ -333,7 +333,7 @@ class BusinessStateTransitionIT {
         Event event = createPublishedEvent(5, true);
 
         // Đăng ký
-        mockMvc.perform(post("/api/v1/events/{id}/register", event.getId())
+        mockMvc.perform(post("/api/v1/events/{id}/registrations", event.getId())
                         .header("Authorization", "Bearer " + student1Token))
                 .andExpect(status().isCreated());
 
@@ -346,7 +346,7 @@ class BusinessStateTransitionIT {
         String body = objectMapper.writeValueAsString(new vn.edu.qnu.events.attendance.CheckInRequest(qrToken));
 
         // Điểm danh lần 1 -> 200 ACCEPTED
-        mockMvc.perform(post("/api/v1/events/{id}/checkin", event.getId())
+        mockMvc.perform(post("/api/v1/events/{id}/attendance/qr", event.getId())
                         .header("Authorization", "Bearer " + student1Token)
                         .header("Idempotency-Key", UUID.randomUUID().toString())
                         .contentType(MediaType.APPLICATION_JSON)
@@ -355,7 +355,7 @@ class BusinessStateTransitionIT {
                 .andExpect(jsonPath("$.status").value("ACCEPTED"));
 
         // Điểm danh lần 2 với Idempotency Key mới -> 409 ALREADY_CHECKED_IN
-        mockMvc.perform(post("/api/v1/events/{id}/checkin", event.getId())
+        mockMvc.perform(post("/api/v1/events/{id}/attendance/qr", event.getId())
                         .header("Authorization", "Bearer " + student1Token)
                         .header("Idempotency-Key", UUID.randomUUID().toString())
                         .contentType(MediaType.APPLICATION_JSON)
@@ -377,7 +377,7 @@ class BusinessStateTransitionIT {
         String body = objectMapper.writeValueAsString(new vn.edu.qnu.events.attendance.CheckInRequest(qrToken));
 
         // Sinh viên 2 chưa đăng ký gọi điểm danh -> 403 NOT_REGISTERED
-        mockMvc.perform(post("/api/v1/events/{id}/checkin", event.getId())
+        mockMvc.perform(post("/api/v1/events/{id}/attendance/qr", event.getId())
                         .header("Authorization", "Bearer " + student2Token)
                         .header("Idempotency-Key", UUID.randomUUID().toString())
                         .contentType(MediaType.APPLICATION_JSON)
