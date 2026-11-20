@@ -1,0 +1,22 @@
+{
+  "noAuth": {
+    "status": 401,
+    "code": "UNAUTHENTICATED"
+  },
+  "revoked": {
+    "status": 401,
+    "code": "SESSION_REVOKED"
+  },
+  "ownerApi": {
+    "status": 403,
+    "code": "FORBIDDEN"
+  },
+  "adminApi": {
+    "status": 403,
+    "code": "FORBIDDEN"
+  },
+  "ownerBrowser": {
+    "hasHistoryMenu": false,
+    "redirectedUrl": "http://localhost:5173/events"
+  }
+}
