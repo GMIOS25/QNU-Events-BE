@@ -16,7 +16,7 @@ $$\text{Khoa (Department)} \longrightarrow \text{Ngành (Specialization)} \longr
 ### Ánh xạ Cơ sở Dữ liệu
 - **Trong Schema V1 hiện hành ([`V1__sprint1_core_schema.sql`](../../src/main/resources/db/migration/V1__sprint1_core_schema.sql))**:
   - Thông tin Khoa được lưu trực tiếp tại cột `org_class.faculty_name` (`varchar(150) NOT NULL`).
-- **Trong Schema V2 mở rộng cho `QE-26` (`org_department`)**:
+- **Trong Schema V2 dự kiến cho `QE-26` (`org_department` — do Agent `A0` tổng hợp chung vào migration `V2__...` theo quy tắc `R6` trong [`AGENTS.md`](../../AGENTS.md), không tự tách migration riêng)**:
   - Bảng `org_department`:
     - `id uuid PRIMARY KEY DEFAULT gen_random_uuid()` (ưu tiên giữ nguyên `DepartmentId` từ `khoa.csv` nếu có, hoặc sinh UUID v5 tất định theo `DepartmentCode`).
     - `code varchar(30) NOT NULL UNIQUE` (`DepartmentCode`).

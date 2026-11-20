@@ -1,9 +1,10 @@
-# Hợp đồng Import CSV/Excel: Thực thể Sinh viên (`Student` / `AppUser`) — QE-45 & QE-26
+# Hợp đồng Import CSV/Excel: Thực thể Sinh viên (`Student` / `AppUser`) — QE-45, QE-26 & QE-73
 
 > **Mã tài liệu:** `CONTRACT-IMP-STUDENT-v1.0`
-> **Liên kết Jira:** `QE-45` (Xác định CSV import contract và báo cáo lỗi), `QE-26` (Backend Import Sinh viên), `QE-62` (UI Import Preview), `QE-73` (Cấp tài khoản sinh viên)
-> **Liên kết SRS:** `UC025` (UC6.1), `REQ-DATA-001` → `REQ-DATA-007`, `REQ-DATA-010`, `NFR-PERF-005`, `NFR-SEC-009`, `NFR-QUAL-012`, `OTH-DATA-001` → `OTH-DATA-003`, `OTH-I18N-001`, `TBD-DATA-01`
-> **Trạng thái:** Đề xuất chuẩn hóa cho `QE-45` (Assumption `A-IMP-01` chờ Stakeholder phê duyệt để đóng `TBD-DATA-01`)
+> **Liên kết Jira:** `QE-45` (Xác định CSV import contract và báo cáo lỗi), `QE-26` (Backend Import hồ sơ sinh viên), `QE-62` (UI Import Preview), `QE-73` (System Admin cấp tài khoản sinh viên), đồng bộ với `QE-36` (Xác thực & vòng đời phiên) và `QE-74` (Google OAuth2 QNU)
+> **Liên kết SRS:** `UC025` (UC6.1), `REQ-DATA-001` → `REQ-DATA-007`, `REQ-DATA-010`, `NFR-PERF-005`, `NFR-SEC-003`, `NFR-SEC-009`, `NFR-SEC-012`, `NFR-QUAL-012`, `OTH-DATA-001` → `OTH-DATA-003`, `OTH-I18N-001`, `TBD-DATA-01`, `TBD-AUTH-01`, `TBD-AUTH-03`
+> **Tài liệu đồng bộ:** [`auth-and-session-lifecycle.md`](../architecture/auth-and-session-lifecycle.md) (`QE-36` — PR #15), [`decisions.md`](../decisions.md) (`A-AUTH-05`, `A-AUTH-08`), [`AGENTS.md`](../../AGENTS.md) (`R6`, `R7`, `R11`, `R12`)
+> **Trạng thái:** Đề xuất chuẩn hóa cho `QE-45` (`ASSUMPTION` chưa duyệt, chờ Stakeholder phê duyệt để đóng `TBD-DATA-01` và chốt `TBD-AUTH-01` / `TBD-AUTH-03`)
 
 ---
 
@@ -12,36 +13,56 @@
 Tài liệu này định nghĩa **Hợp đồng kỹ thuật (Data & API Contract)** cho chức năng nhập (import) danh sách sinh viên từ tệp CSV/Excel vào hệ thống **QNU-Events**, dựa trên:
 1. **Lược đồ CSDL hiện hành** ([`V1__sprint1_core_schema.sql`](../../src/main/resources/db/migration/V1__sprint1_core_schema.sql)) và Model Java ([`AppUser.java`](../../src/main/java/vn/edu/qnu/events/auth/AppUser.java), [`OrgClass.java`](../../src/main/java/vn/edu/qnu/events/student/OrgClass.java)).
 2. **Tập dữ liệu thực tế của Trường Đại học Quy Nhơn (QNU)** gồm 6.435 bản ghi sinh viên thuộc 4 khóa (`student/sv_k46.csv`, `sv_k47.csv`, `sv_k48.csv`, `sv_k49.csv`) và danh mục tổ chức (`khoa.csv`, `nganh.csv`, `khoahoc.csv`, `lop.csv`).
-3. **Đặc tả yêu cầu phần mềm (SRS v1.0)** mục 3.6 (`UC025`, `REQ-DATA-001..007`).
+3. **Đặc tả yêu cầu phần mềm (SRS v1.0)** mục 3.6 (`UC025`, `REQ-DATA-001..007`) và **Đặc tả kiến trúc xác thực `QE-36`** ([`auth-and-session-lifecycle.md`](../architecture/auth-and-session-lifecycle.md)).
 
-Mọi kịch bản kiểm thử tự động của `QE-26` và `QE-62` phải bám sát cấu trúc cột, mã lỗi và ngữ nghĩa giao dịch trong tài liệu này — **không tự giả định cấu trúc tệp**.
+Mọi kịch bản kiểm thử tự động của `QE-26`, `QE-62` và `QE-73` phải bám sát cấu trúc cột, mã lỗi, quy tắc bảo mật credential và ngữ nghĩa giao dịch trong tài liệu này — **không tự giả định cấu trúc tệp hay dùng mật khẩu mặc định chung**.
 
 ---
 
-## 2. Ánh xạ Mô hình Dữ liệu & Cơ sở Dữ liệu (Model & DB Mapping)
+## 2. Ánh xạ Mô hình Dữ liệu, Phạm vi `QE-26` / `QE-73` & Cơ sở Dữ liệu
 
-### 2.1. Ánh xạ vào Schema V1 hiện hành (`app_user` & `user_role`)
+### 2.1. Tách phạm vi `QE-26` vs `QE-73` & Ánh xạ vào Schema V1 (`app_user` & `user_role`)
+
+> [!IMPORTANT]
+> **Tách rõ phạm vi nghiệp vụ giữa `QE-26` và `QE-73` (đồng bộ với [`auth-and-session-lifecycle.md` §2.1–§2.5](../architecture/auth-and-session-lifecycle.md)):**
+> - **`QE-26` *(Import Hồ sơ Sinh viên — `UC025`)*:** Chịu trách nhiệm đọc, kiểm tra định dạng/encoding, ánh xạ cột, đối chiếu khóa ngoại tổ chức (`org_class`, khoa/ngành), kiểm tra trùng lặp/xung đột định danh, thực thi `dryRun` preview (`QE-62`), nhập/đồng bộ **thông tin hồ sơ sinh viên** (`student_code`, `full_name`, `class_id`, trạng thái học vụ, các trường hồ sơ mở rộng ở `V2`) và xuất báo cáo `ImportReport`.
+> - **`QE-73` *(System Admin Cấp Tài khoản Sinh viên từ Import Trường)*:** Chịu trách nhiệm **khởi tạo tài khoản đăng nhập (`app_user` + `user_role = 'STUDENT'`)** do `SYSTEM_ADMIN` thực hiện (cấm tự đăng ký *no self-signup*), tuân thủ 4 nguyên tắc bắt buộc:
+>   1. **Bỏ hoàn toàn giả định mật khẩu khởi tạo dùng chung theo cấu hình hệ thống:** Tuyệt đối **không** dùng một mật khẩu mặc định chung (như `Demo@12345` hay ngày sinh dễ đoán) cho hàng loạt sinh viên.
+>   2. **Cấp credential ngẫu nhiên / activation token riêng cho từng sinh viên (`ASSUMPTION A-AUTH-08`, chờ chốt `TBD-AUTH-01` / `Q-AUTH-04`):** Khi tạo tài khoản mới, hệ thống sinh **token kích hoạt / đặt mật khẩu một lần** có thời hạn (lưu hash SHA-256 của token trong DB, gửi qua email QNU đã xác nhận ở `TBD-AUTH-03`; trong thời gian chưa kích hoạt khi `V1` đặt `app_user.password_hash NOT NULL`, lưu hash `BCrypt(12)` của chuỗi ngẫu nhiên mật mã không đoán được), **hoặc** sinh **mật khẩu tạm ngẫu nhiên mạnh một lần** (băm `BCrypt(12)` vào `password_hash`, kèm cờ `must_change_password = true` ở `V2__...`).
+>   3. **Nguyên tắc Idempotent & *No Silent Overwrite* (`QE-73` AC):** Khi re-import sinh viên đã tồn tại theo `student_code`, **tuyệt đối không** reset/ghi đè `password_hash`, không tự mở khóa tài khoản đang bị `SYSTEM_ADMIN` khóa (`status = LOCKED`), không xóa các vai trò bổ sung (`CLASS_REPRESENTATIVE`), và không ghi đè `google_sub` đã liên kết (`QE-74`).
+>   4. **Cấm log / xuất plaintext credential (`R7`, `NFR-SEC-012`):** Tuyệt đối không lưu, không trả trong API response (`ImportReport`, file kết quả lỗi), và không ghi vào `audit_logs.details` hoặc application logs (`Slf4j`) bất kỳ mật khẩu plaintext, mật khẩu tạm, `password_hash`, activation token gốc hay JWT nào. Chỉ ghi sự kiện audit (`USER_IMPORT_BATCH`, `USER_PROVISION`) với `target_id` (UUID), `batchId` và `reasonCode`.
 
 Trong lược đồ [`V1__sprint1_core_schema.sql`](../../src/main/resources/db/migration/V1__sprint1_core_schema.sql), mỗi sinh viên được lưu trữ dưới dạng một tài khoản trong bảng `app_user` đi kèm vai trò `STUDENT` trong bảng `user_role`:
 
-| Cột trong DB (`V1`) | Thuộc tính `AppUser` | Kiểu dữ liệu DB | Ràng buộc DB | Quy tắc sinh / Ánh xạ từ CSV |
+| Cột trong DB (`V1`) | Thuộc tính `AppUser` | Kiểu dữ liệu DB | Ràng buộc DB | Quy tắc sinh / Ánh xạ từ CSV (`QE-26` & `QE-73`) |
 |---|---|---|---|---|
 | `id` | `id` | `uuid` | `PK DEFAULT gen_random_uuid()` | Giữ nguyên `id` nếu đã tồn tại theo `student_code`; sinh `UUID.randomUUID()` nếu tạo mới. |
-| `login_id` | `loginId` | `varchar(50)` | `NOT NULL UNIQUE` | Gán bằng chính `StudentID` (MSSV 10 chữ số, đã `trim()`). |
-| `password_hash` | `passwordHash` | `varchar(100)` | `NOT NULL` | Khi **tạo mới**: băm `BCrypt(12)` mật khẩu khởi tạo theo cấu hình hệ thống (không lưu plaintext). Khi **cập nhật**: giữ nguyên `password_hash` hiện có. |
-| `full_name` | `fullName` | `varchar(150)` | `NOT NULL` | Lấy từ cột `StudentName` (hoặc ghép `LastName.trim() + " " + FirstName.trim()` nếu `StudentName` trống nhưng có họ/tên tách rời). Chuẩn hóa Unicode NFC. |
-| `student_code` | `studentCode` | `varchar(30)` | `UNIQUE` | Lấy từ cột `StudentID` (chuỗi 10 chữ số `^\d{10}$`). |
-| `class_id` | `classId` | `uuid` | ` FK REFERENCES org_class(id)` | Phân giải từ `ClassId` hoặc `ClassCode` / `ClassStudentName` sang `org_class.id` (xem Mục 5). |
-| `status` | `status` | `varchar(20)` | `CHECK IN ('ACTIVE','LOCKED')` | Ánh xạ từ `StudyStatusID` / `StudyStatusName`: `1` (`Còn học`) → `ACTIVE`; `2, 3, 4, 7` (`Nghỉ học tạm thời`, `Buộc thôi học`, `Thôi học`, `Chuyển trường`) → `LOCKED`. Mặc định `ACTIVE` nếu cột trạng thái để trống. |
-| `user_role.role` | `roles` | `varchar(30)` | `PK (user_id, role)` | Đảm bảo có `'STUDENT'` trong tập `roles` (không xóa các role bổ sung như `'CLASS_REPRESENTATIVE'` nếu sinh viên đã được gán BCS trước đó). |
+| `login_id` | `loginId` | `varchar(50)` | `NOT NULL UNIQUE` | Gán bằng chính `StudentID` (MSSV 10 chữ số, đã `trim()`, khớp `REQ-AUTH-014`). Từ chối dòng lỗi nếu `login_id` đã bị tài khoản khác chiếm dụng. |
+| `password_hash` | `passwordHash` | `varchar(100)` | `NOT NULL` | **`[Phạm vi QE-73]`** Khi **tạo mới**: lưu hash `BCrypt(12)` của **mật khẩu ngẫu nhiên mạnh một lần** (kèm `must_change_password = true`) hoặc **chuỗi ngẫu nhiên mật mã không đoán được** trong lúc chờ kích hoạt qua activation token một lần (`ASSUMPTION A-AUTH-08`, chờ chốt `TBD-AUTH-01`). **Không dùng mật khẩu mặc định chung**; **không log/trả plaintext**. Khi **re-import/cập nhật**: giữ nguyên `password_hash` hiện có (*No Silent Overwrite*). |
+| `full_name` | `fullName` | `varchar(150)` | `NOT NULL` | **`[Phạm vi QE-26]`** Lấy từ cột `StudentName` (hoặc ghép `LastName.trim() + " " + FirstName.trim()` nếu `StudentName` trống nhưng có họ/tên tách rời). Chuẩn hóa Unicode NFC. |
+| `student_code` | `studentCode` | `varchar(30)` | `UNIQUE` | **`[Phạm vi QE-26]`** Lấy từ cột `StudentID` (chuỗi 10 chữ số `^\d{10}$` — khóa đối chiếu nghiệp vụ bất biến). |
+| `class_id` | `classId` | `uuid` | `FK REFERENCES org_class(id)` | **`[Phạm vi QE-26]`** Phân giải từ `ClassId` hoặc `ClassCode` / `ClassStudentName` sang `org_class.id` (xem Mục 5). |
+| `status` | `status` | `varchar(20)` | `CHECK IN ('ACTIVE','LOCKED')` | Khi **tạo mới (`QE-73`)**: ánh xạ từ `StudyStatusID` / `StudyStatusName` (`1` `Còn học` → `ACTIVE`; `2, 3, 4, 7` `Nghỉ học tạm thời`, `Buộc thôi học`, `Thôi học`, `Chuyển trường` → `LOCKED`; mặc định `ACTIVE` nếu trống). Khi **re-import**: theo *No Silent Overwrite* (`QE-73`), **không tự mở khóa** tài khoản đang ở trạng thái khóa quản trị `LOCKED`. |
+| `user_role.role` | `roles` | `varchar(30)` | `PK (user_id, role)` | **`[Phạm vi QE-73]`** Đảm bảo gán `'STUDENT'` khi tạo mới; khi re-import tuyệt đối không xóa các role bổ sung như `'CLASS_REPRESENTATIVE'` nếu sinh viên đã được gán BCS trước đó. |
 
-### 2.2. Đề xuất mở rộng Schema V2 (`student_profile` / mở rộng `app_user`) cho `QE-26`
+### 2.2. Đề xuất mở rộng Schema V2 (Tổng hợp bởi A0 theo `R6`) & Quy định Miền Email QNU (`TBD-AUTH-03`)
 
 > [!NOTE]
-> Theo Quy tắc **R6** ([`AGENTS.md`](../../AGENTS.md)), file `V1__sprint1_core_schema.sql` đã đóng băng. Khi triển khai `QE-26` ở Sprint 2, nếu cần lưu thêm thông tin hồ sơ sinh viên từ CSV nhà trường để phục vụ Google OAuth (`QE-74`) và tra cứu nâng cao, Agent A0 sẽ tạo migration `V2__student_profile_and_catalog.sql` bổ sung các cột/bảng phụ:
-> - `email varchar(150)` (email cá nhân từ CSV; **không đặt UNIQUE cứng** vì dữ liệu thật QNU có các trường hợp thí sinh thi lại khóa sau dùng chung email cá nhân).
-> - `qnu_email varchar(150) UNIQUE` (email định danh trường cấp dạng `<student_code>@st.qnu.edu.vn` phục vụ `QE-74`).
-> - `birth_date date`, `gender varchar(10)`, `id_card varchar(20)`, `study_status_code smallint`, `intake_no smallint`, `specialization_code varchar(10)`, `department_code varchar(10)`.
+> **Quy tắc Flyway Migration (`R6` — [`AGENTS.md`](../../AGENTS.md)):**
+> Tệp `V1__sprint1_core_schema.sql` đã đóng băng và bất biến. Theo quy tắc **R6**, **chỉ Agent phụ trách nền tảng (`A0`) mới được phép tạo migration Flyway**, và **`A0` sẽ tổng hợp toàn bộ nhu cầu schema Sprint 2 vào một migration `V2__...` chung** (gộp đồng bộ các mở rộng của `QE-36`/`QE-73`/`QE-74`, `QE-26`, pool quota `QE-12`/`QE-39`, `attendance_attempts.payload_hash` của `QE-8`/`QE-54`, danh mục tổ chức...) **thay vì để từng module/ticket tự tách file `V2__...` riêng**. Hợp đồng này không chốt tên file migration riêng, chỉ đặc tả yêu cầu dữ liệu đầu vào để `A0` tổng hợp vào `V2__...`.
+
+Để đồng bộ giữa luồng import hồ sơ (`QE-26`), cấp tài khoản (`QE-73`) và Google OAuth2 (`QE-74` trong [`auth-and-session-lifecycle.md` §5.2](../architecture/auth-and-session-lifecycle.md)), yêu cầu dữ liệu mở rộng ở `V2__...` tách làm 2 nhóm rõ ràng:
+
+1. **Trường định danh Xác thực trên `app_user` *(thuộc phạm vi `QE-36` / `QE-73` / `QE-74`)*:**
+   - `email varchar(255)` với unique index không phân biệt hoa thường (`CREATE UNIQUE INDEX uq_app_user_email_lower ON app_user (LOWER(email)) WHERE email IS NOT NULL`) — lưu **email định danh do QNU cấp** phục vụ cấp phát (`QE-73`) và đối chiếu Google OAuth2 (`QE-74`).
+   - `google_sub varchar(128) UNIQUE`, `must_change_password boolean` (cùng các cột phiên/brute-force theo đặc tả `QE-36`).
+   - **Cảnh báo mục mở `TBD-AUTH-03` (`R11`, `R12`):** Dạng địa chỉ `<student_code>@st.qnu.edu.vn` (cũng như tập miền `@st.qnu.edu.vn` / `@qnu.edu.vn`) hiện **là điểm mở `TBD-AUTH-03` chờ stakeholder chốt** (`Q-AUTH-01` trong [`auth-and-session-lifecycle.md` §7.1](../architecture/auth-and-session-lifecycle.md)), **CHƯA phải giá trị đã duyệt**. Vì vậy:
+     * Không được hardcode quy tắc tự suy/tạo địa chỉ `<student_code>@st.qnu.edu.vn` như quy chuẩn chính thức cho đến khi stakeholder phê duyệt `TBD-AUTH-03` (hoặc tệp CSV import do nhà trường xuất có cột email QNU tường minh).
+     * Việc kiểm tra miền email hợp lệ khi Google OAuth2 (`QE-74`) bắt buộc đọc từ **allowlist tường minh qua biến môi trường** (ví dụ `APP_GOOGLE_ALLOWED_DOMAINS`); **cấm** dùng kiểm tra chuỗi lỏng như `endsWith("qnu.edu.vn")`.
+     * Khi CSV có cung cấp email QNU để đối chiếu `QE-73`, nếu cùng một `email` bị gán cho hai `student_code` khác nhau phải từ chối dòng xung đột (không ghi đè ngầm).
+2. **Trường hồ sơ sinh viên từ CSV đào tạo *(lưu ở bảng `student_profile` hoặc cột hồ sơ mở rộng trong `V2__...` — thuộc phạm vi `QE-26`)*:**
+   - `personal_email varchar(150)` *(email cá nhân trích từ cột `Email` trong `sv_k46..k49.csv` — **tách biệt hoàn toàn** với `app_user.email` định danh QNU)*: **không đặt `UNIQUE` cứng** vì dữ liệu thật QNU có các trường hợp thí sinh thi lại khóa sau dùng chung email cá nhân; **không** dùng trường này làm định danh đăng nhập Google SSO `QE-74`.
+   - `birth_date date`, `gender varchar(10)`, `id_card varchar(20)`, `study_status_code smallint`, `intake_no smallint`, `specialization_code varchar(10)`, `department_code varchar(10)`.
 
 ---
 
@@ -77,7 +98,7 @@ Bộ parser của `QE-26` phải hỗ trợ đồng thời **2 profile cột** t
 | 6 | `DepartmentName` | `department_name`, `faculty_name`, `ten_khoa` | Tùy chọn | Text (2–150) | Tên khoa (chấp nhận có hoặc không có tiền tố `[105] `). Nếu có, phải khớp với `org_class.faculty_name`. | `Khoa Công nghệ thông tin` |
 | 7 | `SpecializationCode` | `specialization_code`, `ma_nganh` | Tùy chọn (Khuyến nghị) | Text (3–10) | Mã ngành (`^\d{3,4}$`, ví dụ `105`, `119`, `1051`). Nếu có, kiểm tra đối chiếu với ngành của Lớp và 3 chữ số ngành trong MSSV. | `105` |
 | 8 | `IntakeNo` | `intake_no`, `cohort`, `khoa_hoc` | Tùy chọn | Integer (2) | Số hiệu khóa học (`40`..`60`). Nếu có, phải khớp với 2 chữ số đầu của `StudentID` và khóa của Lớp. | `46` |
-| 9 | `Email` | `email` | Tùy chọn | Text (≤ 150) | Nếu khác rỗng: phải đúng định dạng email RFC 5322. **Lưu ý dữ liệu thực tế QNU**: Giá trị `"0"` hoặc `"N/A"` hoặc `"-"` trong dữ liệu nguồn phải bị từ chối với mã `ROW_INVALID_EMAIL` (hoặc cảnh báo nếu chạy chế độ sanitize). | `anhoaivo101@gmail.com` |
+| 9 | `Email` | `email` | Tùy chọn | Text (≤ 150) | Nếu khác rỗng: phải đúng định dạng email RFC 5322. **Lưu ý dữ liệu thực tế QNU**: Cột `Email` trong `sv_k46..k49.csv` chứa **email cá nhân** (`personal_email`), không phải email QNU cho `QE-74` (vốn chờ chốt ở `TBD-AUTH-03`). Giá trị `"0"` hoặc `"N/A"` hoặc `"-"` trong dữ liệu nguồn phải bị từ chối với mã `ROW_INVALID_EMAIL` (hoặc cảnh báo nếu chạy chế độ sanitize). | `anhoaivo101@gmail.com` |
 | 10 | `BirthDay` | `birth_day`, `birth_date`, `ngay_sinh` | Tùy chọn | Date (10) | Định dạng `dd/MM/yyyy` (chuẩn xuất của QNU, ví dụ `01/03/2005`) hoặc ISO `yyyy-MM-dd` (`2005-03-01`). Năm sinh hợp lệ trong khoảng `1970`..`2015`. | `01/03/2005` |
 | 11 | `Genders` | `gender_text`, `gioi_tinh` | Tùy chọn | Enum Text | Chấp nhận `Nam`, `Nữ`, `Khác` (hoặc cột boolean `Gender`: `true` = Nam, `false` = Nữ). | `Nữ` |
 | 12 | `StudyStatusID` | `study_status_id`, `status` | Tùy chọn | Enum / Int | Chấp nhận mã số QNU (`1`=Còn học, `2`=Nghỉ học tạm thời, `3`=Buộc thôi học, `4`=Thôi học, `7`=Chuyển trường) hoặc trạng thái hệ thống (`ACTIVE`, `LOCKED`). Mặc định `1` (`ACTIVE`). | `1` |
@@ -148,9 +169,9 @@ API nhận tham số `importMode` (mặc định là `UPSERT`):
 
 | Giá trị `importMode` | Hành vi khi `student_code` chưa có trong DB | Hành vi khi `student_code` ĐÃ TỒN TẠI trong DB |
 |---|---|---|
-| **`UPSERT`** *(Mặc định)* | Tạo mới `AppUser` + gán role `STUDENT` → Tăng `createdCount`. | So sánh các trường (`fullName`, `classId`, `status`):<br>• Nếu **không có thay đổi** → Không chạy `UPDATE`, tăng `unchangedCount` (`REQ-DATA-007`).<br>• Nếu **có thay đổi** (và việc đổi `classId` không vi phạm quy tắc bảo vệ tổ chức `REQ-DATA-010`) → Cập nhật `fullName`, `classId`, `status`, `updatedAt`, giữ nguyên `id` và `passwordHash` → Tăng `updatedCount`. |
-| **`CREATE_ONLY`** | Tạo mới `AppUser` → Tăng `createdCount`. | Từ chối dòng đó với lỗi `ROW_STUDENT_ALREADY_EXISTS` → Tăng `errorCount`. |
-| **`SKIP_EXISTING`** | Tạo mới `AppUser` → Tăng `createdCount`. | Bỏ qua không cập nhật, giữ nguyên dữ liệu cũ → Tăng `unchangedCount`. |
+| **`UPSERT`** *(Mặc định)* | **`[QE-26 + QE-73]`** Tạo mới `AppUser` + gán role `STUDENT`, sinh credential ngẫu nhiên / activation token một lần (`A-AUTH-08`, không mật khẩu mặc định chung) → Tăng `createdCount`. | So sánh các trường hồ sơ (`fullName`, `classId`, thông tin `student_profile`):<br>• Nếu **không có thay đổi** → Không chạy `UPDATE`, tăng `unchangedCount` (`REQ-DATA-007`).<br>• Nếu **có thay đổi** (và việc đổi `classId` không vi phạm `REQ-DATA-010`) → Cập nhật hồ sơ hành chính (`fullName`, `classId`, `updatedAt`), **tuyệt đối giữ nguyên** `id`, `passwordHash`, các vai trò bổ sung (`CLASS_REPRESENTATIVE`), `google_sub` và **không tự mở khóa tài khoản đang `LOCKED`** (*No Silent Overwrite*, `QE-73`) → Tăng `updatedCount`. |
+| **`CREATE_ONLY`** | Tạo mới hồ sơ + `AppUser` (`QE-73`) → Tăng `createdCount`. | Từ chối dòng đó với lỗi `ROW_STUDENT_ALREADY_EXISTS` → Tăng `errorCount`. |
+| **`SKIP_EXISTING`** | Tạo mới hồ sơ + `AppUser` (`QE-73`) → Tăng `createdCount`. | Bỏ qua không cập nhật, giữ nguyên toàn bộ dữ liệu cũ → Tăng `unchangedCount`. |
 
 ---
 
@@ -304,6 +325,7 @@ Khi tệp hợp lệ về mặt cấu trúc (dù có dòng lỗi hay không), AP
 ```
 
 > **Quy ước `rowNumber`**: Tính theo **số dòng thực tế trong tệp bảng tính (1-based index)**, trong đó dòng `1` là dòng Header, dòng dữ liệu đầu tiên là dòng `2`. Quy ước này giúp System Admin mở tệp bằng Excel/VS Code và nhảy tới đúng số dòng cần sửa ngay lập tức (`REQ-DATA-004`).
+> **Bảo mật báo cáo & Audit (`R7`, `QE-73`)**: JSON phản hồi `ImportReport`, file kết quả lỗi xuất cho Admin và `audit_logs.details` tuyệt đối **không** chứa mật khẩu plaintext, mật khẩu tạm, `password_hash`, hay chuỗi token kích hoạt gốc.
 
 ### 6.3. Danh mục Mã Lỗi Cấp Tệp & Cấp Dòng (Error Code Catalog)
 
@@ -345,7 +367,7 @@ Khi tệp hợp lệ về mặt cấu trúc (dù có dòng lỗi hay không), AP
 
 ## 7. File Mẫu Hợp lệ và File Mẫu Lỗi (Sample Fixtures cho `QE-26`)
 
-Hai tệp mẫu phục vụ kiểm thử tự động đã được tạo sẵn trong thư mục [`docs/import-contact/samples/`](./samples/):
+Hai tệp mẫu phục vụ kiểm thử tự động đã được tạo sẵn trong thư mục [`docs/import-contract/samples/`](./samples/):
 
 1. **File mẫu hợp lệ**: [`samples/student-valid-sample.csv`](./samples/student-valid-sample.csv)
    - Gồm **10 dòng sinh viên hợp lệ** trích xuất từ dữ liệu thực tế K46–K49 của QNU (Khoa CNTT, Khoa Sư phạm, Khoa Ngoại ngữ, Khoa Tài chính - Ngân hàng & QTKD).
@@ -371,14 +393,15 @@ Hai tệp mẫu phục vụ kiểm thử tự động đã được tạo sẵn 
 
 ---
 
-## 8. Tiêu chí Nghiệm thu Tự động cho `QE-26` (Automated Test Matrix)
+## 8. Tiêu chí Nghiệm thu Tự động cho `QE-26` & `QE-73` (Automated Test Matrix)
 
 | Mã Test | Kịch bản kiểm thử (Given / When / Then) | Kết quả mong đợi |
 |---|---|---|
-| `TC-IMP-STU-01` | `SYSTEM_ADMIN` tải lên `student-valid-sample.csv` lần đầu (`UPSERT`) | HTTP 200; `createdCount=10`, `errorCount=0`; 10 bản ghi `app_user` + `user_role(STUDENT)` trong DB; `password_hash` bắt đầu bằng `$2a$`/`$2b$`. |
-| `TC-IMP-STU-02` | `SYSTEM_ADMIN` tải lại đúng `student-valid-sample.csv` lần thứ 2 (`UPSERT`) | HTTP 200; `createdCount=0, updatedCount=0, unchangedCount=10, errorCount=0`; tổng số dòng trong `app_user` không tăng thêm (`REQ-DATA-007`). |
+| `TC-IMP-STU-01` | `SYSTEM_ADMIN` tải lên `student-valid-sample.csv` lần đầu (`UPSERT`) | HTTP 200; `createdCount=10`, `errorCount=0`; 10 bản ghi `app_user` + `user_role(STUDENT)` trong DB; `password_hash` mỗi tài khoản là hash `BCrypt(12)` (`$2a$`/`$2b$`) riêng biệt sinh từ credential ngẫu nhiên/activation token (`A-AUTH-08`, không dùng mật khẩu mặc định chung); response và `audit_logs` không chứa plaintext password, hash hay token (`R7`). |
+| `TC-IMP-STU-02` | `SYSTEM_ADMIN` tải lại đúng `student-valid-sample.csv` lần thứ 2 (`UPSERT`) | HTTP 200; `createdCount=0, updatedCount=0, unchangedCount=10, errorCount=0`; tổng số dòng trong `app_user` không tăng thêm (`REQ-DATA-007`) và `password_hash` hiện có không bị thay đổi. |
 | `TC-IMP-STU-03` | `SYSTEM_ADMIN` tải lên `student-invalid-sample.csv` (`UPSERT`, Partial Import) | HTTP 200; `createdCount=4, errorCount=8`; 8 phần tử trong `errors[]` khớp đúng `rowNumber`, `field`, `errorCode`; 4 dòng hợp lệ vẫn được lưu vào DB (`REQ-DATA-005`). |
 | `TC-IMP-STU-04` | `SYSTEM_ADMIN` tải lên `student-invalid-sample.csv` với `dryRun=true` (`QE-62`) | HTTP 200; báo cáo trả về `createdCount=4, errorCount=8` nhưng DB không có bản ghi nào được thêm mới. |
 | `TC-IMP-STU-05` | Tải lên tệp thiếu cột `StudentID` hoặc tệp `.pdf`/`.exe` | HTTP 400 `FILE_MISSING_REQUIRED_COLUMNS` hoặc HTTP 415 `FILE_UNSUPPORTED_MEDIA_TYPE`; không thay đổi DB (`REQ-DATA-003`). |
 | `TC-IMP-STU-06` | `EVENT_OWNER` hoặc `STUDENT` gọi API import | HTTP 403 `FORBIDDEN`; không thay đổi DB (`REQ-DATA-002`). |
 | `TC-IMP-STU-07` | Sinh viên đã tồn tại ở lớp A, import tệp đổi sang lớp B khi `allowClassTransfer=false` | Dòng đó bị từ chối với `ROW_CLASS_CHANGE_REQUIRES_CONFIRMATION`; `class_id` trong DB giữ nguyên là lớp A (`REQ-DATA-010`). |
+| `TC-IMP-STU-08` | Sinh viên đã tồn tại có `status=LOCKED` (hoặc đang giữ role `CLASS_REPRESENTATIVE` và đã liên kết `google_sub`), re-import CSV có dòng của SV đó với `StudyStatusID=1` (`QE-73`) | Áp dụng *No Silent Overwrite*: giữ nguyên `password_hash`, giữ nguyên `status=LOCKED`, giữ nguyên role `CLASS_REPRESENTATIVE` và `google_sub`; mọi log/audit không chứa thông tin nhạy cảm (`R7`, [`auth-and-session-lifecycle.md` §2.2](../architecture/auth-and-session-lifecycle.md)). |
