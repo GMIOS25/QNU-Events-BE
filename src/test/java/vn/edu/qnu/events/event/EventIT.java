@@ -947,4 +947,26 @@ class EventIT {
                 .andExpect(jsonPath("$.remainingQuota").value(0))
                 .andExpect(jsonPath("$.registrationOpen").value(false));
     }
+
+    @Test
+    @DisplayName("21. [QE-37] Chi tiết sự kiện trả mã/tên lớp đối tượng và cờ eligible do server tính")
+    void eventDetailExposesAudienceClassesAndEligibility() throws Exception {
+        String title = "Hội thảo điều kiện tham gia " + UUID.randomUUID().toString().substring(0, 8);
+        String eventId = createAndPublishEvent(title, "Học thuật", 50);
+
+        // 1. Sinh viên thuộc lớp đối tượng: eligible = true + hiển thị rõ lớp được phép
+        mockMvc.perform(get("/api/v1/events/" + eventId)
+                        .header("Authorization", "Bearer " + studentToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.eligible").value(true))
+                .andExpect(jsonPath("$.audienceClasses[0].code").value("K49CNTT1"))
+                .andExpect(jsonPath("$.audienceClasses[0].name", not(emptyOrNullString())));
+
+        // 2. Owner xem chi tiết sự kiện của mình: eligible = true (không phải sinh viên)
+        mockMvc.perform(get("/api/v1/events/" + eventId)
+                        .header("Authorization", "Bearer " + ownerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.eligible").value(true))
+                .andExpect(jsonPath("$.audienceClasses[0].code").value("K49CNTT1"));
+    }
 }

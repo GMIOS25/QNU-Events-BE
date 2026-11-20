@@ -11,6 +11,7 @@ import vn.edu.qnu.events.common.CurrentUserProvider;
 import vn.edu.qnu.events.common.ErrorCode;
 import vn.edu.qnu.events.registration.Registration;
 import vn.edu.qnu.events.registration.RegistrationRepository;
+import vn.edu.qnu.events.student.OrgClassRepository;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -27,19 +28,22 @@ public class EventService {
     private final AuditService auditService;
     private final Clock clock;
     private final RegistrationRepository registrationRepository;
+    private final OrgClassRepository orgClassRepository;
 
     public EventService(
             EventRepository eventRepository,
             EventValidator eventValidator,
             AuditService auditService,
             Clock clock,
-            RegistrationRepository registrationRepository
+            RegistrationRepository registrationRepository,
+            OrgClassRepository orgClassRepository
     ) {
         this.eventRepository = eventRepository;
         this.eventValidator = eventValidator;
         this.auditService = auditService;
         this.clock = clock;
         this.registrationRepository = registrationRepository;
+        this.orgClassRepository = orgClassRepository;
     }
 
     @Transactional
@@ -235,7 +239,7 @@ public class EventService {
             throw new ApiException(ErrorCode.NOT_FOUND);
         }
 
-        return toDetail(event, myRegistrationStatus);
+        return toDetail(event, myRegistrationStatus, currentUser);
     }
 
     @Transactional(readOnly = true)
@@ -275,10 +279,14 @@ public class EventService {
     }
 
     public EventDetail toDetail(Event e) {
-        return toDetail(e, null);
+        return toDetail(e, null, null);
     }
 
     public EventDetail toDetail(Event e, String myRegistrationStatus) {
+        return toDetail(e, myRegistrationStatus, null);
+    }
+
+    public EventDetail toDetail(Event e, String myRegistrationStatus, CurrentUser currentUser) {
         Instant now = Instant.now(clock);
         int remainingQuota = Math.max(0, e.getQuotaTotal() - e.getRegisteredCount());
         boolean registrationOpen = (e.getStatus() == EventStatus.PUBLISHED)
@@ -287,6 +295,19 @@ public class EventService {
         boolean attendanceOpen = (e.getStatus() == EventStatus.PUBLISHED)
                 && !now.isBefore(e.getAttendanceOpenAt())
                 && !now.isAfter(e.getAttendanceCloseAt());
+
+        // QE-37: eligibility do server tính (R9) — sinh viên thuộc audience mới được đăng ký
+        boolean eligible = true;
+        if (currentUser != null && currentUser.roles().contains("STUDENT")) {
+            eligible = currentUser.classId() != null && e.getAudienceClassIds().contains(currentUser.classId());
+        }
+
+        // QE-37: điều kiện tham gia hiển thị được — mã/tên lớp thay vì chỉ UUID
+        List<EventDetail.EventAudienceClass> audienceClasses = orgClassRepository
+                .findAllById(e.getAudienceClassIds())
+                .stream()
+                .map(c -> new EventDetail.EventAudienceClass(c.getId(), c.getCode(), c.getName()))
+                .toList();
 
         return new EventDetail(
                 e.getId(),
@@ -314,7 +335,9 @@ public class EventService {
                 e.getAudienceClassIds(),
                 e.getVersion(),
                 e.getPreviewedVersion(),
-                e.getPublishedAt()
+                e.getPublishedAt(),
+                audienceClasses,
+                eligible
         );
     }
 
