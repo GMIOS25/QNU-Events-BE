@@ -1,0 +1,5 @@
+Revoked list: 401 {"code":"SESSION_REVOKED","message":"Phiên đăng nhập đã bị thu hồi hoặc hết hạn.","details":{},"traceId":"2606d897-f47a-45fd-9e19-bc8190e478d9","timestamp":1795166366.379989700}
+Revoked detail: 401 {"code":"SESSION_REVOKED","message":"Phiên đăng nhập đã bị thu hồi hoặc hết hạn.","details":{},"traceId":"bde44c0d-6884-410b-8f3b-971eff2b278c","timestamp":1795166366.396109400}
+DELETE owner01: 403 {"code":"FORBIDDEN","message":"Bạn không có quyền thực hiện thao tác này.","details":{},"traceId":"2d245300-bdb5-49c3-aa77-b7a5857229cc","timestamp":1795166366.414020500}
+PATCH sv001: 403 {"code":"FORBIDDEN","message":"Bạn không có quyền thực hiện thao tác này.","details":{},"traceId":"b545863d-f824-4235-ac3a-37fcc5ecb143","timestamp":1795166366.422821200}
+bcs01 login status: 401
