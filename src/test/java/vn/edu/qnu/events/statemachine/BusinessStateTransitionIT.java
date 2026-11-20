@@ -1,6 +1,7 @@
 package vn.edu.qnu.events.statemachine;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -15,6 +16,8 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import vn.edu.qnu.events.attendance.AttendanceRepository;
+import vn.edu.qnu.events.attendance.CheckInRequest;
+import vn.edu.qnu.events.attendance.QrTokenService;
 import vn.edu.qnu.events.auth.AppUserRepository;
 import vn.edu.qnu.events.auth.AuthService;
 import vn.edu.qnu.events.auth.LoginRequest;
@@ -30,6 +33,8 @@ import vn.edu.qnu.events.student.OrgClassRepository;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -40,6 +45,13 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+/**
+ * QE-25: Kiểm thử tích hợp máy trạng thái nghiệp vụ (Business Status & State Transition IT).
+ * <p>
+ * Phạm vi Sprint 1: Kiểm thử toàn bộ chuyển trạng thái đăng ký và điểm danh qua REST API thật
+ * và các ràng buộc toàn vẹn CSDL (Unique Partial Index), dọn dẹp dữ liệu cô lập sau mỗi ca kiểm thử.
+ * Các chuyển trạng thái Hủy (QE-40), Waiting List (QE-39), No-Show (QE-14) thuộc phạm vi Sprint 2.
+ */
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("dev")
@@ -62,6 +74,9 @@ class BusinessStateTransitionIT {
     private AttendanceRepository attendanceRepository;
 
     @Autowired
+    private QrTokenService qrTokenService;
+
+    @Autowired
     private OrgClassRepository orgClassRepository;
 
     @Autowired
@@ -71,6 +86,8 @@ class BusinessStateTransitionIT {
     private NamedParameterJdbcTemplate jdbcTemplate;
 
     private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
+
+    private final List<UUID> createdEventIds = new ArrayList<>();
 
     private String ownerToken;
     private String student1Token;
@@ -92,6 +109,19 @@ class BusinessStateTransitionIT {
         ownerId = appUserRepository.findByLoginId("owner01").orElseThrow().getId();
         student1Id = appUserRepository.findByLoginId("sv001").orElseThrow().getId();
         student2Id = appUserRepository.findByLoginId("sv002").orElseThrow().getId();
+    }
+
+    @AfterEach
+    void tearDown() {
+        if (!createdEventIds.isEmpty()) {
+            MapSqlParameterSource params = new MapSqlParameterSource("ids", createdEventIds);
+            jdbcTemplate.update("DELETE FROM attendance_attempts WHERE event_id IN (:ids)", params);
+            jdbcTemplate.update("DELETE FROM attendances WHERE event_id IN (:ids)", params);
+            jdbcTemplate.update("DELETE FROM registrations WHERE event_id IN (:ids)", params);
+            jdbcTemplate.update("DELETE FROM event_audience WHERE event_id IN (:ids)", params);
+            jdbcTemplate.update("DELETE FROM events WHERE id IN (:ids)", params);
+            createdEventIds.clear();
+        }
     }
 
     private Event createPublishedEvent(int quota, boolean openForAttendance) {
@@ -123,11 +153,13 @@ class BusinessStateTransitionIT {
                 Set.of(k49ClassId)
         );
         event.setStatus(EventStatus.PUBLISHED);
-        return eventRepository.save(event);
+        Event saved = eventRepository.save(event);
+        createdEventIds.add(saved.getId());
+        return saved;
     }
 
     // =========================================================================
-    // 1. REGISTRATION STATE MACHINE TESTS
+    // 1. REGISTRATION STATE MACHINE TESTS (Sprint 1 API & DB Invariants)
     // =========================================================================
 
     @Test
@@ -145,6 +177,31 @@ class BusinessStateTransitionIT {
         Registration reg = registrationRepository.findActiveByEventAndStudent(event.getId(), student1Id).orElseThrow();
         assertThat(reg.getStatus()).isEqualTo(RegistrationStatus.REGISTERED);
 
+        Event updatedEvent = eventRepository.findById(event.getId()).orElseThrow();
+        assertThat(updatedEvent.getRegisteredCount()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("STTC-REG-02: Chuyển đổi khi hết quota: NONE -> Giữ nguyên NONE, từ chối 409 CAPACITY_FULL (Sprint 1 A-02)")
+    void testRegistrationState_None_WhenQuotaFull_ThrowsCapacityFull() throws Exception {
+        // Sự kiện chỉ có 1 suất duy nhất
+        Event event = createPublishedEvent(1, false);
+
+        // Sinh viên 1 đăng ký thành công suất duy nhất -> 201 Created
+        mockMvc.perform(post("/api/v1/events/{id}/registrations", event.getId())
+                        .header("Authorization", "Bearer " + student1Token))
+                .andExpect(status().isCreated());
+
+        // Sinh viên 2 đăng ký khi đã hết quota -> Bị từ chối 409 CAPACITY_FULL (Sprint 1 chưa có waiting list)
+        mockMvc.perform(post("/api/v1/events/{id}/registrations", event.getId())
+                        .header("Authorization", "Bearer " + student2Token))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("CAPACITY_FULL"));
+
+        // Kiểm tra CSDL: Sinh viên 2 tuyệt đối không có bản ghi đăng ký nào
+        assertThat(registrationRepository.findActiveByEventAndStudent(event.getId(), student2Id)).isEmpty();
+
+        // Số lượng registered_count vẫn giữ nguyên là 1
         Event updatedEvent = eventRepository.findById(event.getId()).orElseThrow();
         assertThat(updatedEvent.getRegisteredCount()).isEqualTo(1);
     }
@@ -171,86 +228,33 @@ class BusinessStateTransitionIT {
     }
 
     @Test
-    @DisplayName("STTC-REG-04 & 05: Chuyển đổi REGISTERED -> CANCELLED trước hạn chót và hoàn quota")
-    void testRegistrationState_CancelBeforeDeadline_TransitionsToCancelled() throws Exception {
+    @DisplayName("STTC-REG-DB: Ràng buộc bất biến CSDL: Unique index uq_registrations_active ngăn tạo 2 bản ghi active cho cùng 1 sinh viên")
+    void testRegistrationState_DatabaseInvariant_UniqueActiveRegistrationPerStudentEvent() {
         Event event = createPublishedEvent(5, false);
 
-        // Sinh viên 1 đăng ký
-        mockMvc.perform(post("/api/v1/events/{id}/registrations", event.getId())
-                        .header("Authorization", "Bearer " + student1Token))
-                .andExpect(status().isCreated());
+        // Lần 1: Chèn bản ghi active REGISTERED
+        Registration reg = new Registration(UUID.randomUUID(), event.getId(), student1Id, RegistrationStatus.REGISTERED);
+        registrationRepository.save(reg);
 
-        // Hủy đăng ký trước deadline bằng trigger nghiệp vụ / DB update
-        int rows = jdbcTemplate.update(
-                "UPDATE registrations SET status = 'CANCELLED' WHERE event_id = :eventId AND student_id = :studentId",
-                new MapSqlParameterSource()
-                        .addValue("eventId", event.getId())
-                        .addValue("studentId", student1Id)
-        );
-        assertThat(rows).isEqualTo(1);
-
-        // Giảm registered_count phản ánh hoàn quota
-        jdbcTemplate.update(
-                "UPDATE events SET registered_count = registered_count - 1 WHERE id = :id",
-                new MapSqlParameterSource().addValue("id", event.getId())
-        );
-        Event updatedEvent = eventRepository.findById(event.getId()).orElseThrow();
-        assertThat(updatedEvent.getRegisteredCount()).isEqualTo(0);
-
-        // Bản ghi bây giờ mang trạng thái CANCELLED
-        String status = jdbcTemplate.queryForObject(
-                "SELECT status FROM registrations WHERE event_id = :eventId AND student_id = :studentId",
-                new MapSqlParameterSource().addValue("eventId", event.getId()).addValue("studentId", student1Id),
-                String.class
-        );
-        assertThat(status).isEqualTo("CANCELLED");
-    }
-
-    @Test
-    @DisplayName("STTC-REG-07 & 08: Quy tắc No-Show: Chỉ REGISTERED chuyển thành NO_SHOW; WAITING_LIST không bị phạt")
-    void testRegistrationState_NoShowRule_OnlyRegisteredEligible() {
-        Event event = createPublishedEvent(10, false);
-
-        // Giả lập SV1 là REGISTERED, SV2 là WAITING_LIST
-        UUID reg1 = UUID.randomUUID();
-        UUID reg2 = UUID.randomUUID();
-
-        jdbcTemplate.update(
-                "INSERT INTO registrations (id, event_id, student_id, status, created_at) " +
-                        "VALUES (:id, :eventId, :studentId, 'REGISTERED', now())",
-                new MapSqlParameterSource().addValue("id", reg1).addValue("eventId", event.getId()).addValue("studentId", student1Id)
-        );
-
-        jdbcTemplate.update(
-                "INSERT INTO registrations (id, event_id, student_id, status, created_at) " +
-                        "VALUES (:id, :eventId, :studentId, 'WAITING_LIST', now())",
-                new MapSqlParameterSource().addValue("id", reg2).addValue("eventId", event.getId()).addValue("studentId", student2Id)
-        );
-
-        // Quy tắc kết thúc sự kiện: Quét các sinh viên REGISTERED không có điểm danh ACCEPTED -> chuyển thành NO_SHOW
-        int noShowMarked = jdbcTemplate.update(
-                "UPDATE registrations r SET status = 'NO_SHOW' " +
-                        "WHERE r.event_id = :eventId AND r.status = 'REGISTERED' " +
-                        "AND NOT EXISTS (SELECT 1 FROM attendances a WHERE a.event_id = r.event_id AND a.student_id = r.student_id AND a.status = 'ACCEPTED')",
-                new MapSqlParameterSource().addValue("eventId", event.getId())
-        );
-        assertThat(noShowMarked).isEqualTo(1); // Đúng 1 người REGISTERED bị NO_SHOW
-
-        // Kiểm tra SV2 (WAITING_LIST) tuyệt đối không bị NO_SHOW
-        String sv2Status = jdbcTemplate.queryForObject(
-                "SELECT status FROM registrations WHERE id = :id",
-                new MapSqlParameterSource().addValue("id", reg2),
-                String.class
-        );
-        assertThat(sv2Status).isEqualTo("WAITING_LIST");
+        // Lần 2: Cố tình chèn thêm 1 bản ghi REGISTERED thứ hai cho cùng sinh viên -> Ném DataIntegrityViolationException
+        assertThatThrownBy(() -> {
+            jdbcTemplate.update(
+                    "INSERT INTO registrations (id, event_id, student_id, status, created_at) " +
+                            "VALUES (:id, :eventId, :studentId, 'REGISTERED', now())",
+                    new MapSqlParameterSource()
+                            .addValue("id", UUID.randomUUID())
+                            .addValue("eventId", event.getId())
+                            .addValue("studentId", student1Id)
+            );
+        }).isInstanceOf(DataIntegrityViolationException.class);
     }
 
     // =========================================================================
-    // 2. ATTENDANCE STATE MACHINE TESTS
+    // 2. ATTENDANCE STATE MACHINE TESTS (Sprint 1 API & DB Invariants)
     // =========================================================================
 
     @Test
-    @DisplayName("STTC-ATT-01: Chuyển đổi hợp lệ NOT_CHECKED_IN -> ACCEPTED qua Dynamic QR hợp lệ")
+    @DisplayName("STTC-ATT-01: Chuyển đổi hợp lệ NOT_CHECKED_IN -> ACCEPTED qua Dynamic QR hợp lệ trong giờ")
     void testAttendanceState_DynamicQr_Accepted() throws Exception {
         Event event = createPublishedEvent(5, true);
 
@@ -267,7 +271,7 @@ class BusinessStateTransitionIT {
         String qrToken = objectMapper.readTree(qrResult.getResponse().getContentAsString()).get("token").asText();
 
         // 3. Sinh viên quét mã QR -> 200 ACCEPTED
-        String body = objectMapper.writeValueAsString(new vn.edu.qnu.events.attendance.CheckInRequest(qrToken));
+        String body = objectMapper.writeValueAsString(new CheckInRequest(qrToken));
         mockMvc.perform(post("/api/v1/events/{id}/attendance/qr", event.getId())
                         .header("Authorization", "Bearer " + student1Token)
                         .header("Idempotency-Key", UUID.randomUUID().toString())
@@ -282,7 +286,36 @@ class BusinessStateTransitionIT {
     }
 
     @Test
-    @DisplayName("STTC-ATT-03 & 04: Chuyển đổi sang REJECTED (Khóa) sau 3 lần thử thất bại -> Lần 4 bị chặn 409")
+    @DisplayName("STTC-ATT-02: Chuyển đổi sang REJECTED khi quét mã QR đã hết hạn (> 3s grace) -> 422 QR_EXPIRED")
+    void testAttendanceState_ExpiredQrToken_Returns422QrExpired() throws Exception {
+        Event event = createPublishedEvent(5, true);
+
+        // Đăng ký
+        mockMvc.perform(post("/api/v1/events/{id}/registrations", event.getId())
+                        .header("Authorization", "Bearer " + student1Token))
+                .andExpect(status().isCreated());
+
+        // Tạo mã QR đã quá hạn (50s trước, vượt quá cả rotationSeconds=10s và graceSeconds=3s)
+        Instant past = Instant.now().minus(50, ChronoUnit.SECONDS);
+        String expiredToken = qrTokenService.issue(event.getId(), past, event.getQrRotationSeconds());
+        String body = objectMapper.writeValueAsString(new CheckInRequest(expiredToken));
+
+        // Quét mã hết hạn -> 422 QR_EXPIRED
+        mockMvc.perform(post("/api/v1/events/{id}/attendance/qr", event.getId())
+                        .header("Authorization", "Bearer " + student1Token)
+                        .header("Idempotency-Key", UUID.randomUUID().toString())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value("QR_EXPIRED"));
+
+        // Xác nhận không tạo bản ghi ACCEPTED
+        boolean hasAccepted = attendanceRepository.existsByEventIdAndStudentIdAndStatus(event.getId(), student1Id, "ACCEPTED");
+        assertThat(hasAccepted).isFalse();
+    }
+
+    @Test
+    @DisplayName("STTC-ATT-03 & 04: Chuyển đổi sang REJECTED (Khóa) sau 3 lần thử thất bại -> Lần 4 bị chặn 409 ATTEMPT_LIMIT_REACHED")
     void testAttendanceState_ThreeFailedAttempts_TransitionsToRejectedLocked() throws Exception {
         Event event = createPublishedEvent(5, true);
 
@@ -291,7 +324,7 @@ class BusinessStateTransitionIT {
                         .header("Authorization", "Bearer " + student1Token))
                 .andExpect(status().isCreated());
 
-        // Lấy token chuẩn nhưng giả mạo chữ ký để tạo lượt thử thất bại
+        // Lấy token chuẩn nhưng sửa chữ ký để tạo lượt thử thất bại
         MvcResult qrResult = mockMvc.perform(get("/api/v1/events/{id}/qr", event.getId())
                         .header("Authorization", "Bearer " + ownerToken))
                 .andExpect(status().isOk())
@@ -299,9 +332,9 @@ class BusinessStateTransitionIT {
         String validToken = objectMapper.readTree(qrResult.getResponse().getContentAsString()).get("token").asText();
         String tamperedToken = validToken.substring(0, validToken.length() - 4) + "XXXX";
 
-        String badBody = objectMapper.writeValueAsString(new vn.edu.qnu.events.attendance.CheckInRequest(tamperedToken));
+        String badBody = objectMapper.writeValueAsString(new CheckInRequest(tamperedToken));
 
-        // 3 lần thử sai -> đều bị REJECTED
+        // 3 lần thử sai -> đều bị 422 QR_BAD_SIGNATURE
         for (int i = 1; i <= 3; i++) {
             mockMvc.perform(post("/api/v1/events/{id}/attendance/qr", event.getId())
                             .header("Authorization", "Bearer " + student1Token)
@@ -313,7 +346,7 @@ class BusinessStateTransitionIT {
         }
 
         // Lần thử thứ 4 (kể cả dùng mã QR hợp lệ) -> Bị chặn 409 ATTEMPT_LIMIT_REACHED
-        String validBody = objectMapper.writeValueAsString(new vn.edu.qnu.events.attendance.CheckInRequest(validToken));
+        String validBody = objectMapper.writeValueAsString(new CheckInRequest(validToken));
         mockMvc.perform(post("/api/v1/events/{id}/attendance/qr", event.getId())
                         .header("Authorization", "Bearer " + student1Token)
                         .header("Idempotency-Key", UUID.randomUUID().toString())
@@ -343,7 +376,7 @@ class BusinessStateTransitionIT {
                 .andExpect(status().isOk())
                 .andReturn();
         String qrToken = objectMapper.readTree(qrResult.getResponse().getContentAsString()).get("token").asText();
-        String body = objectMapper.writeValueAsString(new vn.edu.qnu.events.attendance.CheckInRequest(qrToken));
+        String body = objectMapper.writeValueAsString(new CheckInRequest(qrToken));
 
         // Điểm danh lần 1 -> 200 ACCEPTED
         mockMvc.perform(post("/api/v1/events/{id}/attendance/qr", event.getId())
@@ -374,7 +407,7 @@ class BusinessStateTransitionIT {
                 .andExpect(status().isOk())
                 .andReturn();
         String qrToken = objectMapper.readTree(qrResult.getResponse().getContentAsString()).get("token").asText();
-        String body = objectMapper.writeValueAsString(new vn.edu.qnu.events.attendance.CheckInRequest(qrToken));
+        String body = objectMapper.writeValueAsString(new CheckInRequest(qrToken));
 
         // Sinh viên 2 chưa đăng ký gọi điểm danh -> 403 NOT_REGISTERED
         mockMvc.perform(post("/api/v1/events/{id}/attendance/qr", event.getId())
@@ -384,6 +417,34 @@ class BusinessStateTransitionIT {
                         .content(body))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("NOT_REGISTERED"));
+    }
+
+    @Test
+    @DisplayName("STTC-ATT-07: Chuyển đổi bất hợp lệ: Quét mã QR ngoài khung giờ điểm danh -> 409 ATTENDANCE_NOT_OPEN")
+    void testAttendanceState_IllegalTransition_OutsideWindow_Returns409AttendanceNotOpen() throws Exception {
+        // Sự kiện chưa mở điểm danh (attendanceOpenAt = startAt = 2h nữa)
+        Event event = createPublishedEvent(5, false);
+
+        // Đăng ký thành công
+        mockMvc.perform(post("/api/v1/events/{id}/registrations", event.getId())
+                        .header("Authorization", "Bearer " + student1Token))
+                .andExpect(status().isCreated());
+
+        // Lấy QR hợp lệ (token được tạo bình thường)
+        String validToken = qrTokenService.issue(event.getId(), Instant.now(), event.getQrRotationSeconds());
+        String body = objectMapper.writeValueAsString(new CheckInRequest(validToken));
+
+        // Quét khi chưa đến giờ mở điểm danh -> 409 ATTENDANCE_NOT_OPEN
+        mockMvc.perform(post("/api/v1/events/{id}/attendance/qr", event.getId())
+                        .header("Authorization", "Bearer " + student1Token)
+                        .header("Idempotency-Key", UUID.randomUUID().toString())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("ATTENDANCE_NOT_OPEN"));
+
+        boolean hasAccepted = attendanceRepository.existsByEventIdAndStudentIdAndStatus(event.getId(), student1Id, "ACCEPTED");
+        assertThat(hasAccepted).isFalse();
     }
 
     @Test
