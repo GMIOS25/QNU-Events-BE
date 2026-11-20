@@ -1,0 +1,2 @@
+POST invalid-uuid: 500 {"code":"INTERNAL_ERROR","message":"Đã xảy ra lỗi hệ thống.","details":{},"traceId":"d92e0aaf-d795-455d-8088-427073ca88f1","timestamp":"2026-11-20T09:24:12.183677600Z"}
+GET invalid-uuid/me: 500 {"code":"INTERNAL_ERROR","message":"Đã xảy ra lỗi hệ thống.","details":{},"traceId":"974260b3-b2bf-42d7-bc79-5b836b3ff996","timestamp":"2026-11-20T09:24:12.195542100Z"}

@@ -1,0 +1,18 @@
+TC-REG-07: status=201, body={"id":"2f5b2f87-6466-4c8e-966b-8b891a3a5e72","status":"REGISTERED","alreadyRegistered":false}, before=1, after=2, rows=1
+TC-REG-08: before=404/NOT_FOUND, after=200/{"id":"a9c0aca7-47c4-481b-9245-d7c4fd56c3fe","status":"REGISTERED","registeredAt":"2026-11-20T09:24:11.515759Z"}
+TC-REG-09: r2=200/{"id":"26fbe319-30dc-4211-9174-5f7bfdbd6397","status":"REGISTERED","alreadyRegistered":true}, k=2->2, rows=1
+TC-REG-10: status=409, body={"code":"EVENT_NOT_PUBLISHED","message":"Sự kiện chưa được công bố.","details":{},"traceId":"6d29a6ed-5d6b-4fd8-8e22-472d5215c50f","timestamp":"2026-11-20T09:24:11.971887700Z"}, cnt=0
+TC-REG-11: status=409, body={"code":"REGISTRATION_CLOSED","message":"Thời gian đăng ký sự kiện đã kết thúc.","details":{},"traceId":"15307a71-ed8a-47c4-9292-f9d5470e3fb9","timestamp":"2026-11-20T09:24:12.127522Z"}
+TC-REG-12: status=403, body={"code":"NOT_IN_AUDIENCE","message":"Sự kiện không dành cho lớp của bạn.","details":{},"traceId":"df60948f-b748-4e94-9216-a0388181cb8e","timestamp":"2026-11-20T09:24:12.150739600Z"}
+TC-REG-13: notfound=404/NOT_FOUND, invalidPost=500/{"code":"INTERNAL_ERROR","message":"Đã xảy ra lỗi hệ thống.","details":{},"traceId":"d92e0aaf-d795-455d-8088-427073ca88f1","timestamp":"2026-11-20T09:24:12.183677600Z"}, invalidGet=500/{"code":"INTERNAL_ERROR","message":"Đã xảy ra lỗi hệ thống.","details":{},"traceId":"974260b3-b2bf-42d7-bc79-5b836b3ff996","timestamp":"2026-11-20T09:24:12.195542100Z"}
+TC-REG-14: status=409, code=CAPACITY_FULL, totalRows=1, sv1Rows=0, cnt=1
+TC-REG-15: rMe=200/CANCELLED, rPost=201/{"id":"9a80a058-1faf-48fc-b1de-c68473f10b9a","status":"REGISTERED","alreadyRegistered":false}, totalRows=2, regCount=1
+TC-REG-16: noAuth=401/UNAUTHENTICATED, 401/UNAUTHENTICATED; revoked=401/SESSION_REVOKED, 401/SESSION_REVOKED
+TC-REG-17: owner=403/403, admin=403/403
+TC-REG-18: a1=SUCCESS|NULL, a2=DENIED|NOT_IN_AUDIENCE, a3=REJECTED|CAPACITY_FULL, a4=REJECTED|EVENT_NOT_PUBLISHED, a5=REJECTED|REGISTRATION_CLOSED, immutableBlocked=true
+TC-REG-19: statuses=201,409, cnt=1, rows=1
+TC-REG-20: c201=5, c409=24, c500=1, cnt=5, rows=5
+TC-REG-21: c201=1, c200=9, c500=0, cnt=1, rows=1
+TC-REG-22: E5=409/EVENT_NOT_PUBLISHED, before=201, after=409/REGISTRATION_CLOSED
+TC-REG-23: sv003=201, noclass=403/NOT_IN_AUDIENCE, idor=201, sv1Rows=1, sv2Rows=0
+TC-REG-25: parallel=(201:1,200:9), repeatFull=200/true, repeatClosed=409/REGISTRATION_CLOSED
