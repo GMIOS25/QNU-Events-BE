@@ -153,7 +153,7 @@ class BusinessStateTransitionIT {
                 Set.of(k49ClassId)
         );
         event.setStatus(EventStatus.PUBLISHED);
-        Event saved = eventRepository.save(event);
+        Event saved = eventRepository.saveAndFlush(event);
         createdEventIds.add(saved.getId());
         return saved;
     }
@@ -233,8 +233,15 @@ class BusinessStateTransitionIT {
         Event event = createPublishedEvent(5, false);
 
         // Lần 1: Chèn bản ghi active REGISTERED
-        Registration reg = new Registration(UUID.randomUUID(), event.getId(), student1Id, RegistrationStatus.REGISTERED);
-        registrationRepository.save(reg);
+        Registration reg = new Registration(
+                UUID.randomUUID(),
+                event.getId(),
+                student1Id,
+                RegistrationStatus.REGISTERED,
+                Instant.now(),
+                Instant.now()
+        );
+        registrationRepository.saveAndFlush(reg);
 
         // Lần 2: Cố tình chèn thêm 1 bản ghi REGISTERED thứ hai cho cùng sinh viên -> Ném DataIntegrityViolationException
         assertThatThrownBy(() -> {
