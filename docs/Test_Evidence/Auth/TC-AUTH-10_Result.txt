@@ -1,0 +1,23 @@
+{
+  "me_before_lock": 200,
+  "me_after_lock": {
+    "status": 401,
+    "body": {
+      "code": "UNAUTHENTICATED",
+      "message": "Yêu cầu đăng nhập để thực hiện.",
+      "details": {},
+      "traceId": "2d026835-3e5d-455c-94de-6ac71db53c70",
+      "timestamp": 1795165222.589854
+    }
+  },
+  "events_after_lock": {
+    "status": 401,
+    "body": {
+      "code": "UNAUTHENTICATED",
+      "message": "Yêu cầu đăng nhập để thực hiện.",
+      "details": {},
+      "traceId": "ce940b1c-e846-4aa3-8d42-996db1314fe4",
+      "timestamp": 1795165222.6049771
+    }
+  }
+}
