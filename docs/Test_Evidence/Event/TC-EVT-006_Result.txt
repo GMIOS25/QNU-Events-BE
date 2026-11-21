@@ -1,0 +1,8 @@
+Test Case: TC-EVT-006 - Boundary title 3 & 200 chars
+Status: PASS
+Timestamp: 2026-11-20T09:02:41.903Z
+------------------------------------------------------------
+3 chars ("AI1") -> HTTP 201, status=DRAFT, id=ffb28e9a-783b-4599-9407-6a28a3e9c89d
+200 chars -> HTTP 201, len=200, id=eaa6a2ae-4286-4145-9b38-f6d4c815ee24
+------------------------------------------------------------
+Summary: Cả tiêu đề 3 ký tự và 200 ký tự đều trả 201 Created, status=DRAFT.

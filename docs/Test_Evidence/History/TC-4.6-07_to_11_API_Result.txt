@@ -1,0 +1,265 @@
+{
+  "TC-4.6-07_sv003": {
+    "status": 200,
+    "isArray": false,
+    "body": {
+      "content": [],
+      "empty": true,
+      "first": true,
+      "last": true,
+      "number": 0,
+      "numberOfElements": 0,
+      "pageable": {
+        "offset": 0,
+        "pageNumber": 0,
+        "pageSize": 20,
+        "paged": true,
+        "sort": {
+          "empty": false,
+          "sorted": true,
+          "unsorted": false
+        },
+        "unpaged": false
+      },
+      "size": 20,
+      "sort": {
+        "empty": false,
+        "sorted": true,
+        "unsorted": false
+      },
+      "totalElements": 0,
+      "totalPages": 0
+    }
+  },
+  "TC-4.6-08_09_sv001": {
+    "status": 200,
+    "isArray": false,
+    "body": {
+      "content": [
+        {
+          "eventId": "1158edec-40fc-4c22-a142-59d7368f6cdf",
+          "title": "Sự kiện giới hạn 1 suất 3f6cf5bb",
+          "startAt": "2026-11-21T09:03:40.878092Z",
+          "location": "Hội trường B - Đại học Quy Nhơn",
+          "registrationStatus": "REGISTERED",
+          "registeredAt": "2026-11-20T09:03:40.977116Z",
+          "attendanceStatus": "NOT_CHECKED_IN",
+          "method": "DYNAMIC_QR",
+          "activityType": "Workshop",
+          "activityPoints": 5
+        },
+        {
+          "eventId": "68ec4f94-a9e9-440f-8efd-70ac3273a89c",
+          "title": "Hội thảo hướng nghiệp IT c50452a4",
+          "startAt": "2026-11-21T09:03:35.467125Z",
+          "location": "Hội trường B - Đại học Quy Nhơn",
+          "registrationStatus": "REGISTERED",
+          "registeredAt": "2026-11-20T09:03:35.577421Z",
+          "attendanceStatus": "NOT_CHECKED_IN",
+          "method": "DYNAMIC_QR",
+          "activityType": "Hướng nghiệp",
+          "activityPoints": 5
+        },
+        {
+          "eventId": "59eef6dd-06f9-48b3-bd65-89cdbc65d0af",
+          "title": "[QA-4.5] EVT-CONC Concurrency & Replay",
+          "startAt": "2026-11-20T07:15:08.730218Z",
+          "location": "Hội trường A - QNU",
+          "registrationStatus": "REGISTERED",
+          "registeredAt": "2026-11-20T09:15:08.730218Z",
+          "attendanceStatus": "ACCEPTED",
+          "attendanceAt": "2026-11-20T09:15:49.121783Z",
+          "method": "DYNAMIC_QR",
+          "activityType": "Học thuật",
+          "activityPoints": 5
+        },
+        {
+          "eventId": "40b4bc99-ff8a-4e25-b541-9f5c1020dd75",
+          "title": "[QA-4.5] EVT-CLOSED Not Open Yet",
+          "startAt": "2026-11-20T07:15:08.610051Z",
+          "location": "Hội trường A - QNU",
+          "registrationStatus": "REGISTERED",
+          "registeredAt": "2026-11-20T09:15:08.610051Z",
+          "attendanceStatus": "NOT_CHECKED_IN",
+          "method": "DYNAMIC_QR",
+          "activityType": "Học thuật",
+          "activityPoints": 5
+        },
+        {
+          "eventId": "b7c324fa-7506-435e-8973-13bf80a24cab",
+          "title": "[QA-4.5] EVT-CANCELLED Event",
+          "startAt": "2026-11-20T07:15:08.472165Z",
+          "location": "Hội trường A - QNU",
+          "registrationStatus": "REGISTERED",
+          "registeredAt": "2026-11-20T09:15:08.472165Z",
+          "attendanceStatus": "NOT_CHECKED_IN",
+          "method": "DYNAMIC_QR",
+          "activityType": "Học thuật",
+          "activityPoints": 5
+        },
+        {
+          "eventId": "8297d0d4-a948-4cbc-9071-dedfc256a3e9",
+          "title": "[QA-4.5] EVT-DRAFT Event",
+          "startAt": "2026-11-20T07:15:08.314981Z",
+          "location": "Hội trường A - QNU",
+          "registrationStatus": "REGISTERED",
+          "registeredAt": "2026-11-20T09:15:08.314981Z",
+          "attendanceStatus": "NOT_CHECKED_IN",
+          "method": "DYNAMIC_QR",
+          "activityType": "Học thuật",
+          "activityPoints": 5
+        },
+        {
+          "eventId": "63df5004-285c-4643-82ba-2dcf83d53292",
+          "title": "[QA-4.5] EVT-QR-03 Rotation 5s Grace 0s",
+          "startAt": "2026-11-20T07:15:08.159263Z",
+          "location": "Hội trường A - QNU",
+          "registrationStatus": "REGISTERED",
+          "registeredAt": "2026-11-20T09:15:08.159263Z",
+          "attendanceStatus": "ACCEPTED",
+          "attendanceAt": "2026-11-20T09:15:49.039256Z",
+          "method": "DYNAMIC_QR",
+          "activityType": "Học thuật",
+          "activityPoints": 5
+        },
+        {
+          "eventId": "2a76641a-6a8c-4ec7-9a24-b078fe4c3d14",
+          "title": "[QA-4.5] EVT-QR-02 Owner2 Event",
+          "startAt": "2026-11-20T07:15:08.027982Z",
+          "location": "Hội trường A - QNU",
+          "registrationStatus": "REGISTERED",
+          "registeredAt": "2026-11-20T09:15:08.027982Z",
+          "attendanceStatus": "ACCEPTED",
+          "attendanceAt": "2026-11-20T09:15:48.774308Z",
+          "method": "DYNAMIC_QR",
+          "activityType": "Học thuật",
+          "activityPoints": 5
+        },
+        {
+          "eventId": "726d44d6-97c3-4e4d-8357-a4e7a18bcb18",
+          "title": "[QA-4.5] EVT-QR-01 Dynamic QR Main",
+          "startAt": "2026-11-20T07:15:07.892073Z",
+          "location": "Hội trường A - QNU",
+          "registrationStatus": "REGISTERED",
+          "registeredAt": "2026-11-20T09:15:07.892073Z",
+          "attendanceStatus": "NOT_CHECKED_IN",
+          "method": "DYNAMIC_QR",
+          "activityType": "Học thuật",
+          "activityPoints": 5
+        }
+      ],
+      "empty": false,
+      "first": true,
+      "last": true,
+      "number": 0,
+      "numberOfElements": 9,
+      "pageable": {
+        "offset": 0,
+        "pageNumber": 0,
+        "pageSize": 20,
+        "paged": true,
+        "sort": {
+          "empty": false,
+          "sorted": true,
+          "unsorted": false
+        },
+        "unpaged": false
+      },
+      "size": 20,
+      "sort": {
+        "empty": false,
+        "sorted": true,
+        "unsorted": false
+      },
+      "totalElements": 9,
+      "totalPages": 1
+    }
+  },
+  "TC-4.6-10_sv002": {
+    "status": 200,
+    "totalElements": 3,
+    "content": [
+      {
+        "eventId": "59eef6dd-06f9-48b3-bd65-89cdbc65d0af",
+        "title": "[QA-4.5] EVT-CONC Concurrency & Replay",
+        "startAt": "2026-11-20T07:15:08.730218Z",
+        "location": "Hội trường A - QNU",
+        "registrationStatus": "REGISTERED",
+        "registeredAt": "2026-11-20T09:15:08.730218Z",
+        "attendanceStatus": "NOT_CHECKED_IN",
+        "method": "DYNAMIC_QR",
+        "activityType": "Học thuật",
+        "activityPoints": 5
+      },
+      {
+        "eventId": "63df5004-285c-4643-82ba-2dcf83d53292",
+        "title": "[QA-4.5] EVT-QR-03 Rotation 5s Grace 0s",
+        "startAt": "2026-11-20T07:15:08.159263Z",
+        "location": "Hội trường A - QNU",
+        "registrationStatus": "REGISTERED",
+        "registeredAt": "2026-11-20T09:15:08.159263Z",
+        "attendanceStatus": "ACCEPTED",
+        "attendanceAt": "2026-11-20T09:15:50.137507Z",
+        "method": "DYNAMIC_QR",
+        "activityType": "Học thuật",
+        "activityPoints": 5
+      },
+      {
+        "eventId": "726d44d6-97c3-4e4d-8357-a4e7a18bcb18",
+        "title": "[QA-4.5] EVT-QR-01 Dynamic QR Main",
+        "startAt": "2026-11-20T07:15:07.892073Z",
+        "location": "Hội trường A - QNU",
+        "registrationStatus": "REGISTERED",
+        "registeredAt": "2026-11-20T09:15:07.892073Z",
+        "attendanceStatus": "NOT_CHECKED_IN",
+        "method": "DYNAMIC_QR",
+        "activityType": "Học thuật",
+        "activityPoints": 5
+      }
+    ]
+  },
+  "TC-4.6-11_IDOR_sv002_with_sv001_id": {
+    "status": 200,
+    "sv1Id": "6d15e65e-e758-4210-92c7-8a83a634a0ff",
+    "totalElements": 3,
+    "content": [
+      {
+        "eventId": "59eef6dd-06f9-48b3-bd65-89cdbc65d0af",
+        "title": "[QA-4.5] EVT-CONC Concurrency & Replay",
+        "startAt": "2026-11-20T07:15:08.730218Z",
+        "location": "Hội trường A - QNU",
+        "registrationStatus": "REGISTERED",
+        "registeredAt": "2026-11-20T09:15:08.730218Z",
+        "attendanceStatus": "NOT_CHECKED_IN",
+        "method": "DYNAMIC_QR",
+        "activityType": "Học thuật",
+        "activityPoints": 5
+      },
+      {
+        "eventId": "63df5004-285c-4643-82ba-2dcf83d53292",
+        "title": "[QA-4.5] EVT-QR-03 Rotation 5s Grace 0s",
+        "startAt": "2026-11-20T07:15:08.159263Z",
+        "location": "Hội trường A - QNU",
+        "registrationStatus": "REGISTERED",
+        "registeredAt": "2026-11-20T09:15:08.159263Z",
+        "attendanceStatus": "ACCEPTED",
+        "attendanceAt": "2026-11-20T09:15:50.137507Z",
+        "method": "DYNAMIC_QR",
+        "activityType": "Học thuật",
+        "activityPoints": 5
+      },
+      {
+        "eventId": "726d44d6-97c3-4e4d-8357-a4e7a18bcb18",
+        "title": "[QA-4.5] EVT-QR-01 Dynamic QR Main",
+        "startAt": "2026-11-20T07:15:07.892073Z",
+        "location": "Hội trường A - QNU",
+        "registrationStatus": "REGISTERED",
+        "registeredAt": "2026-11-20T09:15:07.892073Z",
+        "attendanceStatus": "NOT_CHECKED_IN",
+        "method": "DYNAMIC_QR",
+        "activityType": "Học thuật",
+        "activityPoints": 5
+      }
+    ]
+  }
+}

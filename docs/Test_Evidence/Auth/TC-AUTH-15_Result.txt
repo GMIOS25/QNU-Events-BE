@@ -1,0 +1,42 @@
+[
+  {
+    "status": 401,
+    "body": {
+      "code": "UNAUTHENTICATED",
+      "message": "Yêu cầu đăng nhập để thực hiện.",
+      "details": {},
+      "traceId": "c9fd223b-a6ce-48ab-8ad3-32d7eb832856",
+      "timestamp": 1795165224.388727
+    }
+  },
+  {
+    "status": 401,
+    "body": {
+      "code": "UNAUTHENTICATED",
+      "message": "Yêu cầu đăng nhập để thực hiện.",
+      "details": {},
+      "traceId": "a3ad232c-8a84-4232-9f7a-7e38cfbaf36b",
+      "timestamp": 1795165224.3925025
+    }
+  },
+  {
+    "status": 401,
+    "body": {
+      "code": "UNAUTHENTICATED",
+      "message": "Yêu cầu đăng nhập để thực hiện.",
+      "details": {},
+      "traceId": "ab047822-109e-4130-96e5-a8f92c76b1d3",
+      "timestamp": 1795165224.395051
+    }
+  },
+  {
+    "status": 401,
+    "body": {
+      "code": "UNAUTHENTICATED",
+      "message": "Yêu cầu đăng nhập để thực hiện.",
+      "details": {},
+      "traceId": "b8e30e45-34ba-4706-876e-8ee8292ab83f",
+      "timestamp": 1795165224.3988183
+    }
+  }
+]

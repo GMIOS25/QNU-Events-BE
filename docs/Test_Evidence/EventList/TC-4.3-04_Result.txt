@@ -1,0 +1,3 @@
+Redirect URL: http://localhost:5173/login
+Unauth API: 401 {"code":"UNAUTHENTICATED","message":"Yêu cầu đăng nhập để thực hiện.","details":{},"traceId":"2b037b8d-a8bb-4c75-80fc-0cf9dfcbb4be","timestamp":1795166123.115928300}
+Admin API: 403 {"code":"FORBIDDEN","message":"Bạn không có quyền thực hiện thao tác này.","details":{},"traceId":"54ed17e5-81f4-4967-8c0a-df3bc1abaa86","timestamp":1795166123.125227900}

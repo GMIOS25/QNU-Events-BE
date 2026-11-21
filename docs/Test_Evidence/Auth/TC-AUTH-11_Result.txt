@@ -1,0 +1,13 @@
+{
+  "sid": "44307aad-d1c2-4f4e-820b-5a66ed3db5d3",
+  "me_after_expire": {
+    "status": 401,
+    "body": {
+      "code": "UNAUTHENTICATED",
+      "message": "Yêu cầu đăng nhập để thực hiện.",
+      "details": {},
+      "traceId": "111b3de3-14c8-44df-ae66-3df5cf8c7df6",
+      "timestamp": 1795165223.1628518
+    }
+  }
+}

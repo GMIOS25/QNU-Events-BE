@@ -1,0 +1,162 @@
+﻿[INFO] Scanning for projects...
+[INFO] 
+[INFO] -----------------------< vn.edu.qnu:qnu-events >------------------------
+[INFO] Building QNU Events Backend 0.0.1-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ qnu-events ---
+[INFO] Copying 2 resources from src\main\resources to target\classes
+[INFO] Copying 1 resource from src\main\resources to target\classes
+[INFO] 
+[INFO] --- compiler:3.15.0:compile (default-compile) @ qnu-events ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ qnu-events ---
+[INFO] skip non existing resourceDirectory D:\QNU-EVENT\QNU-Events-BE\src\test\resources
+[INFO] 
+[INFO] --- compiler:3.15.0:testCompile (default-testCompile) @ qnu-events ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.5.6:test (default-test) @ qnu-events ---
+[INFO] Using auto detected provider org.apache.maven.surefire.junitplatform.JUnitPlatformProvider
+[INFO] 
+[INFO] -------------------------------------------------------
+[INFO]  T E S T S
+[INFO] -------------------------------------------------------
+[INFO] Running vn.edu.qnu.events.registration.RegistrationIT
+16:26:58.553 [main] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [vn.edu.qnu.events.registration.RegistrationIT]: RegistrationIT does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+16:26:58.761 [main] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration vn.edu.qnu.events.QnuEventsApplication for test class vn.edu.qnu.events.registration.RegistrationIT
+16:26:58.841 [main] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [vn.edu.qnu.events.registration.RegistrationIT]: RegistrationIT does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+16:26:58.845 [main] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration vn.edu.qnu.events.QnuEventsApplication for test class vn.edu.qnu.events.registration.RegistrationIT
+16:26:59.029 [main] INFO org.springframework.boot.devtools.restart.RestartApplicationListener -- Restart disabled due to context in which it is running
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v4.1.2)
+
+2026-11-20T16:26:59.341+07:00  INFO 25796 --- [qnu-events] [           main] v.e.q.e.registration.RegistrationIT      : Starting RegistrationIT using Java 25.0.4 with PID 25796 (started by yangk in D:\QNU-EVENT\QNU-Events-BE)
+2026-11-20T16:26:59.343+07:00  INFO 25796 --- [qnu-events] [           main] v.e.q.e.registration.RegistrationIT      : The following 1 profile is active: "dev"
+2026-11-20T16:27:00.777+07:00  INFO 25796 --- [qnu-events] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-11-20T16:27:00.915+07:00  INFO 25796 --- [qnu-events] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 125 ms. Found 8 JPA repository interfaces.
+2026-11-20T16:27:02.083+07:00  INFO 25796 --- [qnu-events] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-11-20T16:27:02.473+07:00  INFO 25796 --- [qnu-events] [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@52a75c12
+2026-11-20T16:27:02.475+07:00  INFO 25796 --- [qnu-events] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-11-20T16:27:02.504+07:00  INFO 25796 --- [qnu-events] [           main] org.flywaydb.core.FlywayExecutor         : Database: jdbc:postgresql://localhost:5432/qnu_events (PostgreSQL 17.11)
+2026-11-20T16:27:02.640+07:00  INFO 25796 --- [qnu-events] [           main] o.f.core.internal.command.DbValidate     : Successfully validated 1 migration (execution time 00:00.042s)
+2026-11-20T16:27:02.674+07:00  INFO 25796 --- [qnu-events] [           main] o.f.core.internal.command.DbMigrate      : Current version of schema "public": 1
+2026-11-20T16:27:02.683+07:00  INFO 25796 --- [qnu-events] [           main] o.f.core.internal.command.DbMigrate      : Schema "public" is up to date. No migration necessary.
+2026-11-20T16:27:02.888+07:00  INFO 25796 --- [qnu-events] [           main] org.hibernate.orm.jpa                    : HHH008540: Processing PersistenceUnitInfo [name: default]
+2026-11-20T16:27:03.005+07:00  INFO 25796 --- [qnu-events] [           main] org.hibernate.orm.core                   : HHH000001: Hibernate ORM core version 7.4.13.Final
+2026-11-20T16:27:03.666+07:00  INFO 25796 --- [qnu-events] [           main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-11-20T16:27:03.838+07:00  INFO 25796 --- [qnu-events] [           main] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [jdbc:postgresql://localhost:5432/qnu_events]
+	Database driver: PostgreSQL JDBC Driver
+	Database dialect: PostgreSQLDialect
+	Database version: 17.11
+	Default catalog/schema: qnu_events/public
+	Autocommit mode: undefined/unknown
+	Isolation level: READ_COMMITTED [default READ_COMMITTED]
+	JDBC fetch size: none
+	Pool: DataSourceConnectionProvider
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-11-20T16:27:05.449+07:00  INFO 25796 --- [qnu-events] [           main] org.hibernate.orm.core                   : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-11-20T16:27:05.510+07:00  INFO 25796 --- [qnu-events] [           main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-11-20T16:27:05.605+07:00  INFO 25796 --- [qnu-events] [           main] o.s.d.j.r.query.QueryEnhancerFactories   : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-11-20T16:27:08.831+07:00  INFO 25796 --- [qnu-events] [           main] o.s.b.t.m.w.SpringBootMockServletContext : Initializing Spring TestDispatcherServlet ''
+2026-11-20T16:27:08.831+07:00  INFO 25796 --- [qnu-events] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-11-20T16:27:08.843+07:00  INFO 25796 --- [qnu-events] [           main] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 1 endpoint beneath base path '/actuator'
+2026-11-20T16:27:08.853+07:00  INFO 25796 --- [qnu-events] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 22 ms
+2026-11-20T16:27:09.103+07:00  INFO 25796 --- [qnu-events] [           main] v.e.q.e.registration.RegistrationIT      : Started RegistrationIT in 10.084 seconds (process running for 11.443)
+2026-11-20T16:27:09.233+07:00  INFO 25796 --- [qnu-events] [           main] vn.edu.qnu.events.auth.DemoDataSeeder    : Running DemoDataSeeder for dev/demo profile...
+2026-11-20T16:27:09.739+07:00  INFO 25796 --- [qnu-events] [           main] vn.edu.qnu.events.auth.DemoDataSeeder    : DemoDataSeeder completed successfully.
+2026-11-20T16:27:11.657+07:00  INFO 25796 --- [qnu-events] [pool-3-thread-2] vn.edu.qnu.events.audit.AuditService     : Audit logged: action=REGISTRATION_CREATE, targetType=REGISTRATION, targetId=8f2da5cc-0a14-4762-a964-6b838716821f, outcome=SUCCESS, reason=null
+2026-11-20T16:27:11.670+07:00  INFO 25796 --- [qnu-events] [pool-3-thread-1] vn.edu.qnu.events.audit.AuditService     : Audit logged: action=REGISTRATION_CREATE, targetType=EVENT, targetId=16f65ec8-9217-432d-8461-619712e31da5, outcome=REJECTED, reason=CAPACITY_FULL
+2026-11-20T16:27:11.682+07:00  WARN 25796 --- [qnu-events] [pool-3-thread-1] v.e.q.e.common.GlobalExceptionHandler    : Business error [CAPACITY_FULL]: S? ki?n ?� h?t su?t tham gia. (traceId: 6aacbb3c-5fd0-4d74-b928-26751b1e7db0)
+2026-11-20T16:27:12.999+07:00  WARN 25796 --- [qnu-events] [           main] v.e.q.e.common.GlobalExceptionHandler    : Business error [NOT_FOUND]: Kh�ng t�m th?y t�i nguy�n y�u c?u. (traceId: 0e763a4c-58fd-4e75-871a-2af158a82fc9)
+2026-11-20T16:27:13.063+07:00  INFO 25796 --- [qnu-events] [           main] vn.edu.qnu.events.audit.AuditService     : Audit logged: action=REGISTRATION_CREATE, targetType=REGISTRATION, targetId=b80e3a80-fc58-4cc9-aa20-ee25421669b6, outcome=SUCCESS, reason=null
+2026-11-20T16:27:14.293+07:00  INFO 25796 --- [qnu-events] [           main] vn.edu.qnu.events.audit.AuditService     : Audit logged: action=REGISTRATION_CREATE, targetType=REGISTRATION, targetId=8adf1d40-e155-4c45-a23b-7bb4dce220d0, outcome=SUCCESS, reason=null
+2026-11-20T16:27:15.480+07:00  INFO 25796 --- [qnu-events] [pool-4-thread-1] vn.edu.qnu.events.audit.AuditService     : Audit logged: action=REGISTRATION_CREATE, targetType=REGISTRATION, targetId=b61a7386-c212-4607-8a98-e303c24acf0c, outcome=SUCCESS, reason=null
+2026-11-20T16:27:16.727+07:00  INFO 25796 --- [qnu-events] [           main] vn.edu.qnu.events.audit.AuditService     : Audit logged: action=REGISTRATION_CREATE, targetType=EVENT, targetId=9a05efe2-9059-412f-b68f-4cfbf88fd5cf, outcome=DENIED, reason=NOT_IN_AUDIENCE
+2026-11-20T16:27:16.733+07:00  WARN 25796 --- [qnu-events] [           main] v.e.q.e.common.GlobalExceptionHandler    : Business error [NOT_IN_AUDIENCE]: S? ki?n kh�ng d�nh cho l?p c?a b?n. (traceId: be8935a7-0b2c-47e4-9e0e-c63555e45c59)
+2026-11-20T16:27:17.908+07:00  INFO 25796 --- [qnu-events] [           main] vn.edu.qnu.events.audit.AuditService     : Audit logged: action=REGISTRATION_CREATE, targetType=REGISTRATION, targetId=c056ede1-094f-48db-bcf3-141eae9bdc81, outcome=SUCCESS, reason=null
+2026-11-20T16:27:19.138+07:00  INFO 25796 --- [qnu-events] [           main] vn.edu.qnu.events.audit.AuditService     : Audit logged: action=REGISTRATION_CREATE, targetType=EVENT, targetId=f5cb5a67-135e-445c-8a0f-48cc1b552250, outcome=REJECTED, reason=REGISTRATION_CLOSED
+2026-11-20T16:27:19.144+07:00  WARN 25796 --- [qnu-events] [           main] v.e.q.e.common.GlobalExceptionHandler    : Business error [REGISTRATION_CLOSED]: Th?i gian ??ng k� s? ki?n ?� k?t th�c. (traceId: b90cce7f-297f-4f31-88cb-2bcf0277a833)
+2026-11-20T16:27:20.333+07:00  INFO 25796 --- [qnu-events] [           main] vn.edu.qnu.events.audit.AuditService     : Audit logged: action=REGISTRATION_CREATE, targetType=EVENT, targetId=d512c86c-4a08-4861-be26-066841600dc7, outcome=REJECTED, reason=EVENT_NOT_PUBLISHED
+2026-11-20T16:27:20.337+07:00  WARN 25796 --- [qnu-events] [           main] v.e.q.e.common.GlobalExceptionHandler    : Business error [EVENT_NOT_PUBLISHED]: S? ki?n ch?a ???c c�ng b?. (traceId: 71df824a-cfec-47ad-8047-26a564cff0c7)
+2026-11-20T16:27:21.506+07:00  INFO 25796 --- [qnu-events] [           main] vn.edu.qnu.events.audit.AuditService     : Audit logged: action=REGISTRATION_CREATE, targetType=REGISTRATION, targetId=fdfce165-9d50-44de-bd7c-8f99ea1025c0, outcome=SUCCESS, reason=null
+2026-11-20T16:27:21.534+07:00  INFO 25796 --- [qnu-events] [           main] vn.edu.qnu.events.audit.AuditService     : Audit logged: action=REGISTRATION_CREATE, targetType=EVENT, targetId=56adfde1-d0ab-4183-9720-dd41ce8673f5, outcome=REJECTED, reason=CAPACITY_FULL
+2026-11-20T16:27:21.540+07:00  WARN 25796 --- [qnu-events] [           main] v.e.q.e.common.GlobalExceptionHandler    : Business error [CAPACITY_FULL]: S? ki?n ?� h?t su?t tham gia. (traceId: 2653983f-90ff-4c22-a11d-2c9bdce4eece)
+2026-11-20T16:27:33.685+07:00  INFO 25796 --- [qnu-events] [pool-5-thread-9] vn.edu.qnu.events.audit.AuditService     : Audit logged: action=REGISTRATION_CREATE, targetType=REGISTRATION, targetId=54f5e9c6-4568-4734-9c80-c42a54a464d3, outcome=SUCCESS, reason=null
+2026-11-20T16:27:33.695+07:00  INFO 25796 --- [qnu-events] [pool-5-thread-6] vn.edu.qnu.events.audit.AuditService     : Audit logged: action=REGISTRATION_CREATE, targetType=REGISTRATION, targetId=36453dca-c817-40f5-a5aa-f4e9835fb62e, outcome=SUCCESS, reason=null
+2026-11-20T16:27:33.704+07:00  INFO 25796 --- [qnu-events] [pool-5-thread-4] vn.edu.qnu.events.audit.AuditService     : Audit logged: action=REGISTRATION_CREATE, targetType=REGISTRATION, targetId=a523fd63-ab55-483d-9d68-a90f193e61d5, outcome=SUCCESS, reason=null
+2026-11-20T16:27:33.713+07:00  INFO 25796 --- [qnu-events] [ool-5-thread-10] vn.edu.qnu.events.audit.AuditService     : Audit logged: action=REGISTRATION_CREATE, targetType=REGISTRATION, targetId=7943d538-2a57-4c2c-a634-26517269d2a6, outcome=SUCCESS, reason=null
+2026-11-20T16:27:33.723+07:00  INFO 25796 --- [qnu-events] [pool-5-thread-5] vn.edu.qnu.events.audit.AuditService     : Audit logged: action=REGISTRATION_CREATE, targetType=REGISTRATION, targetId=af1afe88-bd12-45cb-9fc0-f3ac7598ef1c, outcome=SUCCESS, reason=null
+2026-11-20T16:27:33.734+07:00  INFO 25796 --- [qnu-events] [pool-5-thread-1] vn.edu.qnu.events.audit.AuditService     : Audit logged: action=REGISTRATION_CREATE, targetType=EVENT, targetId=48516a28-4093-4fd7-9ab6-9a732fe60517, outcome=REJECTED, reason=CAPACITY_FULL
+2026-11-20T16:27:33.741+07:00  INFO 25796 --- [qnu-events] [pool-5-thread-4] vn.edu.qnu.events.audit.AuditService     : Audit logged: action=REGISTRATION_CREATE, targetType=EVENT, targetId=48516a28-4093-4fd7-9ab6-9a732fe60517, outcome=REJECTED, reason=CAPACITY_FULL
+2026-11-20T16:27:33.743+07:00  WARN 25796 --- [qnu-events] [pool-5-thread-1] v.e.q.e.common.GlobalExceptionHandler    : Business error [CAPACITY_FULL]: S? ki?n ?� h?t su?t tham gia. (traceId: 19d48960-d77b-4701-8cc8-9b2d69bd083f)
+2026-11-20T16:27:33.744+07:00  INFO 25796 --- [qnu-events] [pool-5-thread-6] vn.edu.qnu.events.audit.AuditService     : Audit logged: action=REGISTRATION_CREATE, targetType=EVENT, targetId=48516a28-4093-4fd7-9ab6-9a732fe60517, outcome=REJECTED, reason=CAPACITY_FULL
+2026-11-20T16:27:33.751+07:00  INFO 25796 --- [qnu-events] [ool-5-thread-10] vn.edu.qnu.events.audit.AuditService     : Audit logged: action=REGISTRATION_CREATE, targetType=EVENT, targetId=48516a28-4093-4fd7-9ab6-9a732fe60517, outcome=REJECTED, reason=CAPACITY_FULL
+2026-11-20T16:27:33.753+07:00  WARN 25796 --- [qnu-events] [pool-5-thread-6] v.e.q.e.common.GlobalExceptionHandler    : Business error [CAPACITY_FULL]: S? ki?n ?� h?t su?t tham gia. (traceId: 509fc635-d7bc-4be1-a7ad-9d17530a1b61)
+2026-11-20T16:27:33.753+07:00  INFO 25796 --- [qnu-events] [pool-5-thread-8] vn.edu.qnu.events.audit.AuditService     : Audit logged: action=REGISTRATION_CREATE, targetType=EVENT, targetId=48516a28-4093-4fd7-9ab6-9a732fe60517, outcome=REJECTED, reason=CAPACITY_FULL
+2026-11-20T16:27:33.755+07:00  WARN 25796 --- [qnu-events] [pool-5-thread-4] v.e.q.e.common.GlobalExceptionHandler    : Business error [CAPACITY_FULL]: S? ki?n ?� h?t su?t tham gia. (traceId: 269e5f32-81a9-47c3-9c67-ec25d318e869)
+2026-11-20T16:27:33.761+07:00  INFO 25796 --- [qnu-events] [pool-5-thread-5] vn.edu.qnu.events.audit.AuditService     : Audit logged: action=REGISTRATION_CREATE, targetType=EVENT, targetId=48516a28-4093-4fd7-9ab6-9a732fe60517, outcome=REJECTED, reason=CAPACITY_FULL
+2026-11-20T16:27:33.762+07:00  WARN 25796 --- [qnu-events] [pool-5-thread-8] v.e.q.e.common.GlobalExceptionHandler    : Business error [CAPACITY_FULL]: S? ki?n ?� h?t su?t tham gia. (traceId: 909dd6f9-806e-4966-b4e8-fc6de1704773)
+2026-11-20T16:27:33.763+07:00  INFO 25796 --- [qnu-events] [pool-5-thread-3] vn.edu.qnu.events.audit.AuditService     : Audit logged: action=REGISTRATION_CREATE, targetType=EVENT, targetId=48516a28-4093-4fd7-9ab6-9a732fe60517, outcome=REJECTED, reason=CAPACITY_FULL
+2026-11-20T16:27:33.765+07:00  WARN 25796 --- [qnu-events] [ool-5-thread-10] v.e.q.e.common.GlobalExceptionHandler    : Business error [CAPACITY_FULL]: S? ki?n ?� h?t su?t tham gia. (traceId: c6e75614-d45e-4aa3-a98b-d48f757ace90)
+2026-11-20T16:27:33.771+07:00  WARN 25796 --- [qnu-events] [pool-5-thread-5] v.e.q.e.common.GlobalExceptionHandler    : Business error [CAPACITY_FULL]: S? ki?n ?� h?t su?t tham gia. (traceId: 46f1a423-0704-4ed5-9bd0-4d958a19eb03)
+2026-11-20T16:27:33.773+07:00  WARN 25796 --- [qnu-events] [pool-5-thread-3] v.e.q.e.common.GlobalExceptionHandler    : Business error [CAPACITY_FULL]: S? ki?n ?� h?t su?t tham gia. (traceId: 1a847821-26a2-4782-a28e-084609ed5822)
+2026-11-20T16:27:33.774+07:00  INFO 25796 --- [qnu-events] [pool-5-thread-1] vn.edu.qnu.events.audit.AuditService     : Audit logged: action=REGISTRATION_CREATE, targetType=EVENT, targetId=48516a28-4093-4fd7-9ab6-9a732fe60517, outcome=REJECTED, reason=CAPACITY_FULL
+2026-11-20T16:27:33.774+07:00  INFO 25796 --- [qnu-events] [pool-5-thread-7] vn.edu.qnu.events.audit.AuditService     : Audit logged: action=REGISTRATION_CREATE, targetType=EVENT, targetId=48516a28-4093-4fd7-9ab6-9a732fe60517, outcome=REJECTED, reason=CAPACITY_FULL
+2026-11-20T16:27:33.785+07:00  WARN 25796 --- [qnu-events] [pool-5-thread-7] v.e.q.e.common.GlobalExceptionHandler    : Business error [CAPACITY_FULL]: S? ki?n ?� h?t su?t tham gia. (traceId: 29d66183-6178-4831-868c-66344348d0bf)
+2026-11-20T16:27:33.785+07:00  INFO 25796 --- [qnu-events] [pool-5-thread-2] vn.edu.qnu.events.audit.AuditService     : Audit logged: action=REGISTRATION_CREATE, targetType=EVENT, targetId=48516a28-4093-4fd7-9ab6-9a732fe60517, outcome=REJECTED, reason=CAPACITY_FULL
+2026-11-20T16:27:33.785+07:00  INFO 25796 --- [qnu-events] [pool-5-thread-4] vn.edu.qnu.events.audit.AuditService     : Audit logged: action=REGISTRATION_CREATE, targetType=EVENT, targetId=48516a28-4093-4fd7-9ab6-9a732fe60517, outcome=REJECTED, reason=CAPACITY_FULL
+2026-11-20T16:27:33.786+07:00  WARN 25796 --- [qnu-events] [pool-5-thread-1] v.e.q.e.common.GlobalExceptionHandler    : Business error [CAPACITY_FULL]: S? ki?n ?� h?t su?t tham gia. (traceId: aeba15fe-e5d9-4589-b438-a77cbb097a4e)
+2026-11-20T16:27:33.789+07:00  INFO 25796 --- [qnu-events] [pool-5-thread-6] vn.edu.qnu.events.audit.AuditService     : Audit logged: action=REGISTRATION_CREATE, targetType=EVENT, targetId=48516a28-4093-4fd7-9ab6-9a732fe60517, outcome=REJECTED, reason=CAPACITY_FULL
+2026-11-20T16:27:33.798+07:00  WARN 25796 --- [qnu-events] [pool-5-thread-4] v.e.q.e.common.GlobalExceptionHandler    : Business error [CAPACITY_FULL]: S? ki?n ?� h?t su?t tham gia. (traceId: 56be6f3f-5ffd-41d3-a846-d080c721d357)
+2026-11-20T16:27:33.798+07:00  WARN 25796 --- [qnu-events] [pool-5-thread-2] v.e.q.e.common.GlobalExceptionHandler    : Business error [CAPACITY_FULL]: S? ki?n ?� h?t su?t tham gia. (traceId: e987fa4a-3a81-41d1-b8c0-d1605b832f4c)
+2026-11-20T16:27:33.799+07:00  INFO 25796 --- [qnu-events] [pool-5-thread-8] vn.edu.qnu.events.audit.AuditService     : Audit logged: action=REGISTRATION_CREATE, targetType=EVENT, targetId=48516a28-4093-4fd7-9ab6-9a732fe60517, outcome=REJECTED, reason=CAPACITY_FULL
+2026-11-20T16:27:33.799+07:00  INFO 25796 --- [qnu-events] [pool-5-thread-9] vn.edu.qnu.events.audit.AuditService     : Audit logged: action=REGISTRATION_CREATE, targetType=EVENT, targetId=48516a28-4093-4fd7-9ab6-9a732fe60517, outcome=REJECTED, reason=CAPACITY_FULL
+2026-11-20T16:27:33.804+07:00  INFO 25796 --- [qnu-events] [pool-5-thread-5] vn.edu.qnu.events.audit.AuditService     : Audit logged: action=REGISTRATION_CREATE, targetType=EVENT, targetId=48516a28-4093-4fd7-9ab6-9a732fe60517, outcome=REJECTED, reason=CAPACITY_FULL
+2026-11-20T16:27:33.806+07:00  WARN 25796 --- [qnu-events] [pool-5-thread-6] v.e.q.e.common.GlobalExceptionHandler    : Business error [CAPACITY_FULL]: S? ki?n ?� h?t su?t tham gia. (traceId: a5e7fa44-3e24-464e-94aa-c8c09af6ab60)
+2026-11-20T16:27:33.807+07:00  INFO 25796 --- [qnu-events] [pool-5-thread-3] vn.edu.qnu.events.audit.AuditService     : Audit logged: action=REGISTRATION_CREATE, targetType=EVENT, targetId=48516a28-4093-4fd7-9ab6-9a732fe60517, outcome=REJECTED, reason=CAPACITY_FULL
+2026-11-20T16:27:33.814+07:00  WARN 25796 --- [qnu-events] [pool-5-thread-9] v.e.q.e.common.GlobalExceptionHandler    : Business error [CAPACITY_FULL]: S? ki?n ?� h?t su?t tham gia. (traceId: d1cff24e-4009-4d7f-8be7-069c20ba8982)
+2026-11-20T16:27:33.816+07:00  WARN 25796 --- [qnu-events] [pool-5-thread-5] v.e.q.e.common.GlobalExceptionHandler    : Business error [CAPACITY_FULL]: S? ki?n ?� h?t su?t tham gia. (traceId: 41ac53a7-d53e-4c26-b157-9c4c5eda1d52)
+2026-11-20T16:27:33.816+07:00  WARN 25796 --- [qnu-events] [pool-5-thread-8] v.e.q.e.common.GlobalExceptionHandler    : Business error [CAPACITY_FULL]: S? ki?n ?� h?t su?t tham gia. (traceId: d0f540f9-0b7d-46c7-a9ba-ae3a6544aa30)
+2026-11-20T16:27:33.818+07:00  INFO 25796 --- [qnu-events] [ool-5-thread-10] vn.edu.qnu.events.audit.AuditService     : Audit logged: action=REGISTRATION_CREATE, targetType=EVENT, targetId=48516a28-4093-4fd7-9ab6-9a732fe60517, outcome=REJECTED, reason=CAPACITY_FULL
+2026-11-20T16:27:33.820+07:00  INFO 25796 --- [qnu-events] [pool-5-thread-7] vn.edu.qnu.events.audit.AuditService     : Audit logged: action=REGISTRATION_CREATE, targetType=EVENT, targetId=48516a28-4093-4fd7-9ab6-9a732fe60517, outcome=REJECTED, reason=CAPACITY_FULL
+2026-11-20T16:27:33.822+07:00  INFO 25796 --- [qnu-events] [pool-5-thread-1] vn.edu.qnu.events.audit.AuditService     : Audit logged: action=REGISTRATION_CREATE, targetType=EVENT, targetId=48516a28-4093-4fd7-9ab6-9a732fe60517, outcome=REJECTED, reason=CAPACITY_FULL
+2026-11-20T16:27:33.833+07:00  WARN 25796 --- [qnu-events] [pool-5-thread-3] v.e.q.e.common.GlobalExceptionHandler    : Business error [CAPACITY_FULL]: S? ki?n ?� h?t su?t tham gia. (traceId: 29153043-d4d3-4e2a-9140-970b88a09a5a)
+2026-11-20T16:27:33.836+07:00  WARN 25796 --- [qnu-events] [pool-5-thread-1] v.e.q.e.common.GlobalExceptionHandler    : Business error [CAPACITY_FULL]: S? ki?n ?� h?t su?t tham gia. (traceId: 894ff7fe-c1ba-4622-a6e3-5b73c8a2d996)
+2026-11-20T16:27:33.836+07:00  WARN 25796 --- [qnu-events] [ool-5-thread-10] v.e.q.e.common.GlobalExceptionHandler    : Business error [CAPACITY_FULL]: S? ki?n ?� h?t su?t tham gia. (traceId: b9fd5c83-7cd7-4abb-b0bd-386ba8ae9148)
+2026-11-20T16:27:33.836+07:00  WARN 25796 --- [qnu-events] [pool-5-thread-7] v.e.q.e.common.GlobalExceptionHandler    : Business error [CAPACITY_FULL]: S? ki?n ?� h?t su?t tham gia. (traceId: a9c4425a-e6f7-4236-ba75-a7017876bc0e)
+2026-11-20T16:27:33.836+07:00  INFO 25796 --- [qnu-events] [pool-5-thread-2] vn.edu.qnu.events.audit.AuditService     : Audit logged: action=REGISTRATION_CREATE, targetType=EVENT, targetId=48516a28-4093-4fd7-9ab6-9a732fe60517, outcome=REJECTED, reason=CAPACITY_FULL
+2026-11-20T16:27:33.844+07:00  WARN 25796 --- [qnu-events] [pool-5-thread-2] v.e.q.e.common.GlobalExceptionHandler    : Business error [CAPACITY_FULL]: S? ki?n ?� h?t su?t tham gia. (traceId: 12ba7263-077f-4b75-8c74-cb98368ce1bc)
+2026-11-20T16:27:33.846+07:00  INFO 25796 --- [qnu-events] [pool-5-thread-6] vn.edu.qnu.events.audit.AuditService     : Audit logged: action=REGISTRATION_CREATE, targetType=EVENT, targetId=48516a28-4093-4fd7-9ab6-9a732fe60517, outcome=REJECTED, reason=CAPACITY_FULL
+2026-11-20T16:27:33.848+07:00  INFO 25796 --- [qnu-events] [pool-5-thread-4] vn.edu.qnu.events.audit.AuditService     : Audit logged: action=REGISTRATION_CREATE, targetType=EVENT, targetId=48516a28-4093-4fd7-9ab6-9a732fe60517, outcome=REJECTED, reason=CAPACITY_FULL
+2026-11-20T16:27:33.852+07:00  INFO 25796 --- [qnu-events] [pool-5-thread-9] vn.edu.qnu.events.audit.AuditService     : Audit logged: action=REGISTRATION_CREATE, targetType=EVENT, targetId=48516a28-4093-4fd7-9ab6-9a732fe60517, outcome=REJECTED, reason=CAPACITY_FULL
+2026-11-20T16:27:33.852+07:00  INFO 25796 --- [qnu-events] [pool-5-thread-8] vn.edu.qnu.events.audit.AuditService     : Audit logged: action=REGISTRATION_CREATE, targetType=EVENT, targetId=48516a28-4093-4fd7-9ab6-9a732fe60517, outcome=REJECTED, reason=CAPACITY_FULL
+2026-11-20T16:27:33.856+07:00  INFO 25796 --- [qnu-events] [pool-5-thread-5] vn.edu.qnu.events.audit.AuditService     : Audit logged: action=REGISTRATION_CREATE, targetType=EVENT, targetId=48516a28-4093-4fd7-9ab6-9a732fe60517, outcome=REJECTED, reason=CAPACITY_FULL
+2026-11-20T16:27:33.857+07:00  WARN 25796 --- [qnu-events] [pool-5-thread-4] v.e.q.e.common.GlobalExceptionHandler    : Business error [CAPACITY_FULL]: S? ki?n ?� h?t su?t tham gia. (traceId: 3427579c-660c-4404-8f7b-a689b10b53da)
+2026-11-20T16:27:33.859+07:00  WARN 25796 --- [qnu-events] [pool-5-thread-6] v.e.q.e.common.GlobalExceptionHandler    : Business error [CAPACITY_FULL]: S? ki?n ?� h?t su?t tham gia. (traceId: 45fd3bb5-36af-4f3a-a284-ca183590ddd2)
+2026-11-20T16:27:33.861+07:00  WARN 25796 --- [qnu-events] [pool-5-thread-9] v.e.q.e.common.GlobalExceptionHandler    : Business error [CAPACITY_FULL]: S? ki?n ?� h?t su?t tham gia. (traceId: d122f758-e9aa-4ba8-847e-8d1f725d22e9)
+2026-11-20T16:27:33.861+07:00  WARN 25796 --- [qnu-events] [pool-5-thread-8] v.e.q.e.common.GlobalExceptionHandler    : Business error [CAPACITY_FULL]: S? ki?n ?� h?t su?t tham gia. (traceId: 2ee957b1-36ad-443a-9f49-2b5d78fdb0e1)
+2026-11-20T16:27:33.864+07:00  WARN 25796 --- [qnu-events] [pool-5-thread-5] v.e.q.e.common.GlobalExceptionHandler    : Business error [CAPACITY_FULL]: S? ki?n ?� h?t su?t tham gia. (traceId: 50de4ba4-5d7f-4a2f-b68a-de3dff62f6e1)
+[INFO] Tests run: 12, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 35.53 s -- in vn.edu.qnu.events.registration.RegistrationIT
+[INFO] 
+[INFO] Results:
+[INFO] 
+[INFO] Tests run: 12, Failures: 0, Errors: 0, Skipped: 0
+[INFO] 
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  39.759 s
+[INFO] Finished at: 2026-11-20T16:27:34+07:00
+[INFO] ------------------------------------------------------------------------

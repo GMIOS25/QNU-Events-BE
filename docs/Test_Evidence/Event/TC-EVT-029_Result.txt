@@ -1,0 +1,9 @@
+Test Case: TC-EVT-029 - BVA min/max location, time+1s, deadline==close, activityType 50 vs 51
+Status: FAIL
+Timestamp: 2026-11-20T09:02:42.078Z
+------------------------------------------------------------
+Step 1 (loc=1, end=start+1s, close=open+1s, deadline==close) -> HTTP 201
+Step 2 (loc=300, activityType=50) -> HTTP 201
+Step 3 (activityType=51) -> HTTP 500 {"code":"INTERNAL_ERROR","message":"Đã xảy ra lỗi hệ thống.","details":{},"traceId":"a6e2b58f-540c-4bc5-b3a2-570ca364eed4","timestamp":"2026-11-20T09:02:42.077109500Z"}
+------------------------------------------------------------
+Summary: Step 1 & 2 trả 201 Created hợp lệ, nhưng Step 3 (activityType 51 ký tự) trả HTTP 500 (INTERNAL_ERROR) do EventUpsert thiếu @Size(max=50) nên chạm DB varchar(50).

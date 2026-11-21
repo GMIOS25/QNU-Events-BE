@@ -1,0 +1,22 @@
+=== QA R1 RE-VERIFICATION LOG — REGISTRATION (TC-REG-20 CONCURRENCY) ===
+Timestamp: 2026-11-21T03:58:52.547Z (runId=9530742a)
+Environment: Spring Boot dev (http://localhost:8080, DB_POOL_SIZE=30, hikari.connection-timeout=10000ms) + PostgreSQL 17 (qnu-events-postgres-1 / qnu_events)
+Scenario: 30 distinct STUDENT accounts in K49CNTT1 sending 30 simultaneous POST /api/v1/events/{id}/registrations requests (Promise.all) for a PUBLISHED event with quotaTotal = 5.
+
+--- Trial Results (3 consecutive trials) ---
+[PASS] TC-REG-20_TRIAL_1: eventId=ca91744f-b546-4cdf-8aeb-5c434d29b6fb, c201=5, c409=25, c500=0, other=0, cnt=5, rows=5, elapsedMs=354
+[FAIL] TC-REG-20_TRIAL_2: eventId=08b634bd-0142-429c-b154-f2d601c2638e, c201=5, c409=24, c500=1, other=0, cnt=5, rows=5, elapsedMs=10258
+  500 sample traceIds: 500/INTERNAL_ERROR(e58db914-4654-4a73-ac00-32c716cc53f8)
+[FAIL] TC-REG-20_TRIAL_3: eventId=5b6de0c4-90a9-4afe-b715-200eaf14d4aa, c201=5, c409=24, c500=1, other=0, cnt=5, rows=5, elapsedMs=10241
+  500 sample traceIds: 500/INTERNAL_ERROR(17368b55-7074-496b-b80f-15888ef28ac2)
+
+--- Backend Root Cause Excerpt (Spring Boot server log, traceId=17368b55-7074-496b-b80f-15888ef28ac2) ---
+Resolved [org.springframework.transaction.CannotCreateTransactionException: Could not open JPA EntityManager for transaction]
+Caused by: org.hibernate.exception.JDBCConnectionException: Unable to acquire JDBC Connection [HikariPool-1 - Connection is not available, request timed out after 10000ms (total=30, active=30, idle=0, waiting=0)] [n/a]
+Caused by: java.sql.SQLTransientConnectionException: HikariPool-1 - Connection is not available, request timed out after 10000ms (total=30, active=30, idle=0, waiting=0)
+
+--- QA Diagnosis ---
+1. Quota/DB integrity holds in all 3 trials: events.registered_count = 5 and COUNT(registrations) = 5 (no overbooking, no orphan rows).
+2. However, TC-REG-20 FAILS acceptance criteria ("Không có HTTP 500 hoặc lỗi deadlock/constraint lọt ra ngoài") reproducibly in 2/3 live trials (and in the initial 2026-11-20 run: c201=5, c409=24, c500=1).
+3. Root cause: RegistrationService.register() runs inside @Transactional while calling AuditService.record() which is annotated with @Transactional(propagation = Propagation.REQUIRES_NEW). Each concurrent request requires up to 2 simultaneous JDBC connections; under 30 parallel requests with default hikari.maximum-pool-size=30, HikariCP can suffer pool starvation until connection-timeout=10000ms triggers HTTP 500 INTERNAL_ERROR.
+4. Note: RegistrationIT.concurrencyRaceConditionQuota5With30Students() passes because it uses Executors.newFixedThreadPool(10) (max 20 connections <= 30), whereas 30 simultaneous HTTP requests expose the pool starvation defect.

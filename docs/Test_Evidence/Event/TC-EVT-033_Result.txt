@@ -1,0 +1,10 @@
+Test Case: TC-EVT-033 - Non-existent UUID on PUT/preview/publish -> 404
+Status: PASS
+Timestamp: 2026-11-20T09:02:43.425Z
+------------------------------------------------------------
+PUT -> HTTP 404 (NOT_FOUND)
+GET /preview -> HTTP 404 (NOT_FOUND)
+POST /publish -> HTTP 404 (NOT_FOUND)
+audit_logs count for 00000000-0000-0000-0000-000000009999 -> 0
+------------------------------------------------------------
+Summary: Cả 3 endpoint trả 404 NOT_FOUND và không tạo bản ghi audit_logs rác.

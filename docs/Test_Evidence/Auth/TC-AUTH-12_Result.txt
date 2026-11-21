@@ -1,0 +1,80 @@
+[
+  {
+    "status": 400,
+    "body": {
+      "code": "VALIDATION_FAILED",
+      "message": "Dữ liệu không hợp lệ.",
+      "details": {
+        "fields": {
+          "password": "Mật khẩu không được để trống",
+          "loginId": "Tên đăng nhập không được để trống"
+        }
+      },
+      "traceId": "03b68782-5d3d-4222-b567-8addd46c0fa6",
+      "timestamp": "2026-11-20T09:00:23.174844500Z"
+    }
+  },
+  {
+    "status": 400,
+    "body": {
+      "code": "VALIDATION_FAILED",
+      "message": "Dữ liệu không hợp lệ.",
+      "details": {
+        "fields": {
+          "password": "Mật khẩu không được để trống",
+          "loginId": "Tên đăng nhập không được để trống"
+        }
+      },
+      "traceId": "ca07ce00-1927-45e8-bc52-6c574a471e37",
+      "timestamp": "2026-11-20T09:00:23.184251400Z"
+    }
+  },
+  {
+    "status": 400,
+    "body": {
+      "code": "VALIDATION_FAILED",
+      "message": "Dữ liệu không hợp lệ.",
+      "details": {
+        "fields": {
+          "loginId": "Tên đăng nhập không được để trống"
+        }
+      },
+      "traceId": "2f088760-1a26-4d21-86be-72aaeaa75ba3",
+      "timestamp": "2026-11-20T09:00:23.189813300Z"
+    }
+  },
+  {
+    "status": 400,
+    "body": {
+      "code": "VALIDATION_FAILED",
+      "message": "Dữ liệu không hợp lệ.",
+      "details": {
+        "fields": {
+          "password": "Mật khẩu không được để trống"
+        }
+      },
+      "traceId": "331728bb-2dfb-4de5-82ef-b1d2025a3b20",
+      "timestamp": "2026-11-20T09:00:23.194734700Z"
+    }
+  },
+  {
+    "status": 400,
+    "body": {
+      "code": "VALIDATION_FAILED",
+      "message": "Dữ liệu yêu cầu không hợp lệ hoặc sai định dạng.",
+      "details": {},
+      "traceId": "cbd0111f-3008-4a9b-941b-d9a030da7dcd",
+      "timestamp": "2026-11-20T09:00:23.199616600Z"
+    }
+  },
+  {
+    "status": 400,
+    "body": {
+      "code": "VALIDATION_FAILED",
+      "message": "Dữ liệu yêu cầu không hợp lệ hoặc sai định dạng.",
+      "details": {},
+      "traceId": "ab8794be-7242-4ebd-9a8d-f232c0cb4c56",
+      "timestamp": "2026-11-20T09:00:23.206378600Z"
+    }
+  }
+]

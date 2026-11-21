@@ -1,0 +1,7 @@
+attemptCount=2
+hasLoadingText=true
+hasErrorBox=true
+hasRetryButton=false
+NetworkErrors:
+500 GET http://localhost:5173/api/v1/me/history
+500 GET http://localhost:5173/api/v1/me/history

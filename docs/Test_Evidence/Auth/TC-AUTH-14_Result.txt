@@ -1,0 +1,51 @@
+{
+  "sv": {
+    "header": {
+      "alg": "HS256"
+    },
+    "claims": {
+      "sub": "6d15e65e-e758-4210-92c7-8a83a634a0ff",
+      "classId": "00000000-0000-0000-0000-000000000001",
+      "exp": 1795194024,
+      "iat": 1795165224,
+      "roles": [
+        "STUDENT"
+      ],
+      "sid": "7b7736a2-ceb6-4c45-8ea8-2dc942898fd6"
+    },
+    "me": {
+      "id": "6d15e65e-e758-4210-92c7-8a83a634a0ff",
+      "loginId": "sv001",
+      "fullName": "Trần Sinh Viên 1",
+      "studentCode": "4901040001",
+      "roles": [
+        "STUDENT"
+      ],
+      "classId": "00000000-0000-0000-0000-000000000001"
+    }
+  },
+  "owner": {
+    "header": {
+      "alg": "HS256"
+    },
+    "claims": {
+      "sub": "0b9dfabb-4d99-4483-b5f9-8cec0197d257",
+      "exp": 1795194024,
+      "iat": 1795165224,
+      "roles": [
+        "EVENT_OWNER"
+      ],
+      "sid": "5c48d1b4-8fb7-48d1-93b0-1765a8f4f7f1"
+    },
+    "me": {
+      "id": "0b9dfabb-4d99-4483-b5f9-8cec0197d257",
+      "loginId": "owner01",
+      "fullName": "Nguyễn Văn Chủ Sự Kiện",
+      "studentCode": null,
+      "roles": [
+        "EVENT_OWNER"
+      ],
+      "classId": null
+    }
+  }
+}

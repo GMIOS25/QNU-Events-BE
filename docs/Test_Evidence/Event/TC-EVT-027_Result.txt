@@ -1,0 +1,10 @@
+Test Case: TC-EVT-027 - Ownership isolation (owner02 vs owner01)
+Status: PASS
+Timestamp: 2026-11-20T09:02:43.240Z
+------------------------------------------------------------
+GET /events/30698738-7835-4a2a-a1f5-83adb4cb88db (owner02) -> HTTP 404 (NOT_FOUND)
+PUT /events/30698738-7835-4a2a-a1f5-83adb4cb88db (owner02) -> HTTP 403 (FORBIDDEN)
+GET /preview (owner02) -> HTTP 403 (FORBIDDEN)
+POST /publish (owner02) -> HTTP 403 (FORBIDDEN)
+------------------------------------------------------------
+Summary: GET trả 404 NOT_FOUND; PUT/preview/publish trả 403 FORBIDDEN.

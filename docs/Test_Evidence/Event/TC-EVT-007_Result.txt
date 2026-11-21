@@ -1,0 +1,8 @@
+Test Case: TC-EVT-007 - Boundary title 201 chars
+Status: PASS
+Timestamp: 2026-11-20T09:02:41.922Z
+------------------------------------------------------------
+201 chars -> HTTP 400
+Response: {"code":"VALIDATION_FAILED","message":"Dữ liệu không hợp lệ.","details":{"fields":{"title":"Tiêu đề phải từ 3 đến 200 ký tự"}},"traceId":"a2e5f7fa-b02b-4a99-b44f-baf6b2baf77b","timestamp":"2026-11-20T09:02:41.918942700Z"}
+------------------------------------------------------------
+Summary: Trả 400 VALIDATION_FAILED với details.fields.title.

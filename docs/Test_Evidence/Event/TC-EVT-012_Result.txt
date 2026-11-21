@@ -1,0 +1,9 @@
+Test Case: TC-EVT-012 - Boundary quotaTotal 0, -1, 1
+Status: PASS
+Timestamp: 2026-11-20T09:02:41.966Z
+------------------------------------------------------------
+quotaTotal=0 -> HTTP 400 {"code":"VALIDATION_FAILED","message":"Dữ liệu không hợp lệ.","details":{"fields":{"quotaTotal":"Số lượng chỗ tối thiểu là 1"}},"traceId":"8c7ff1b2-cc9d-4807-b4a4-0df008f793e8","timestamp":"2026-11-20T09:02:41.932423600Z"}
+quotaTotal=-1 -> HTTP 400 {"code":"VALIDATION_FAILED","message":"Dữ liệu không hợp lệ.","details":{"fields":{"quotaTotal":"Số lượng chỗ tối thiểu là 1"}},"traceId":"8c28a081-ff1a-4178-bf24-80f568900eb6","timestamp":"2026-11-20T09:02:41.943334400Z"}
+quotaTotal=1 -> HTTP 201, quotaTotal=1
+------------------------------------------------------------
+Summary: quotaTotal 0 và -1 trả 400 VALIDATION_FAILED; quotaTotal=1 trả 201 Created.

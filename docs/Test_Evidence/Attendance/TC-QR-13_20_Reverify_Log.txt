@@ -1,0 +1,47 @@
+=== QA R1 RE-VERIFICATION LOG — ATTENDANCE (TC-QR-13 & TC-QR-20) ===
+Timestamp: 2026-11-21T03:58:05.984Z (runId=acdf8d51)
+Environment: Spring Boot dev (http://localhost:8080) + PostgreSQL 17 (qnu-events-postgres-1 / qnu_events)
+
+--- 1. TC-QR-13 (QR_MALFORMED — Exact 10 specification inputs a-e) ---
+Events created (4 isolated PUBLISHED events for sv001 so 3-attempt limit is not hit):
+  [QA-4.5-Reverify-acdf8d51] TC-QR-13 Batch 1..4
+
+Exact specification samples tested via POST /api/v1/events/{id}/attendance/qr:
+  a1) {"token": ""}                                                     -> 422 QR_MALFORMED
+  a2) {"token": "   "}                                                  -> 422 QR_MALFORMED
+  a3) {"token": null}                                                   -> 422 QR_MALFORMED
+  b1) "invalid.token" (< 4 parts)                                       -> 422 QR_MALFORMED
+  b2) "qr1.00000000-0000-0000-0000-000000000001.100.sig.extra" (> 4)    -> 422 QR_MALFORMED
+  b3) "qr1.00000000-0000-0000-0000-000000000001.100." (trailing dot)    -> 422 QR_MALFORMED
+  c1) "qr2.00000000-0000-0000-0000-000000000001.100.sig" (prefix qr2)   -> 422 QR_MALFORMED
+  c2) "QR1.00000000-0000-0000-0000-000000000001.100.sig" (prefix QR1)   -> 422 QR_MALFORMED
+  d1) "qr1.not-a-uuid.100.sig" (invalid UUID)                           -> 422 QR_MALFORMED
+  e1) "qr1.00000000-0000-0000-0000-000000000001.abc.sig" (non-long)     -> 422 QR_MALFORMED
+
+Result: [PASS] TC-QR-13_SPEC_10: 10/10 returned 422/QR_MALFORMED
+DB verification (attendance_attempts WHERE idempotency_key LIKE 'reverify-qr13-acdf8d51-%' AND counted = true AND reason_code = 'QR_MALFORMED'): 10/10
+
+Supplementary boundary probe (explaining 2026-11-20 initial run finding):
+  [PROBE] "qr1.<uuid>.100.sig." (trailing dot after 4th segment)        -> 422 QR_BAD_SIGNATURE
+  Note: QrTokenService.verify() uses token.split("\\.") (limit=0), which drops trailing empty strings,
+  so a 4-part token ending in "." yields length 4 and reaches HMAC signature verification.
+
+--- 2. TC-QR-20 (Audit Log & PostgreSQL Immutability Trigger) ---
+Audit rows for [QA-4.5] events (action LIKE 'ATTENDANCE_QR%'):
+  qa45AuditCnt        = 44 (ATTENDANCE_QR_ACCEPT: 6, ATTENDANCE_QR_REJECT: 38)
+  rawTokenLeakAudit   = 0  (audit_logs.details::text LIKE '%qr1.%')
+  rawTokenLeakAttempt = 0  (attendance_attempts.response_body::text LIKE '%qr1.%')
+  tokenHash format    = 8-char hex SHA-256 prefix (verified e.g. 670d8cd3, 2cb1c098, 06fe5202, 41b0a40c, 48581c66)
+
+Immutability trigger verification (target row id = '9521da8e-8b37-4632-8049-689ee39c618f'):
+  SQL 1: UPDATE audit_logs SET outcome = 'SUCCESS' WHERE id = '9521da8e-8b37-4632-8049-689ee39c618f';
+  -> BLOCKED (exit != 0):
+     ERROR:  audit_logs is append-only
+     CONTEXT:  PL/pgSQL function audit_logs_immutable() line 1 at RAISE
+
+  SQL 2: DELETE FROM audit_logs WHERE id = '9521da8e-8b37-4632-8049-689ee39c618f';
+  -> BLOCKED (exit != 0):
+     ERROR:  audit_logs is append-only
+     CONTEXT:  PL/pgSQL function audit_logs_immutable() line 1 at RAISE
+
+Result: [PASS] TC-QR-20_AUDIT: qa45AuditCnt=44, rawTokenLeakAudit=0, rawTokenLeakAttempt=0, updateBlocked=true, deleteBlocked=true

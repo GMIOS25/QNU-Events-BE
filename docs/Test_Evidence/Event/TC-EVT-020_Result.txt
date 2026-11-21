@@ -1,0 +1,7 @@
+Test Case: TC-EVT-020 - Publish with confirm=false -> 400 VALIDATION_FAILED
+Status: PASS
+Timestamp: 2026-11-20T09:02:42.921Z
+------------------------------------------------------------
+POST /publish {confirm:false, previewVersion:1} -> HTTP 400 {"code":"VALIDATION_FAILED","message":"Cần xác nhận trước khi công bố sự kiện.","details":{},"traceId":"51ce182d-e7aa-46eb-a24a-bb8872316eec","timestamp":"2026-11-20T09:02:42.919823900Z"}
+------------------------------------------------------------
+Summary: Trả 400 VALIDATION_FAILED khi confirm=false.

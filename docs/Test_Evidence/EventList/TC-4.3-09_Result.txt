@@ -1,0 +1,5 @@
+Event ID: 08885aef-4132-45eb-a482-9c377ad8a29d
+startAt (UTC): 2026-11-20T12:33:24.059950Z
+startAt (Asia/Ho_Chi_Minh): 19:33:24 20/11/2026
+quotaTotal=5, registeredCount=0, remainingQuota=5
+registrationOpen=true, attendanceOpen=false

@@ -1,0 +1,11 @@
+Test Case: TC-EVT-034 - Audit log details & trg_audit_logs_immutable
+Status: PASS
+Timestamp: 2026-11-20T09:02:44.216Z
+------------------------------------------------------------
+Row: EVENT_PUBLISH|EVENT|30698738-7835-4a2a-a1f5-83adb4cb88db|SUCCESS||{"title": "QA Preview Publish Flow Event Updated", "version": 1}|810050a5-4031-41a3-a257-c124a91d58c5
+UPDATE attempt -> ok=false, err=ERROR:  audit_logs is append-only
+CONTEXT:  PL/pgSQL function audit_logs_immutable() line 1 at RAISE
+DELETE attempt -> ok=false, err=ERROR:  audit_logs is append-only
+CONTEXT:  PL/pgSQL function audit_logs_immutable() line 1 at RAISE
+------------------------------------------------------------
+Summary: Bản ghi EVENT_PUBLISH đầy đủ thông tin; trigger trg_audit_logs_immutable chặn cả UPDATE và DELETE.

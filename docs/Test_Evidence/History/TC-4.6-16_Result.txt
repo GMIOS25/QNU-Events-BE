@@ -1,0 +1,8 @@
+{
+  "loginRedirectUrl": "http://localhost:5173/login",
+  "postLoginUrl": "http://localhost:5173/history",
+  "crashed": true,
+  "postMethodStatus": 403,
+  "postMethodCode": "FORBIDDEN",
+  "pageErrors": []
+}
