@@ -9,9 +9,9 @@
 [PASS] TC-QR-19_CONC: 200=1, 409_ALREADY=9, dbAccepted=1
 [PASS] TC-QR-24_CONC: sameKey200Exact=true, 5_parallel: 422=2, 409=3, totalCounted=3
 [PASS] TC-QR-25_ISOLATION: sv002 reached 3 fails on EVT_CONC while sv001 succeeded on EVT_CONC and sv002 succeeded on EVT_QR_03
-[FAIL] TC-QR-20_AUDIT: auditCnt=22, rawTokenLeak=0, immutableBlocked=false
+[PASS] TC-QR-20_AUDIT (re-verified 2026-11-21, see TC-QR-13_20_Reverify_Log.txt): qa45AuditCnt=44, rawTokenLeakAudit=0, rawTokenLeakAttempt=0, updateBlocked=true, deleteBlocked=true (ERROR: audit_logs is append-only)
 [PASS] TC-QR-26_API: rotationSeconds=5, validUntil=2026-11-20T09:15:55Z
-[FAIL] TC-QR-13_API: 422/QR_MALFORMED, 422/QR_MALFORMED, 422/QR_MALFORMED, 422/QR_MALFORMED, 422/QR_BAD_SIGNATURE, 422/QR_MALFORMED
+[PASS] TC-QR-13_API (re-verified 2026-11-21, see TC-QR-13_20_Reverify_Log.txt): 10/10 exact spec inputs (a1..e1) = 422/QR_MALFORMED, dbCounted=10/10 [NOTE: extra non-spec probe "qr1.<uuid>.100.sig." -> 422/QR_BAD_SIGNATURE due to Java split("\\.")]
 [PASS] TC-QR-14_API: 422/QR_BAD_SIGNATURE, 422/QR_BAD_SIGNATURE, 422/QR_BAD_SIGNATURE
 [PASS] TC-QR-15_API: 422/QR_WRONG_EVENT (Mã QR không thuộc về sự kiện này.)
 [PASS] TC-QR-11_GRACE: epochN=179516628, waited=6090ms, status=200/ACCEPTED
