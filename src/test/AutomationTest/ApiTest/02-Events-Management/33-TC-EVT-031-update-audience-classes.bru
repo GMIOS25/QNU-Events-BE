@@ -1,0 +1,51 @@
+meta {
+  name: TC-EVT-031 - PUT cập nhật thay đổi lớp đối tượng sang chỉ K49CNTT2
+  type: http
+  seq: 33
+  tags: [
+    events
+  ]
+}
+
+put {
+  url: {{baseUrl}}/api/v1/events/{{evtMultiDraftId}}
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenOwner01}}
+}
+
+body:json {
+  {
+    "title": "[BRU-{{runSuffix}}] Sự kiện đa lớp (đổi lớp)",
+    "description": "Nội dung chi tiết sự kiện kiểm thử tự động Bruno.",
+    "location": "Hội trường A - Trường ĐH Quy Nhơn",
+    "startAt": "{{futureStartAt}}",
+    "endAt": "{{futureEndAt}}",
+    "registrationDeadline": "{{futureRegDeadline}}",
+    "attendanceOpenAt": "{{futureAttOpen}}",
+    "attendanceCloseAt": "{{futureAttClose}}",
+    "attendanceMethod": "DYNAMIC_QR",
+    "quotaTotal": 50,
+    "audienceClassIds": [
+      "{{classK49Cntt2}}"
+    ],
+    "activityType": "Hội thảo khoa học",
+    "activityPoints": 5,
+    "version": 0
+  }
+}
+
+tests {
+  test("HTTP 200 OK, version tăng lên 1 và chỉ còn lớp K49CNTT2", function() {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody().version).to.equal(1);
+    expect(res.getBody().audienceClassIds).to.deep.equal([bru.getEnvVar("classK49Cntt2")]);
+  });
+}
+
+docs {
+  TC-EVT-031: Cập nhật thay thế danh sách lớp đối tượng trên sự kiện DRAFT.
+}

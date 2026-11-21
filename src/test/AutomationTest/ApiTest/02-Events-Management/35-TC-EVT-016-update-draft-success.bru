@@ -1,0 +1,54 @@
+meta {
+  name: TC-EVT-016 - Chỉnh sửa thành công sự kiện DRAFT -> 200 & tăng version 0 -> 1
+  type: http
+  seq: 35
+  tags: [
+    events
+  ]
+}
+
+put {
+  url: {{baseUrl}}/api/v1/events/{{evtDraftMainId}}
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenOwner01}}
+}
+
+body:json {
+  {
+    "title": "[BRU-{{runSuffix}}] Hội thảo AI (Cập nhật v1)",
+    "description": "Nội dung chi tiết sự kiện kiểm thử tự động Bruno.",
+    "location": "Hội trường B - ĐH Quy Nhơn",
+    "startAt": "{{futureStartAt}}",
+    "endAt": "{{futureEndAt}}",
+    "registrationDeadline": "{{futureRegDeadline}}",
+    "attendanceOpenAt": "{{futureAttOpen}}",
+    "attendanceCloseAt": "{{futureAttClose}}",
+    "attendanceMethod": "DYNAMIC_QR",
+    "quotaTotal": 60,
+    "audienceClassIds": [
+      "{{classK49Cntt1}}"
+    ],
+    "activityType": "Hội thảo khoa học",
+    "activityPoints": 5,
+    "version": 0
+  }
+}
+
+tests {
+  test("HTTP 200 OK, version tăng từ 0 lên 1, giữ trạng thái DRAFT", function() {
+    expect(res.getStatus()).to.equal(200);
+    const e = res.getBody();
+    expect(e.version).to.equal(1);
+    expect(e.status).to.equal("DRAFT");
+    expect(e.quotaTotal).to.equal(60);
+    expect(e.location).to.equal("Hội trường B - ĐH Quy Nhơn");
+  });
+}
+
+docs {
+  TC-EVT-016: Sửa sự kiện DRAFT với version khớp tăng version lên 1.
+}

@@ -1,0 +1,38 @@
+meta {
+  name: TC-EVT-028 - Ẩn danh gọi POST /publish -> 401 UNAUTHENTICATED
+  type: http
+  seq: 60
+  tags: [
+    events
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/events/{{evtDraftMainId}}/publish
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "confirm": true,
+    "previewVersion": 2
+  }
+}
+
+tests {
+  test("HTTP 401 và mã lỗi UNAUTHENTICATED", function() {
+    expect(res.getStatus()).to.equal(401);
+    const body = res.getBody();
+    expect(body).to.be.an("object");
+    expect(body.code).to.equal("UNAUTHENTICATED");
+    expect(body.message).to.be.a("string").and.not.be.empty;
+    expect(body.traceId).to.be.a("string").and.not.be.empty;
+    expect(body.timestamp).to.be.a("string").and.not.be.empty;
+    expect(body.details).to.be.an("object");
+  });
+}
+
+docs {
+  TC-EVT-028: Gọi POST /publish không token trả 401.
+}

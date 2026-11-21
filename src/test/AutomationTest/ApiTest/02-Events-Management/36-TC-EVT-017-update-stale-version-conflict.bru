@@ -1,0 +1,56 @@
+meta {
+  name: TC-EVT-017 - Optimistic Locking với version cũ (0 khi DB=1) -> 409 VERSION_CONFLICT
+  type: http
+  seq: 36
+  tags: [
+    events
+  ]
+}
+
+put {
+  url: {{baseUrl}}/api/v1/events/{{evtDraftMainId}}
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenOwner01}}
+}
+
+body:json {
+  {
+    "title": "[BRU-{{runSuffix}}] Ghi đè version cũ",
+    "description": "Nội dung chi tiết sự kiện kiểm thử tự động Bruno.",
+    "location": "Hội trường A - Trường ĐH Quy Nhơn",
+    "startAt": "{{futureStartAt}}",
+    "endAt": "{{futureEndAt}}",
+    "registrationDeadline": "{{futureRegDeadline}}",
+    "attendanceOpenAt": "{{futureAttOpen}}",
+    "attendanceCloseAt": "{{futureAttClose}}",
+    "attendanceMethod": "DYNAMIC_QR",
+    "quotaTotal": 50,
+    "audienceClassIds": [
+      "{{classK49Cntt1}}"
+    ],
+    "activityType": "Hội thảo khoa học",
+    "activityPoints": 5,
+    "version": 0
+  }
+}
+
+tests {
+  test("HTTP 409 và mã lỗi VERSION_CONFLICT", function() {
+    expect(res.getStatus()).to.equal(409);
+    const body = res.getBody();
+    expect(body).to.be.an("object");
+    expect(body.code).to.equal("VERSION_CONFLICT");
+    expect(body.message).to.be.a("string").and.not.be.empty;
+    expect(body.traceId).to.be.a("string").and.not.be.empty;
+    expect(body.timestamp).to.be.a("string").and.not.be.empty;
+    expect(body.details).to.be.an("object");
+  });
+}
+
+docs {
+  TC-EVT-017: Gửi PUT với version cũ 0 khi sự kiện đã ở version 1 trả 409 VERSION_CONFLICT.
+}

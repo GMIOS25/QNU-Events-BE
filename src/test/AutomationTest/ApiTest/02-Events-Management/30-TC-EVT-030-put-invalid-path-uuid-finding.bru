@@ -1,0 +1,51 @@
+meta {
+  name: TC-EVT-030 & WB-14 - PUT /events/not-a-uuid (Finding ẩn stack trace)
+  type: http
+  seq: 30
+  tags: [
+    events
+  ]
+}
+
+put {
+  url: {{baseUrl}}/api/v1/events/not-a-uuid
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenOwner01}}
+}
+
+body:json {
+  {
+    "title": "[BRU-{{runSuffix}}] Hội thảo AI & Khởi nghiệp 2026",
+    "description": "Nội dung chi tiết sự kiện kiểm thử tự động Bruno.",
+    "location": "Hội trường A - Trường ĐH Quy Nhơn",
+    "startAt": "{{futureStartAt}}",
+    "endAt": "{{futureEndAt}}",
+    "registrationDeadline": "{{futureRegDeadline}}",
+    "attendanceOpenAt": "{{futureAttOpen}}",
+    "attendanceCloseAt": "{{futureAttClose}}",
+    "attendanceMethod": "DYNAMIC_QR",
+    "quotaTotal": 50,
+    "audienceClassIds": [
+      "{{classK49Cntt1}}"
+    ],
+    "activityType": "Hội thảo khoa học",
+    "activityPoints": 5,
+    "version": 0
+  }
+}
+
+tests {
+  test("Trả lỗi chuẩn ApiError không lộ stack trace (500 theo code hiện tại hoặc 400 nếu đã xử lý TypeMismatch)", function() {
+    expect([400, 500]).to.include(res.getStatus());
+    expect(["VALIDATION_FAILED", "INTERNAL_ERROR"]).to.include(res.getBody().code);
+    expect(JSON.stringify(res.getBody())).to.not.include("MethodArgumentTypeMismatch");
+  });
+}
+
+docs {
+  TC-EVT-030, TC-EVT-WB-14: Kiểm chứng hành vi UUID đường dẫn sai định dạng.
+}

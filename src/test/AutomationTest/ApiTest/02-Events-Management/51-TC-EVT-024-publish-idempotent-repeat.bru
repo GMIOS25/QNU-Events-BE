@@ -1,0 +1,37 @@
+meta {
+  name: TC-EVT-024 & WB-09 - Công bố lặp lại trên sự kiện đã PUBLISHED (Idempotent)
+  type: http
+  seq: 51
+  tags: [
+    events
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/events/{{evtDraftMainId}}/publish
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenOwner01}}
+}
+
+body:json {
+  {
+    "confirm": true,
+    "previewVersion": 2
+  }
+}
+
+tests {
+  test("HTTP 200 OK, giữ nguyên publishedAt (idempotent)", function() {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody().status).to.equal("PUBLISHED");
+    expect(res.getBody().publishedAt).to.equal(bru.getVar("evtMainPublishedAt"));
+  });
+}
+
+docs {
+  TC-EVT-024, TC-EVT-WB-09: Công bố lặp lại trả 200 OK giữ nguyên publishedAt và không ghi trùng audit.
+}

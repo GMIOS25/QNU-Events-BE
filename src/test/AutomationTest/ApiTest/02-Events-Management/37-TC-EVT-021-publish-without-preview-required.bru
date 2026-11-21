@@ -1,0 +1,42 @@
+meta {
+  name: TC-EVT-021 - Công bố khi chưa xem trước -> 409 PREVIEW_REQUIRED
+  type: http
+  seq: 37
+  tags: [
+    events
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/events/{{evtDraftMainId}}/publish
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenOwner01}}
+}
+
+body:json {
+  {
+    "confirm": true,
+    "previewVersion": 1
+  }
+}
+
+tests {
+  test("HTTP 409 và mã lỗi PREVIEW_REQUIRED", function() {
+    expect(res.getStatus()).to.equal(409);
+    const body = res.getBody();
+    expect(body).to.be.an("object");
+    expect(body.code).to.equal("PREVIEW_REQUIRED");
+    expect(body.message).to.be.a("string").and.not.be.empty;
+    expect(body.traceId).to.be.a("string").and.not.be.empty;
+    expect(body.timestamp).to.be.a("string").and.not.be.empty;
+    expect(body.details).to.be.an("object");
+  });
+}
+
+docs {
+  TC-EVT-021: Công bố DRAFT chưa qua GET /preview trả 409 PREVIEW_REQUIRED và ghi audit EVENT_PUBLISH_DENIED.
+}
