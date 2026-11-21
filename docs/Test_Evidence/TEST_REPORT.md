@@ -125,11 +125,12 @@
 
 ## Tổng hợp kết quả (Mục 4.6)
 
-- **Tổng số Test Case đã thực thi:** 13 (`TC-4.6-01` → `13`, `TC-4.6-16`, `TC-4.6-17`) + 1 suite Vitest FE
-- **PASS:** 4 (`TC-4.6-10`, `TC-4.6-11`, `TC-4.6-12`, Vitest FE `7/7`)
-- **FAIL:** 7 (`TC-4.6-01`, `TC-4.6-02`, `TC-4.6-05`, `TC-4.6-06`, `TC-4.6-07`, `TC-4.6-08`, `TC-4.6-13`, `TC-4.6-16` — 8 mục nếu tính cả `TC-4.6-16`, chính xác: 8 FAIL: `01, 02, 05, 06, 07, 08, 13, 16`)
-- **BLOCKED:** 4 (`TC-4.6-03`, `TC-4.6-04`, `TC-4.6-09`, `TC-4.6-17` — bị chặn xác minh UI `/history` do lỗi crash render `TypeError: historyItems?.filter is not a function`)
-- **Chưa chạy (tránh xung đột dữ liệu DB dùng chung):** 2 (`TC-4.6-14`, `TC-4.6-15`)
+- **Tổng số mục trong bảng kết quả:** 16 (`15` Black-box / E2E / API Test Case: `TC-4.6-01` → `TC-4.6-13`, `TC-4.6-16`, `TC-4.6-17` + `1` suite automated `Vitest FE (History)`)
+  - **PASS:** 4 (`3` Black-box API: `TC-4.6-10`, `TC-4.6-11`, `TC-4.6-12` + `1` suite `Vitest FE (History)` `7/7`)
+  - **FAIL:** 8 (`TC-4.6-01`, `TC-4.6-02`, `TC-4.6-05`, `TC-4.6-06`, `TC-4.6-07`, `TC-4.6-08`, `TC-4.6-13`, `TC-4.6-16`)
+  - **BLOCKED:** 4 (`TC-4.6-03`, `TC-4.6-04`, `TC-4.6-09`, `TC-4.6-17` — bị chặn xác minh UI `/history` do lỗi crash render `TypeError: historyItems?.filter is not a function`)
+  - *(Đối soát tổng: `4 PASS + 8 FAIL + 4 BLOCKED = 16` mục; riêng nhóm Black-box/E2E/API: `3 PASS + 8 FAIL + 4 BLOCKED = 15` TC).*
+- **Chưa chạy (tránh xung đột dữ liệu DB dùng chung):** 2 (`TC-4.6-14`, `TC-4.6-15`) — cộng `15` TC đã đánh giá = đủ `17` TC đặc tả (`TC-4.6-01` → `TC-4.6-17`).
 - **Console Errors:** Ghi nhận `TypeError: historyItems?.filter is not a function` tại `src/features/history/index.tsx:20:38` trên mọi lượt render `/history` khi API trả `200 OK`. Nguyên nhân gốc: `GET /api/v1/me/history` trả về Spring `Page<HistoryItem>` (`{ content: [...], pageable: ..., totalElements: ... }`) trong khi `fetchHistory()` ở FE kỳ vọng mảng `HistoryItem[]`.
 - **Server Errors (`500 Internal Server Error`):** Không ghi nhận lỗi `500` thật từ Backend (chỉ mô phỏng `500` qua `page.route` trong `TC-4.6-06`).
 
@@ -240,14 +241,14 @@
 | TC-QR-10 | Khóa nút khi đang gửi, chặn input khoảng trắng và từ chối điểm danh lặp `ALREADY_CHECKED_IN` | PASS | `Attendance/API_Concurrency_Results.txt` | Nút `Gửi mã` bị `disabled` khi rỗng và khi nhập `"   "`; sau khi `ACCEPTED`, gửi request mới luôn trả `409 ALREADY_CHECKED_IN`. |
 | TC-QR-11 | Biên thời gian ân hạn (Grace Period): Token epoch trước trong khoảng `<= 3s` vẫn hợp lệ | PASS | `Attendance/API_Concurrency_Results.txt` | Lấy token `epoch 179516628`, chờ sang đầu `epoch 179516629` (+~1.2s), gửi `POST /attendance/qr` trả `200 ACCEPTED`. |
 | TC-QR-12 | Biên thời gian hết hạn: Token vượt quá 3s ân hạn -> `QR_EXPIRED` | PASS | `Attendance/TC-QR-12_Step2_PASS_ExpiredQrBanner.png` | Gửi token `epoch 179516625` đã hết hạn trên UI trả `422`, `ErrorBanner` hiển thị `"Mã QR đã hết hạn (xoay vòng 10 giây). Vui lòng quét lại mã đang hiển thị."`. |
-| TC-QR-13 | Phân vùng token sai định dạng (`QR_MALFORMED`) | PASS | `Attendance/API_Concurrency_Results.txt` | Các mẫu `""`, `"   "`, `null`, `"invalid.token"`, `"qr2..."`, `"not-a-uuid"`, `"abc"` đều trả `422 QR_MALFORMED`. *(Lưu ý: mẫu có chuỗi `"sig."` kết thúc bằng dấu `.` khi `split("\\.")` trong Java vẫn ra 4 phần nên trả `QR_BAD_SIGNATURE`).* |
+| TC-QR-13 | Phân vùng token sai định dạng (`QR_MALFORMED`) | PASS | `Attendance/API_Concurrency_Results.txt`, `Attendance/TC-QR-13_20_Reverify_Log.txt` | Kiểm chứng lại (`2026-11-21`) trên đủ `10/10` mẫu đặc tả (`""`, `"   "`, `null`, `"invalid.token"`, `>4` phần, `"qr1.<uuid>.100."`, `"qr2..."`, `"QR1..."`, `"not-a-uuid"`, `"abc"`): tất cả trả `422 QR_MALFORMED` và ghi `10/10` dòng `attendance_attempts` (`counted=true`). *(Ghi chú bổ sung: mẫu ngoài đặc tả `"qr1.<uuid>.100.sig."` có dấu `.` sau phần thứ 4 trả `422 QR_BAD_SIGNATURE` do `token.split("\\.")` ở Java bỏ chuỗi rỗng cuối).* |
 | TC-QR-14 | Token bị sửa đổi chữ ký HMAC hoặc giả mạo event khác (`QR_BAD_SIGNATURE`) | PASS | `Attendance/API_Concurrency_Results.txt` | Cả 3 biến thể (sửa `<sig>`, sửa `<epoch>`, giả mạo `EVT-QR-02` với `forged-sig`) đều trả `422 QR_BAD_SIGNATURE`, không lộ `QR_WRONG_EVENT`. |
 | TC-QR-15 | Dùng token hợp lệ của Sự kiện B quét tại Sự kiện A (`QR_WRONG_EVENT`) | PASS | `Attendance/TC-QR-15_Step2_PASS_WrongEventBanner.png`, `Attendance/API_Concurrency_Results.txt` | Trả `422 QR_WRONG_EVENT`, UI `ErrorBanner` hiển thị `"Mã QR không thuộc về sự kiện này."`. |
 | TC-QR-16 | Token mang `epoch` tương lai (`QR_FROM_FUTURE`) | BLOCKED | — | Profile `dev` tự sinh `QR_SIGNING_SECRET` trong bộ nhớ nên không thể ký token `currentEpoch + 1` từ bên ngoài qua HTTP API; cần kiểm thử ở mức White-box Unit Test (`MutableClock`). |
 | TC-QR-17 | Biên giới hạn 3 lần thử sai: lần 1–3 tăng đếm, lần 4 bị chặn `ATTEMPT_LIMIT_REACHED` kể cả token đúng | PASS | `Attendance/TC-QR-17_Step3_PASS_AttemptLimitReached.png` | `sv002` thử sai 3 lần (`422`), lần thứ 4 gửi token hợp lệ mới nhất của `owner01` bị chặn `409`, `ErrorBanner` hiển thị `"Bạn đã vượt quá số lần thử điểm danh cho phép (tối đa 3 lần)."`. |
 | TC-QR-18 | Kiểm tra Replay nguyên trạng response với cùng `Idempotency-Key` | PASS | `Attendance/API_Concurrency_Results.txt` | Cả replay lỗi (`422` với `X-Request-Id` khác) và replay ngoài cửa sổ (`409`) đều trả JSON giống hệt từng byte. |
 | TC-QR-19 | Chống điểm danh trùng khi gửi 10 request hợp lệ đồng thời khác `Idempotency-Key` | PASS | `Attendance/API_Concurrency_Results.txt` | Đúng `1` request trả `200 ACCEPTED`, `9` request trả `409 ALREADY_CHECKED_IN`, DB `attendances` có duy nhất `1` dòng `ACCEPTED`. |
-| TC-QR-20 | Kiểm tra ghi nhận Audit Log bất biến (`audit_logs`) và không lộ token QR gốc | PASS | `Attendance/API_Concurrency_Results.txt` | Có đủ `22` bản ghi audit, `0` rò rỉ `qr1.`, lệnh `UPDATE audit_logs` bị PostgreSQL chặn với `ERROR: audit_logs is append-only`. |
+| TC-QR-20 | Kiểm tra ghi nhận Audit Log bất biến (`audit_logs`) và không lộ token QR gốc | PASS | `Attendance/API_Concurrency_Results.txt`, `Attendance/TC-QR-13_20_Reverify_Log.txt` | Kiểm chứng lại trực tiếp trên PostgreSQL (`2026-11-21`): `44` bản ghi `ATTENDANCE_QR_*` cho bộ `[QA-4.5]`, `0` rò rỉ `qr1.` trên `audit_logs` & `attendance_attempts`, `tokenHash` đúng 8 hex; cả `UPDATE` lẫn `DELETE` trên bản ghi thực tế đều bị `trg_audit_logs_immutable` chặn với `ERROR: audit_logs is append-only`. |
 | TC-QR-21 | Phân quyền, ẩn `AttendanceSlot` với `owner01` & Responsive `320px` | PASS | `Attendance/TC-QR-21_Step2_PASS_OwnerNoAttendanceSlot.png`, `Attendance/TC-QR-21_Step3_PASS_Responsive320px.png` | `owner01` không thấy `AttendanceSlot`; viewport `320x568` không tràn ngang (`width = 305px <= 320px`). *(Lưu ý: mô phỏng `Offline` qua `context.setOffline` không được hỗ trợ trong webview sandbox).* |
 | TC-QR-22 | Kiểm định giá trị biên Request Body JSON và `Idempotency-Key` (`""`, `"   "`, `1`, `101` ký tự) | PASS | `Attendance/API_Concurrency_Results.txt` | JSON lỗi / thiếu key / `""` / `"   "` / `101` ký tự trả `400`; key `1` ký tự trả `200 ACCEPTED`. |
 | TC-QR-23 | Thành công ở lần thử thứ 3 (sau 2 lần sai) và thứ tự ưu tiên điều kiện chặn | PASS | `Attendance/API_Concurrency_Results.txt` | 2 lần sai (`422`), lần thứ 3 gửi token đúng trả `200 ACCEPTED`; gửi tiếp token sai sau khi `ACCEPTED` trả `409 ALREADY_CHECKED_IN`. |
@@ -270,14 +271,16 @@
 ## Tổng hợp kết quả (Mục 4.4)
 
 - **Tổng số Black-box / Browser E2E / API / DB / Concurrency Test Case đã chạy:** 25 (`TC-REG-01` → `TC-REG-25`)
-  - **PASS:** 24
-  - **FAIL:** 1 (`TC-REG-13`)
+  - **PASS:** 23
+  - **FAIL:** 2 (`TC-REG-13`, `TC-REG-20`)
   - **BLOCKED:** 0
 - **Kiểm thử tự động White-box hiện có trong repo:**
   - **Backend Maven (`RegistrationIT`):** **12/12 PASS** — xem [`Registration/Whitebox_BE_Maven.txt`](Registration/Whitebox_BE_Maven.txt).
   - **Frontend Vitest (`RegistrationSlot.test.tsx`):** **2/2 PASS** — xem [`Registration/Whitebox_FE_Vitest.txt`](Registration/Whitebox_FE_Vitest.txt).
 - **Console Errors (`Uncaught TypeError` / JS Runtime Errors):** `0` lỗi JS runtime trên trình duyệt trong toàn bộ các bước kiểm thử mục 4.4.
-- **Server Errors (`500 Internal Server Error`):** Ghi nhận lỗi `500 INTERNAL_ERROR` tại `TC-REG-13` (`POST/GET /api/v1/events/invalid-uuid/registrations`) do `GlobalExceptionHandler` thiếu handler cho `MethodArgumentTypeMismatchException`. *(Lưu ý thêm: ở lần chạy đầu của `TC-REG-20`, 1/30 request đồng thời gặp `500` tạm thời khi tranh chấp tải cao; ở lần chạy kiểm tra lại sạch, `TC-REG-20` đạt `5/5` `201 Created`, `25/25` `409 CAPACITY_FULL`, `0` lỗi `500`).*
+- **Server Errors (`500 Internal Server Error`):** Ghi nhận **2** lỗi `500 INTERNAL_ERROR`:
+  1. `TC-REG-13`: `POST/GET /api/v1/events/invalid-uuid/registrations` do `GlobalExceptionHandler` thiếu handler cho `MethodArgumentTypeMismatchException`.
+  2. `TC-REG-20`: Tái hiện ổn định `500 INTERNAL_ERROR` (`c201=5, c409=24, c500=1`) ở cả lần chạy `2026-11-20` lẫn `2/3` lượt kiểm chứng lại `2026-11-21` (`Trial 1: 5/25/0`, `Trial 2: 5/24/1`, `Trial 3: 5/24/1`). Nguyên nhân gốc từ log server: `HikariPool-1 - Connection is not available, request timed out after 10000ms (total=30, active=30, idle=0)` do `RegistrationService.register()` giữ transaction ngoài trong khi gọi `AuditService.record()` (`REQUIRES_NEW`, cần kết nối JDBC thứ 2 trên pool mặc định `30`). Toàn vẹn quota DB vẫn được bảo đảm (`registered_count = 5`, `registrations = 5`); `RegistrationIT` chỉ pass vì dùng `newFixedThreadPool(10)`.
 
 ## Bảng kết quả chi tiết (Mục 4.4)
 
@@ -302,7 +305,7 @@
 | TC-REG-17 | Chặn vai trò `EVENT_OWNER` và `SYSTEM_ADMIN` gọi API đăng ký (`403 FORBIDDEN`) | PASS | `Registration/TC-REG-API_Results.txt` | Cả 4 request (`POST` & `GET /me` cho `owner01`, `admin01`) đều trả `403 FORBIDDEN`. |
 | TC-REG-18 | Kiểm tra ghi nhận `audit_logs` cho các kết quả đăng ký và tính bất biến | PASS | `Registration/TC-REG-API_Results.txt` | Đủ 5 outcome (`SUCCESS|NULL`, `DENIED|NOT_IN_AUDIENCE`, `REJECTED|CAPACITY_FULL`, `REJECTED|EVENT_NOT_PUBLISHED`, `REJECTED|REGISTRATION_CLOSED`); trigger `trg_audit_logs_immutable` chặn `UPDATE`. |
 | TC-REG-19 | Tranh suất cuối cùng (`quotaTotal = 1`): 2 sinh viên (`sv001`, `sv002`) đăng ký đồng thời | PASS | `Registration/TC-REG-API_Results.txt` | 2 request song song trả `[201, 409]`, DB `registered_count = 1`, `registrations = 1`. |
-| TC-REG-20 | Tranh chấp tải cao đồng thời: 30 sinh viên cùng lớp tranh 5 suất (`quotaTotal = 5`) | PASS | `Registration/TC-REG-API_Results.txt` | 30 luồng song song: `5x 201 Created`, `25x 409 CAPACITY_FULL`, `0x 500`; DB `registered_count = 5`, `registrations = 5`. |
+| TC-REG-20 | Tranh chấp tải cao đồng thời: 30 sinh viên cùng lớp tranh 5 suất (`quotaTotal = 5`) | FAIL | `Registration/TC-REG-API_Results.txt`, `Registration/TC-REG-20_ErrorLog.txt` | DB giữ đúng quota (`registered_count = 5`, `registrations = 5`), **nhưng** không đạt tiêu chí `0` lỗi `500`: lần chạy `2026-11-20` trả `5x 201, 24x 409, 1x 500`; kiểm chứng lại `2026-11-21` (3 lượt) tái hiện `1x 500` ở `2/3` lượt (`T1: 5/25/0`, `T2: 5/24/1`, `T3: 5/24/1`) do cạn kết nối `HikariPool-1` (`total=30, active=30`, timeout `10000ms`) khi `AuditService.record()` mở `REQUIRES_NEW` trong `@Transactional`. |
 | TC-REG-21 | Cùng 1 sinh viên (`sv001`) gửi 10 request đăng ký song song cùng lúc | PASS | `Registration/TC-REG-API_Results.txt` | 10 luồng song song: `1x 201 Created`, `9x 200 OK` (`alreadyRegistered = true`), `0x 500`; DB `1` dòng, `registered_count = 1`. |
 | TC-REG-22 | Kiểm định biên thời gian `registrationDeadline` vs `+1s` và sự kiện trạng thái `CANCELLED` | PASS | `Registration/TC-REG-API_Results.txt` | E5 `CANCELLED` -> `409 EVENT_NOT_PUBLISHED`; trước hạn -> `201`; sau hạn -> `409 REGISTRATION_CLOSED`. *(Mốc exact `now == deadline` kiểm chứng ở White-box `MutableClock`)*. |
 | TC-REG-23 | Đăng ký sự kiện mời đa lớp, sinh viên `class_id = NULL`, và chống giả mạo `studentId` (Anti-IDOR) | PASS | `Registration/TC-REG-API_Results.txt` | `sv003` (`K49CNTT2`): `201`; `sv_noclass`: `403 NOT_IN_AUDIENCE`; Anti-IDOR: tạo cho `sv001` (`sv002 = 0` dòng). |
