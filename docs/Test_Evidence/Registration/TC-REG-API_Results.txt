@@ -11,7 +11,7 @@ TC-REG-16: noAuth=401/UNAUTHENTICATED, 401/UNAUTHENTICATED; revoked=401/SESSION_
 TC-REG-17: owner=403/403, admin=403/403
 TC-REG-18: a1=SUCCESS|NULL, a2=DENIED|NOT_IN_AUDIENCE, a3=REJECTED|CAPACITY_FULL, a4=REJECTED|EVENT_NOT_PUBLISHED, a5=REJECTED|REGISTRATION_CLOSED, immutableBlocked=true
 TC-REG-19: statuses=201,409, cnt=1, rows=1
-TC-REG-20: c201=5, c409=24, c500=1, cnt=5, rows=5
+TC-REG-20: [FAIL] initial(2026-11-20): c201=5, c409=24, c500=1, cnt=5, rows=5 | re-verify(2026-11-21, 3 trials, see TC-REG-20_ErrorLog.txt): T1=5/25/0(354ms), T2=5/24/1(10258ms), T3=5/24/1(10241ms) — HikariPool-1 connection timeout (REQUIRES_NEW audit TX starvation at pool=30), DB cnt=5, rows=5 intact
 TC-REG-21: c201=1, c200=9, c500=0, cnt=1, rows=1
 TC-REG-22: E5=409/EVENT_NOT_PUBLISHED, before=201, after=409/REGISTRATION_CLOSED
 TC-REG-23: sv003=201, noclass=403/NOT_IN_AUDIENCE, idor=201, sv1Rows=1, sv2Rows=0
