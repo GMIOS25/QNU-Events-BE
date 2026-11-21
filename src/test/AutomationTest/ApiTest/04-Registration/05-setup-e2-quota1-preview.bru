@@ -1,0 +1,23 @@
+meta {
+  name: [Setup] Xem trước sự kiện evtRegE2
+  type: http
+  seq: 5
+  tags: [
+    registration
+    setup
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/events/{{evtRegE2}}/preview
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenOwner01}}
+}
+
+tests {
+  test("Setup preview evtRegE2 thành công (200)", function() { expect(res.getStatus()).to.equal(200); });
+}

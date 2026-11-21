@@ -1,0 +1,30 @@
+meta {
+  name: [Setup] Công bố sự kiện evtRegMulti
+  type: http
+  seq: 13
+  tags: [
+    registration
+    setup
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/events/{{evtRegMulti}}/publish
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenOwner01}}
+}
+
+body:json {
+  {
+    "confirm": true,
+    "previewVersion": 0
+  }
+}
+
+tests {
+  test("Setup publish evtRegMulti thành công (200)", function() { expect(res.getStatus()).to.equal(200); expect(res.getBody().status).to.equal("PUBLISHED"); });
+}

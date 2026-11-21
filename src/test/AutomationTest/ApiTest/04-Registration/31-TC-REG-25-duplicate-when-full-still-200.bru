@@ -1,0 +1,30 @@
+meta {
+  name: TC-REG-25 - Đăng ký lặp của sv001 khi sự kiện đã đầy 1/1 -> vẫn 200 alreadyRegistered=true
+  type: http
+  seq: 31
+  tags: [
+    registration
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/events/{{evtRegE2}}/registrations
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenSv001}}
+}
+
+tests {
+  test("HTTP 200 OK, alreadyRegistered=true (không bị nhầm thành 409 CAPACITY_FULL)", function() {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody().id).to.equal(bru.getVar("sv001RegE2Id"));
+    expect(res.getBody().alreadyRegistered).to.equal(true);
+  });
+}
+
+docs {
+  TC-REG-25 (DT-01-R8): Sinh viên đã REGISTERED gọi lại khi quota đầy vẫn nhận 200 idempotent.
+}

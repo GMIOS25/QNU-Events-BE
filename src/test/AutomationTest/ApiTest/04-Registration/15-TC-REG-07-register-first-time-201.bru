@@ -1,0 +1,38 @@
+meta {
+  name: TC-REG-07 - POST /registrations lần đầu (sv001) -> 201 Created
+  type: http
+  seq: 15
+  tags: [
+    registration
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/events/{{evtRegE1}}/registrations
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenSv001}}
+}
+
+script:post-response {
+  if (res.getStatus() === 201) {
+    bru.setVar("sv001RegE1Id", res.getBody().id);
+  }
+}
+
+tests {
+  test("HTTP 201 Created với status=REGISTERED, alreadyRegistered=false", function() {
+    expect(res.getStatus()).to.equal(201);
+    const b = res.getBody();
+    expect(b.id).to.match(/^[0-9a-f-]{36}$/i);
+    expect(b.status).to.equal("REGISTERED");
+    expect(b.alreadyRegistered).to.equal(false);
+  });
+}
+
+docs {
+  TC-REG-07, TC-REG-01: Đăng ký giữ suất thành công lần đầu trả 201 Created.
+}

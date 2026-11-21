@@ -1,0 +1,32 @@
+meta {
+  name: TC-4.3-11 - Chi tiết sự kiện cho sv001 hiển thị registeredCount=1 & myRegistrationStatus=REGISTERED
+  type: http
+  seq: 17
+  tags: [
+    registration
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/events/{{evtRegE1}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenSv001}}
+}
+
+tests {
+  test("registeredCount=1, remainingQuota=9, myRegistrationStatus=REGISTERED", function() {
+    expect(res.getStatus()).to.equal(200);
+    const e = res.getBody();
+    expect(e.registeredCount).to.equal(1);
+    expect(e.remainingQuota).to.equal(9);
+    expect(e.myRegistrationStatus).to.equal("REGISTERED");
+  });
+}
+
+docs {
+  TC-4.3-11, TC-REG-07: Kiểm chứng EventDetail đồng bộ registeredCount và myRegistrationStatus từ server.
+}
