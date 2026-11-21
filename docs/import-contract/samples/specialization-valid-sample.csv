@@ -1,0 +1,11 @@
+SpecializationId,DepartmentId,SpecializationCode,SpecializationName,ParentSpecializationId,IsActive,Abbreviation,EnglishName,DepartmentCode
+97668d0c-7ebb-4a79-885b-3c064831d570,d0f597d3-f893-4967-b2da-70be84945ea7,101,Sư phạm Toán học,,true,SPT,Mathematics Teacher Education,201
+0d03377f-f79f-4f20-840e-ef1390b4dd40,24d2865f-ad8b-4c86-8a70-745045a98fbc,105,Công nghệ thông tin,,true,CNTT,Information Technology,105
+235887d0-1de4-42a3-abcf-08aa23c5fe67,24d2865f-ad8b-4c86-8a70-745045a98fbc,1051,KHOA HỌC MÁY TÍNH,0d03377f-f79f-4f20-840e-ef1390b4dd40,true,KHMT,Computer Science,105
+5a868897-78e5-41b4-b05b-8b5babe628bb,24d2865f-ad8b-4c86-8a70-745045a98fbc,119,Kỹ thuật phần mềm,,true,KTPM,Software Engineering,105
+ae25e3dd-1331-4934-be41-5373308a878e,bccbbc59-d02a-4a3d-abbf-91529f97866a,409,Logistics và quản lý chuỗi cung ứng,,true,LOG,Logistics and Supply Chain Management,115
+9b13720a-817c-40c8-98b2-6224c5e16620,24d2865f-ad8b-4c86-8a70-745045a98fbc,410,Trí tuệ nhân tạo,,true,TTNT,Artificial Intelligence,105
+640019d5-9060-4cdd-8504-c0b56d33e96c,9808f56b-ff6f-4d64-b55c-e0b9f8f0ed84,752,Ngôn ngữ Trung Quốc,,true,NNTQ,Chinese Language,109
+f1000000-0000-4000-8000-000000000412,4c666978-2e9f-4dea-b7d9-f1709b0ca011,412,Kinh tế số,,true,KTS,Digital Economics,114
+f1000000-0000-4000-8000-000000000502,4c666978-2e9f-4dea-b7d9-f1709b0ca011,502,Kế toán (Định hướng ACCA),,true,KTACCA,Accounting (ACCA),114
+f1000000-0000-4000-8000-000000000503,bccbbc59-d02a-4a3d-abbf-91529f97866a,503,Tài chính - Ngân hàng (Tiếng Anh),,true,TCNHTA,Finance and Banking (English),115

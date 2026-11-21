@@ -1,0 +1,9 @@
+SpecializationId,DepartmentId,SpecializationCode,SpecializationName,ParentSpecializationId,IsActive,Abbreviation,EnglishName,DepartmentCode
+0d03377f-f79f-4f20-840e-ef1390b4dd40,24d2865f-ad8b-4c86-8a70-745045a98fbc,105,Công nghệ thông tin,,true,CNTT,Information Technology,105
+,24d2865f-ad8b-4c86-8a70-745045a98fbc,10A,Ngành Sai Định Dạng Mã,,true,ERR,Invalid Code,105
+,24d2865f-ad8b-4c86-8a70-745045a98fbc,105,Công nghệ thông tin Trùng Mã,,true,CNTT2,Duplicate Code,105
+,24d2865f-ad8b-4c86-8a70-745045a98fbc,120,,,true,EMPTY,Missing Name,105
+,,130,Công nghệ kỹ thuật ô tô,,true,CKOT,Automotive Engineering,999
+,d0f597d3-f893-4967-b2da-70be84945ea7,119,Kỹ thuật phần mềm Lệch Khoa,,true,KTPM,Mismatched Dept ID and Code,105
+97668d0c-7ebb-4a79-885b-3c064831d570,d0f597d3-f893-4967-b2da-70be84945ea7,101,Sư phạm Toán học,97668d0c-7ebb-4a79-885b-3c064831d570,true,SPT,Self Parent Reference,201
+,24d2865f-ad8b-4c86-8a70-745045a98fbc,410,"=SUM(1,2)",0d03377f-f79f-4f20-840e-ef1390b4dd40,true,TTNT,Formula Injection,105
