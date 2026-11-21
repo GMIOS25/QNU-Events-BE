@@ -1,0 +1,33 @@
+meta {
+  name: TC-AUTH-14 - GET /auth/me cho EVENT_OWNER (owner01)
+  type: http
+  seq: 8
+  tags: [
+    auth
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/auth/me
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenOwner01}}
+}
+
+tests {
+  test("HTTP 200 OK và UserInfo khớp owner01", function() {
+    expect(res.getStatus()).to.equal(200);
+    const u = res.getBody();
+    expect(u.id).to.equal(bru.getVar("owner01Id"));
+    expect(u.loginId).to.equal("owner01");
+    expect(u.roles).to.deep.equal(["EVENT_OWNER"]);
+    expect(u.classId).to.equal(null);
+  });
+}
+
+docs {
+  TC-AUTH-14: Kiểm tra GET /api/v1/auth/me cho owner01.
+}

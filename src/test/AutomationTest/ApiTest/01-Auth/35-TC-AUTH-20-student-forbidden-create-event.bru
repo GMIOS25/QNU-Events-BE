@@ -1,0 +1,40 @@
+meta {
+  name: TC-AUTH-20 - RBAC STUDENT gọi POST /events -> 403 FORBIDDEN
+  type: http
+  seq: 35
+  tags: [
+    auth
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/events
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenSv001}}
+}
+
+body:json {
+  {}
+}
+
+tests {
+  test("HTTP 403 và mã lỗi FORBIDDEN", function() {
+    expect(res.getStatus()).to.equal(403);
+    const body = res.getBody();
+    expect(body).to.be.an("object");
+    expect(body.code).to.equal("FORBIDDEN");
+    expect(body.message).to.be.a("string").and.not.be.empty;
+    expect(body.message).to.equal("Bạn không có quyền thực hiện thao tác này.");
+    expect(body.traceId).to.be.a("string").and.not.be.empty;
+    expect(body.timestamp).to.be.a("string").and.not.be.empty;
+    expect(body.details).to.be.an("object");
+  });
+}
+
+docs {
+  TC-AUTH-20: Sinh viên gọi POST /api/v1/events bị chặn 403 FORBIDDEN.
+}

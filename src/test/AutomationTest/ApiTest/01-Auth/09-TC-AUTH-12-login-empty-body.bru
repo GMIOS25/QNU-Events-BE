@@ -1,0 +1,43 @@
+meta {
+  name: TC-AUTH-12 - Login body rỗng {} -> 400 VALIDATION_FAILED
+  type: http
+  seq: 9
+  tags: [
+    auth
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/auth/login
+  body: json
+  auth: none
+}
+
+body:json {
+  {}
+}
+
+tests {
+  test("HTTP 400 và mã lỗi VALIDATION_FAILED", function() {
+    expect(res.getStatus()).to.equal(400);
+    const body = res.getBody();
+    expect(body).to.be.an("object");
+    expect(body.code).to.equal("VALIDATION_FAILED");
+    expect(body.message).to.be.a("string").and.not.be.empty;
+    expect(body.message).to.equal("Dữ liệu không hợp lệ.");
+    expect(body.traceId).to.be.a("string").and.not.be.empty;
+    expect(body.timestamp).to.be.a("string").and.not.be.empty;
+    expect(body.details).to.be.an("object");
+  });
+
+  test("details.fields chứa đủ lỗi loginId và password", function() {
+    const fields = res.getBody().details.fields;
+    expect(fields).to.be.an("object");
+    expect(fields).to.have.property("loginId");
+    expect(fields).to.have.property("password");
+  });
+}
+
+docs {
+  TC-AUTH-12 & TC-AUTH-WB-22: Gửi body rỗng vào POST /api/v1/auth/login trả 400 VALIDATION_FAILED kèm details.fields.
+}

@@ -1,0 +1,30 @@
+meta {
+  name: TC-AUTH-22 - SYSTEM_ADMIN được phép gọi GET /auth/me -> 200 OK
+  type: http
+  seq: 44
+  tags: [
+    auth
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/auth/me
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenAdmin01}}
+}
+
+tests {
+  test("SYSTEM_ADMIN gọi GET /auth/me thành công 200 OK", function() {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody().loginId).to.equal("admin01");
+    expect(res.getBody().roles).to.deep.equal(["SYSTEM_ADMIN"]);
+  });
+}
+
+docs {
+  TC-AUTH-22: SYSTEM_ADMIN vẫn được phép gọi các endpoint .authenticated() như /auth/me.
+}

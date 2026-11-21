@@ -1,0 +1,42 @@
+meta {
+  name: TC-AUTH-16 - Xác minh seed tài khoản admin01 (SYSTEM_ADMIN)
+  type: http
+  seq: 6
+  tags: [
+    auth
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/auth/login
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "loginId": "{{admin01}}",
+    "password": "{{demoPassword}}"
+  }
+}
+
+script:post-response {
+  if (res.getStatus() === 200) {
+    const b = res.getBody();
+    bru.setVar("tokenAdmin01", b.accessToken);
+    bru.setVar("admin01Id", b.user.id);
+  }
+}
+
+tests {
+  test("HTTP 200 OK cho admin01 với vai trò SYSTEM_ADMIN", function() {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody().user.loginId).to.equal("admin01");
+    expect(res.getBody().user.roles).to.deep.equal(["SYSTEM_ADMIN"]);
+    expect(res.getBody().user.classId).to.equal(null);
+  });
+}
+
+docs {
+  TC-AUTH-16: Kiểm tra dữ liệu seed DemoDataSeeder cho admin01.
+}

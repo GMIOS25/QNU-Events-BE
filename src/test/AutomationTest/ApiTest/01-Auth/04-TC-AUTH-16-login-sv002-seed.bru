@@ -1,0 +1,43 @@
+meta {
+  name: TC-AUTH-16 - Xác minh seed tài khoản sv002 (K49CNTT1)
+  type: http
+  seq: 4
+  tags: [
+    auth
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/auth/login
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "loginId": "{{sv002}}",
+    "password": "{{demoPassword}}"
+  }
+}
+
+script:post-response {
+  if (res.getStatus() === 200) {
+    const b = res.getBody();
+    bru.setVar("tokenSv002", b.accessToken);
+    bru.setVar("sv002Id", b.user.id);
+  }
+}
+
+tests {
+  test("HTTP 200 OK cho sv002 cùng lớp K49CNTT1", function() {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody().user.loginId).to.equal("sv002");
+    expect(res.getBody().user.studentCode).to.equal("4901040002");
+    expect(res.getBody().user.roles).to.deep.equal(["STUDENT"]);
+    expect(res.getBody().user.classId).to.equal(bru.getEnvVar("classK49Cntt1"));
+  });
+}
+
+docs {
+  TC-AUTH-16: Kiểm tra dữ liệu seed DemoDataSeeder cho sv002.
+}

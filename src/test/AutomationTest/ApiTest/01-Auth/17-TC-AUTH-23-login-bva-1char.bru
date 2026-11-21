@@ -1,0 +1,39 @@
+meta {
+  name: TC-AUTH-23 - BVA loginId 1 ký tự & password 1 ký tự -> 401
+  type: http
+  seq: 17
+  tags: [
+    auth
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/auth/login
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "loginId": "a",
+    "password": "x"
+  }
+}
+
+tests {
+  test("HTTP 401 và mã lỗi INVALID_CREDENTIALS", function() {
+    expect(res.getStatus()).to.equal(401);
+    const body = res.getBody();
+    expect(body).to.be.an("object");
+    expect(body.code).to.equal("INVALID_CREDENTIALS");
+    expect(body.message).to.be.a("string").and.not.be.empty;
+    expect(body.message).to.equal("Thông tin đăng nhập không chính xác.");
+    expect(body.traceId).to.be.a("string").and.not.be.empty;
+    expect(body.timestamp).to.be.a("string").and.not.be.empty;
+    expect(body.details).to.be.an("object");
+  });
+}
+
+docs {
+  TC-AUTH-23 (BVA-01/02/03): Độ dài 1 ký tự qua @NotBlank và trả 401 INVALID_CREDENTIALS.
+}

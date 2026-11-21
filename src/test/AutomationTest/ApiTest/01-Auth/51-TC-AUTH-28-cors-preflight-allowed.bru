@@ -1,0 +1,34 @@
+meta {
+  name: TC-AUTH-28 - CORS Preflight từ origin tin cậy http://localhost:5173 -> 200
+  type: http
+  seq: 51
+  tags: [
+    auth
+  ]
+}
+
+options {
+  url: {{baseUrl}}/api/v1/events
+  body: none
+  auth: none
+}
+
+headers {
+  Origin: {{feOrigin}}
+  Access-Control-Request-Method: POST
+  Access-Control-Request-Headers: authorization,content-type,idempotency-key
+}
+
+tests {
+  test("CORS preflight origin hợp lệ trả 200 và có Access-Control-Allow-Origin", function() {
+    expect(res.getStatus()).to.equal(200);
+    const allowOrigin = res.getHeader("access-control-allow-origin");
+    expect(allowOrigin).to.equal(bru.getEnvVar("feOrigin"));
+    const allowHeaders = (res.getHeader("access-control-allow-headers") || "").toLowerCase();
+    expect(allowHeaders).to.include("idempotency-key");
+  });
+}
+
+docs {
+  TC-AUTH-28, TC-QR-WB-12: CORS preflight từ FE origin trả 200 OK và cho phép header Idempotency-Key.
+}

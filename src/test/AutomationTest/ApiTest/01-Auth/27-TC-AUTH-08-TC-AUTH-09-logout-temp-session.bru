@@ -1,0 +1,32 @@
+meta {
+  name: TC-AUTH-08 & TC-AUTH-09 - POST /auth/logout thu hồi phiên -> 204
+  type: http
+  seq: 27
+  tags: [
+    auth
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/auth/logout
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenSv001Temp}}
+}
+
+script:post-response {
+  bru.setVar("tokenSv001Revoked", bru.getVar("tokenSv001Temp"));
+}
+
+tests {
+  test("Đăng xuất trả HTTP 204 No Content", function() {
+    expect(res.getStatus()).to.equal(204);
+  });
+}
+
+docs {
+  TC-AUTH-08, TC-AUTH-09: Gọi POST /api/v1/auth/logout trả 204 No Content và đặt revoked_at trên DB.
+}

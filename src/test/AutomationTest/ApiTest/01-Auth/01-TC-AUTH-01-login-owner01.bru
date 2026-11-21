@@ -1,0 +1,66 @@
+meta {
+  name: TC-AUTH-01 - Login EVENT_OWNER (owner01) & kiểm tra JWT
+  type: http
+  seq: 1
+  tags: [
+    auth
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/auth/login
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "loginId": "{{owner01}}",
+    "password": "{{demoPassword}}"
+  }
+}
+
+script:post-response {
+  if (res.getStatus() === 200) {
+    const b = res.getBody();
+    bru.setVar("tokenOwner01", b.accessToken);
+    bru.setVar("owner01Id", b.user.id);
+  }
+}
+
+tests {
+  function decodeJwtPart(part) {
+    const b64 = part.replace(/-/g, "+").replace(/_/g, "/");
+    const pad = b64.length % 4 === 0 ? "" : "=".repeat(4 - (b64.length % 4));
+    const CryptoJS = require("crypto-js");
+    return JSON.parse(CryptoJS.enc.Base64.parse(b64 + pad).toString(CryptoJS.enc.Utf8));
+  }
+
+  test("HTTP 200 OK và đầy đủ LoginResponse + UserInfo cho owner01", function() {
+    expect(res.getStatus()).to.equal(200);
+    const b = res.getBody();
+    expect(b.accessToken).to.be.a("string").and.not.be.empty;
+    expect(b.expiresAt).to.be.a("string").and.not.be.empty;
+    expect(b.user.loginId).to.equal("owner01");
+    expect(b.user.fullName).to.equal("Nguyễn Văn Chủ Sự Kiện");
+    expect(b.user.roles).to.deep.equal(["EVENT_OWNER"]);
+    expect(b.user.classId).to.equal(null);
+  });
+  test("TC-AUTH-14 & WB-09 - JWT HS256 có TTL 28800s và không chứa claim classId", function() {
+    const parts = res.getBody().accessToken.split(".");
+    expect(parts).to.have.lengthOf(3);
+    const header = decodeJwtPart(parts[0]);
+    const payload = decodeJwtPart(parts[1]);
+    expect(header.alg).to.equal("HS256");
+    expect(payload.sub).to.equal(res.getBody().user.id);
+    expect(payload.sid).to.match(/^[0-9a-f-]{36}$/i);
+    expect(payload.roles).to.deep.equal(["EVENT_OWNER"]);
+    expect(payload.exp - payload.iat).to.equal(28800);
+    expect(payload).to.not.have.property("classId");
+  });
+}
+
+docs {
+  TC-AUTH-01, TC-AUTH-14, TC-AUTH-WB-09: Đăng nhập EVENT_OWNER (owner01), xác minh UserInfo và JWT HS256 (TTL 8h, không có classId).
+  Nguồn: docs/test/testcase/4.1-xac-thuc-quan-ly-phien-dang-nhap.md
+}
