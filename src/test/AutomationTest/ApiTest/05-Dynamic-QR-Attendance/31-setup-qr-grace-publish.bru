@@ -1,0 +1,30 @@
+meta {
+  name: [Setup] Publish sự kiện evtQrGrace
+  type: http
+  seq: 31
+  tags: [
+    qr
+    setup
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/events/{{evtQrGrace}}/publish
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenOwner01}}
+}
+
+body:json {
+  {
+    "confirm": true,
+    "previewVersion": 0
+  }
+}
+
+tests {
+  test("Setup publish evtQrGrace (200)", function() { expect(res.getStatus()).to.equal(200); });
+}

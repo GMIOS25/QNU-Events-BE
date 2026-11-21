@@ -1,0 +1,51 @@
+meta {
+  name: TC-QR-17 - Lần sai 3/3 (sv002): token malformed -> 422 attemptCount=3, canRetry=false
+  type: http
+  seq: 74
+  tags: [
+    qr
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/events/{{evtQr01}}/attendance/qr
+  body: json
+  auth: bearer
+}
+
+headers {
+  Idempotency-Key: {{freshIdemKey}}
+}
+
+auth:bearer {
+  token: {{tokenSv002}}
+}
+
+body:json {
+  {
+    "token": ""
+  }
+}
+
+tests {
+  test("HTTP 422 và mã lỗi QR_MALFORMED", function() {
+    expect(res.getStatus()).to.equal(422);
+    const body = res.getBody();
+    expect(body).to.be.an("object");
+    expect(body.code).to.equal("QR_MALFORMED");
+    expect(body.message).to.be.a("string").and.not.be.empty;
+    expect(body.traceId).to.be.a("string").and.not.be.empty;
+    expect(body.timestamp).to.be.a("string").and.not.be.empty;
+    expect(body.details).to.be.an("object");
+  });
+
+  test("attemptCount=3, remainingAttempts=0, canRetry=false", function() {
+    expect(res.getBody().details.attemptCount).to.equal(3);
+    expect(res.getBody().details.remainingAttempts).to.equal(0);
+    expect(res.getBody().details.canRetry).to.equal(false);
+  });
+}
+
+docs {
+  TC-QR-17: Lần thử sai thứ 3 chạm ngưỡng tối đa 3 lần.
+}

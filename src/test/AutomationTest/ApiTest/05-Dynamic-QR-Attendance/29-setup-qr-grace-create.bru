@@ -1,0 +1,47 @@
+meta {
+  name: [Setup] Tạo sự kiện evtQrGrace
+  type: http
+  seq: 29
+  tags: [
+    qr
+    setup
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/events
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenOwner01}}
+}
+
+body:json {
+  {
+    "title": "[BRU-{{runSuffix}}] QR Grace Period & Expired Live",
+    "description": "Nội dung chi tiết sự kiện kiểm thử tự động Bruno.",
+    "location": "Hội trường A - Trường ĐH Quy Nhơn",
+    "startAt": "{{activeStartAt}}",
+    "endAt": "{{activeEndAt}}",
+    "registrationDeadline": "{{activeRegDeadline}}",
+    "attendanceOpenAt": "{{activeAttOpen}}",
+    "attendanceCloseAt": "{{activeAttClose}}",
+    "attendanceMethod": "DYNAMIC_QR",
+    "quotaTotal": 10,
+    "audienceClassIds": [
+      "{{classK49Cntt1}}"
+    ],
+    "activityType": "Hội thảo khoa học",
+    "activityPoints": 5
+  }
+}
+
+script:post-response {
+  if (res.getStatus() === 201) bru.setVar("evtQrGrace", res.getBody().id);
+}
+
+tests {
+  test("Setup tạo sự kiện evtQrGrace (201)", function() { expect(res.getStatus()).to.equal(201); });
+}

@@ -1,0 +1,50 @@
+meta {
+  name: TC-QR-09 - Điểm danh trên sự kiện DRAFT -> 409 EVENT_NOT_PUBLISHED (không trừ lượt)
+  type: http
+  seq: 54
+  tags: [
+    qr
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/events/{{evtQrDraft}}/attendance/qr
+  body: json
+  auth: bearer
+}
+
+headers {
+  Idempotency-Key: {{freshIdemKey}}
+}
+
+auth:bearer {
+  token: {{tokenSv001}}
+}
+
+body:json {
+  {
+    "token": "{{qrToken01}}"
+  }
+}
+
+tests {
+  test("HTTP 409 và mã lỗi EVENT_NOT_PUBLISHED", function() {
+    expect(res.getStatus()).to.equal(409);
+    const body = res.getBody();
+    expect(body).to.be.an("object");
+    expect(body.code).to.equal("EVENT_NOT_PUBLISHED");
+    expect(body.message).to.be.a("string").and.not.be.empty;
+    expect(body.message).to.equal("Sự kiện chưa được công bố.");
+    expect(body.traceId).to.be.a("string").and.not.be.empty;
+    expect(body.timestamp).to.be.a("string").and.not.be.empty;
+    expect(body.details).to.be.an("object");
+  });
+
+  test("counted=false: details không chứa metadata trừ lượt (attemptCount)", function() {
+    expect(res.getBody().details).to.not.have.property("attemptCount");
+  });
+}
+
+docs {
+  TC-QR-09: Sự kiện DRAFT trả 409 EVENT_NOT_PUBLISHED và counted=false.
+}

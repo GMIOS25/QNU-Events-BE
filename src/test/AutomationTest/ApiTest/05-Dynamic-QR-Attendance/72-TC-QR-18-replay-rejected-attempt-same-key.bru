@@ -1,0 +1,54 @@
+meta {
+  name: TC-QR-18 - Replay cùng Idempotency-Key (lỗi) với token hợp lệ -> vẫn trả nguyên 422 cũ
+  type: http
+  seq: 72
+  tags: [
+    qr
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/events/{{evtQr01}}/attendance/qr
+  body: json
+  auth: bearer
+}
+
+headers {
+  Idempotency-Key: {{idemKeyErrReplay}}
+  X-Request-Id: req-qr-err-2
+}
+
+auth:bearer {
+  token: {{tokenSv002}}
+}
+
+body:json {
+  {
+    "token": "{{qrToken01}}"
+  }
+}
+
+tests {
+  test("HTTP 422 và mã lỗi QR_WRONG_EVENT", function() {
+    expect(res.getStatus()).to.equal(422);
+    const body = res.getBody();
+    expect(body).to.be.an("object");
+    expect(body.code).to.equal("QR_WRONG_EVENT");
+    expect(body.message).to.be.a("string").and.not.be.empty;
+    expect(body.message).to.equal("Mã QR không thuộc về sự kiện này.");
+    expect(body.traceId).to.be.a("string").and.not.be.empty;
+    expect(body.timestamp).to.be.a("string").and.not.be.empty;
+    expect(body.details).to.be.an("object");
+  });
+
+  test("Replay nguyên trạng: traceId giữ req-qr-err-1, timestamp cũ và attemptCount vẫn = 1", function() {
+    const b = res.getBody();
+    expect(b.traceId).to.equal("req-qr-err-1");
+    expect(b.timestamp).to.equal(bru.getVar("errReplayTimestamp"));
+    expect(b.details.attemptCount).to.equal(1);
+  });
+}
+
+docs {
+  TC-QR-18: Gửi lại cùng Idempotency-Key trả nguyên response cũ mà không trừ thêm lượt thử.
+}

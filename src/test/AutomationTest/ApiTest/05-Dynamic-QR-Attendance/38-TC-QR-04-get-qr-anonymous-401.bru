@@ -1,0 +1,31 @@
+meta {
+  name: TC-QR-04 - Ẩn danh gọi GET /qr -> 401 UNAUTHENTICATED
+  type: http
+  seq: 38
+  tags: [
+    qr
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/events/{{evtQr01}}/qr
+  body: none
+  auth: none
+}
+
+tests {
+  test("HTTP 401 và mã lỗi UNAUTHENTICATED", function() {
+    expect(res.getStatus()).to.equal(401);
+    const body = res.getBody();
+    expect(body).to.be.an("object");
+    expect(body.code).to.equal("UNAUTHENTICATED");
+    expect(body.message).to.be.a("string").and.not.be.empty;
+    expect(body.traceId).to.be.a("string").and.not.be.empty;
+    expect(body.timestamp).to.be.a("string").and.not.be.empty;
+    expect(body.details).to.be.an("object");
+  });
+}
+
+docs {
+  TC-QR-04: Chặn ẩn danh gọi GET /qr.
+}

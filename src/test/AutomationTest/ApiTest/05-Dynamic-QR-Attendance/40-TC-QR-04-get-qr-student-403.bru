@@ -1,0 +1,35 @@
+meta {
+  name: TC-QR-04 - RBAC STUDENT gọi GET /qr -> 403 FORBIDDEN
+  type: http
+  seq: 40
+  tags: [
+    qr
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/events/{{evtQr01}}/qr
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenSv001}}
+}
+
+tests {
+  test("HTTP 403 và mã lỗi FORBIDDEN", function() {
+    expect(res.getStatus()).to.equal(403);
+    const body = res.getBody();
+    expect(body).to.be.an("object");
+    expect(body.code).to.equal("FORBIDDEN");
+    expect(body.message).to.be.a("string").and.not.be.empty;
+    expect(body.traceId).to.be.a("string").and.not.be.empty;
+    expect(body.timestamp).to.be.a("string").and.not.be.empty;
+    expect(body.details).to.be.an("object");
+  });
+}
+
+docs {
+  TC-QR-04: Sinh viên không được phép gọi API phát mã QR.
+}

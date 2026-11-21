@@ -1,0 +1,51 @@
+meta {
+  name: TC-QR-08 (R9 Anti-IDOR) - SV chưa đăng ký (sv003) điểm danh + giả studentId -> 403 NOT_REGISTERED
+  type: http
+  seq: 56
+  tags: [
+    qr
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/events/{{evtQr01}}/attendance/qr?studentId={{sv001Id}}
+  body: json
+  auth: bearer
+}
+
+headers {
+  Idempotency-Key: {{freshIdemKey}}
+}
+
+auth:bearer {
+  token: {{tokenSv003}}
+}
+
+body:json {
+  {
+    "token": "{{qrToken01}}",
+    "studentId": "{{sv001Id}}"
+  }
+}
+
+tests {
+  test("HTTP 403 và mã lỗi NOT_REGISTERED", function() {
+    expect(res.getStatus()).to.equal(403);
+    const body = res.getBody();
+    expect(body).to.be.an("object");
+    expect(body.code).to.equal("NOT_REGISTERED");
+    expect(body.message).to.be.a("string").and.not.be.empty;
+    expect(body.message).to.equal("Bạn chưa có suất đăng ký sự kiện này.");
+    expect(body.traceId).to.be.a("string").and.not.be.empty;
+    expect(body.timestamp).to.be.a("string").and.not.be.empty;
+    expect(body.details).to.be.an("object");
+  });
+
+  test("counted=false: không trừ lượt và không điểm danh hộ sv001", function() {
+    expect(res.getBody().details).to.not.have.property("attemptCount");
+  });
+}
+
+docs {
+  TC-QR-08 (R9): Sinh viên chưa có suất REGISTERED bị chặn 403 NOT_REGISTERED; server bỏ qua studentId giả mạo.
+}

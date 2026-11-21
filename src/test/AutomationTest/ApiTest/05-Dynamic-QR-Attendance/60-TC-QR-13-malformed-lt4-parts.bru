@@ -1,0 +1,54 @@
+meta {
+  name: TC-QR-13 - QR_MALFORMED (< 4 phần ("invalid.token")) -> 422 & attemptCount=1
+  type: http
+  seq: 60
+  tags: [
+    qr
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/events/{{evtQrMalA}}/attendance/qr
+  body: json
+  auth: bearer
+}
+
+headers {
+  Idempotency-Key: {{freshIdemKey}}
+}
+
+auth:bearer {
+  token: {{tokenSv002}}
+}
+
+body:json {
+  {
+    "token": "invalid.token"
+  }
+}
+
+tests {
+  test("HTTP 422 và mã lỗi QR_MALFORMED", function() {
+    expect(res.getStatus()).to.equal(422);
+    const body = res.getBody();
+    expect(body).to.be.an("object");
+    expect(body.code).to.equal("QR_MALFORMED");
+    expect(body.message).to.be.a("string").and.not.be.empty;
+    expect(body.message).to.equal("Mã QR không đúng định dạng.");
+    expect(body.traceId).to.be.a("string").and.not.be.empty;
+    expect(body.timestamp).to.be.a("string").and.not.be.empty;
+    expect(body.details).to.be.an("object");
+  });
+
+  test("Metadata counted attempt chính xác: attemptCount=1, remaining=2", function() {
+    const d = res.getBody().details;
+    expect(d.attemptCount).to.equal(1);
+    expect(d.maxAttempts).to.equal(3);
+    expect(d.remainingAttempts).to.equal(2);
+    expect(d.canRetry).to.equal(true);
+  });
+}
+
+docs {
+  TC-QR-13 (EP-08-I1): Kiểm tra phân vùng QR_MALFORMED cho trường hợp < 4 phần ("invalid.token").
+}

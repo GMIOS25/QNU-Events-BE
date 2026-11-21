@@ -1,0 +1,54 @@
+meta {
+  name: TC-QR-09 - Điểm danh ngoài cửa sổ thời gian -> 409 ATTENDANCE_NOT_OPEN (không trừ lượt)
+  type: http
+  seq: 55
+  tags: [
+    qr
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/events/{{evtQrClosed}}/attendance/qr
+  body: json
+  auth: bearer
+}
+
+headers {
+  Idempotency-Key: {{idemKeyClosed}}
+}
+
+auth:bearer {
+  token: {{tokenSv001}}
+}
+
+body:json {
+  {
+    "token": "{{qrToken01}}"
+  }
+}
+
+script:pre-request {
+  bru.setVar("idemKeyClosed", "bru-closed-" + Date.now());
+}
+
+tests {
+  test("HTTP 409 và mã lỗi ATTENDANCE_NOT_OPEN", function() {
+    expect(res.getStatus()).to.equal(409);
+    const body = res.getBody();
+    expect(body).to.be.an("object");
+    expect(body.code).to.equal("ATTENDANCE_NOT_OPEN");
+    expect(body.message).to.be.a("string").and.not.be.empty;
+    expect(body.message).to.equal("Chưa đến hoặc đã hết thời gian điểm danh.");
+    expect(body.traceId).to.be.a("string").and.not.be.empty;
+    expect(body.timestamp).to.be.a("string").and.not.be.empty;
+    expect(body.details).to.be.an("object");
+  });
+
+  test("counted=false: details rỗng", function() {
+    expect(res.getBody().details).to.not.have.property("attemptCount");
+  });
+}
+
+docs {
+  TC-QR-09: Điểm danh trước giờ mở cửa sổ trả 409 ATTENDANCE_NOT_OPEN và counted=false.
+}
