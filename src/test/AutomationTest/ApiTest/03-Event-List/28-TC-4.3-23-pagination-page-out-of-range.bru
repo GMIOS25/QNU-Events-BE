@@ -1,0 +1,30 @@
+meta {
+  name: TC-4.3-23 - BVA page=99 vượt tổng số trang -> 200 content=[]
+  type: http
+  seq: 28
+  tags: [
+    event-list
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/events?page=99&size=20
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenSv001}}
+}
+
+tests {
+  test("HTTP 200 OK với content=[] khi page vượt totalPages", function() {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody().content).to.deep.equal([]);
+    expect(res.getBody().empty).to.equal(true);
+  });
+}
+
+docs {
+  TC-4.3-23 (BVA-01): Trang vượt biên trả trang rỗng an toàn.
+}

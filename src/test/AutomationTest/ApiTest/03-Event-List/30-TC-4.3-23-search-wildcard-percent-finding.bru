@@ -1,0 +1,29 @@
+meta {
+  name: TC-4.3-23 & WB-05 - Tìm kiếm wildcard % (Finding LIKE không escape)
+  type: http
+  seq: 30
+  tags: [
+    event-list
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/events?q=%25
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenSv001}}
+}
+
+tests {
+  test("HTTP 200 OK (ghi nhận White-box Finding: wildcard % chưa escape nên khớp sự kiện)", function() {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody().content).to.be.an("array");
+  });
+}
+
+docs {
+  TC-4.3-23, TC-4.3-WB-05: Kiểm chứng từ khóa chứa ký tự wildcard SQL LIKE (%).
+}

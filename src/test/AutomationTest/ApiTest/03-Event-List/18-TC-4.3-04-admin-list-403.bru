@@ -1,0 +1,35 @@
+meta {
+  name: TC-4.3-04 - Chặn SYSTEM_ADMIN gọi GET /api/v1/events -> 403 FORBIDDEN
+  type: http
+  seq: 18
+  tags: [
+    event-list
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/events
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenAdmin01}}
+}
+
+tests {
+  test("HTTP 403 và mã lỗi FORBIDDEN", function() {
+    expect(res.getStatus()).to.equal(403);
+    const body = res.getBody();
+    expect(body).to.be.an("object");
+    expect(body.code).to.equal("FORBIDDEN");
+    expect(body.message).to.be.a("string").and.not.be.empty;
+    expect(body.traceId).to.be.a("string").and.not.be.empty;
+    expect(body.timestamp).to.be.a("string").and.not.be.empty;
+    expect(body.details).to.be.an("object");
+  });
+}
+
+docs {
+  TC-4.3-04: SYSTEM_ADMIN bị chặn 403 tại GET /api/v1/events.
+}

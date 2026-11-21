@@ -1,0 +1,47 @@
+meta {
+  name: [Setup] Tạo sự kiện evtListPubK49
+  type: http
+  seq: 1
+  tags: [
+    event-list
+    setup
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/events
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenOwner01}}
+}
+
+body:json {
+  {
+    "title": "[BRU-{{runSuffix}}] Hội thảo Ứng dụng AI & Khởi nghiệp 2026",
+    "description": "Mô tả chi tiết hội thảo AI 4.3",
+    "location": "Hội trường A - Trường ĐH Quy Nhơn",
+    "startAt": "{{activeStartAt}}",
+    "endAt": "{{activeEndAt}}",
+    "registrationDeadline": "{{activeRegDeadline}}",
+    "attendanceOpenAt": "{{activeAttOpen}}",
+    "attendanceCloseAt": "{{activeAttClose}}",
+    "attendanceMethod": "DYNAMIC_QR",
+    "quotaTotal": 10,
+    "audienceClassIds": [
+      "{{classK49Cntt1}}"
+    ],
+    "activityType": "Hội thảo khoa học",
+    "activityPoints": 10
+  }
+}
+
+script:post-response {
+  if (res.getStatus() === 201) bru.setVar("evtListPubK49", res.getBody().id);
+}
+
+tests {
+  test("Setup tạo sự kiện evtListPubK49 thành công (201)", function() { expect(res.getStatus()).to.equal(201); });
+}

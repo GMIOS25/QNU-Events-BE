@@ -1,0 +1,23 @@
+meta {
+  name: [Setup] Xem trước sự kiện evtListPubK49
+  type: http
+  seq: 2
+  tags: [
+    event-list
+    setup
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/events/{{evtListPubK49}}/preview
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenOwner01}}
+}
+
+tests {
+  test("Setup preview evtListPubK49 thành công (200)", function() { expect(res.getStatus()).to.equal(200); });
+}

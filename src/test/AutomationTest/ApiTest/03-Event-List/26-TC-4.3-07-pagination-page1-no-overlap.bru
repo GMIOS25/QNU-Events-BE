@@ -1,0 +1,35 @@
+meta {
+  name: TC-4.3-07 - Phân trang page=1&size=2&sort=startAt,desc không trùng trang 0
+  type: http
+  seq: 26
+  tags: [
+    event-list
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/events?q={{runSuffix}}&page=1&size=2&sort=startAt,desc
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenOwner01}}
+}
+
+tests {
+  test("HTTP 200 OK, number=1 và không trùng ID với trang 0", function() {
+    expect(res.getStatus()).to.equal(200);
+    const p = res.getBody();
+    expect(p.number).to.equal(1);
+    expect(p.content.length).to.be.at.least(1);
+    const page0Ids = JSON.parse(bru.getVar("evtListPage0Ids") || "[]");
+    p.content.forEach((item) => {
+      expect(page0Ids).to.not.include(item.id);
+    });
+  });
+}
+
+docs {
+  TC-4.3-07: Trang 1 chứa các phần tử tiếp theo, không lặp lại phần tử của trang 0.
+}

@@ -1,0 +1,32 @@
+meta {
+  name: TC-4.3-05 (EventIT #18) - Lọc danh sách theo activityType=Workshop
+  type: http
+  seq: 23
+  tags: [
+    event-list
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/events?q={{runSuffix}}&activityType=Workshop&size=50
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenSv003}}
+}
+
+tests {
+  test("HTTP 200 OK và chỉ trả về các sự kiện có activityType = Workshop", function() {
+    expect(res.getStatus()).to.equal(200);
+    const items = res.getBody().content;
+    expect(items.length).to.be.at.least(1);
+    items.forEach((i) => expect(i.activityType).to.equal("Workshop"));
+    expect(items.map((i) => i.id)).to.include(bru.getVar("evtListOwn2K49_2"));
+  });
+}
+
+docs {
+  TC-4.3-05 / EventIT #18: Lọc danh sách sự kiện theo tham số activityType kết hợp từ khóa q.
+}

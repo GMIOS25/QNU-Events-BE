@@ -1,0 +1,35 @@
+meta {
+  name: TC-4.3-02 & TC-4.3-22 - SV K49CNTT2 không thấy sự kiện K49CNTT1, thấy đa lớp đúng 1 lần
+  type: http
+  seq: 15
+  tags: [
+    event-list
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/events?q={{runSuffix}}&size=50
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenSv003}}
+}
+
+tests {
+  test("HTTP 200 OK, ẩn sự kiện K49CNTT1, thấy sự kiện K49CNTT2 và đa lớp đúng 1 lần", function() {
+    expect(res.getStatus()).to.equal(200);
+    const items = res.getBody().content;
+    const ids = items.map((i) => i.id);
+    expect(ids).to.not.include(bru.getVar("evtListPubK49"));
+    expect(ids).to.not.include(bru.getVar("evtListDraftK49"));
+    expect(ids).to.include(bru.getVar("evtListOwn2K49_2"));
+    const multiMatches = items.filter((i) => i.id === bru.getVar("evtListMultiClass"));
+    expect(multiMatches).to.have.lengthOf(1);
+  });
+}
+
+docs {
+  TC-4.3-02, TC-4.3-22: Cô lập phạm vi lớp đối tượng giữa K49CNTT2 và K49CNTT1.
+}

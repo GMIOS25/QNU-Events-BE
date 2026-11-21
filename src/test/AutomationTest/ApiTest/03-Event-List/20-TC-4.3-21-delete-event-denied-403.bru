@@ -1,0 +1,35 @@
+meta {
+  name: TC-4.3-21 - Sai HTTP method DELETE /api/v1/events/id -> 403 denyAll
+  type: http
+  seq: 20
+  tags: [
+    event-list
+  ]
+}
+
+delete {
+  url: {{baseUrl}}/api/v1/events/{{evtListPubK49}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenOwner01}}
+}
+
+tests {
+  test("HTTP 403 và mã lỗi FORBIDDEN", function() {
+    expect(res.getStatus()).to.equal(403);
+    const body = res.getBody();
+    expect(body).to.be.an("object");
+    expect(body.code).to.equal("FORBIDDEN");
+    expect(body.message).to.be.a("string").and.not.be.empty;
+    expect(body.traceId).to.be.a("string").and.not.be.empty;
+    expect(body.timestamp).to.be.a("string").and.not.be.empty;
+    expect(body.details).to.be.an("object");
+  });
+}
+
+docs {
+  TC-4.3-21: Rule anyRequest().denyAll() chặn DELETE /api/v1/events/id bằng 403 FORBIDDEN.
+}

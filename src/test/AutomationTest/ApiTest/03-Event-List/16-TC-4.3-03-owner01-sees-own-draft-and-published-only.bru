@@ -1,0 +1,32 @@
+meta {
+  name: TC-4.3-03 - Owner01 thấy cả DRAFT và PUBLISHED của mình, ẩn sự kiện owner02
+  type: http
+  seq: 16
+  tags: [
+    event-list
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/events?q={{runSuffix}}&size=50
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenOwner01}}
+}
+
+tests {
+  test("HTTP 200 OK, gồm cả DRAFT và PUBLISHED của owner01, loại trừ owner02", function() {
+    expect(res.getStatus()).to.equal(200);
+    const ids = res.getBody().content.map((i) => i.id);
+    expect(ids).to.include(bru.getVar("evtListPubK49"));
+    expect(ids).to.include(bru.getVar("evtListDraftK49"));
+    expect(ids).to.not.include(bru.getVar("evtListOwn2K49_2"));
+  });
+}
+
+docs {
+  TC-4.3-03: Ban tổ chức thấy tất cả sự kiện do mình tạo (DRAFT/PUBLISHED), không thấy sự kiện của Ban tổ chức khác.
+}

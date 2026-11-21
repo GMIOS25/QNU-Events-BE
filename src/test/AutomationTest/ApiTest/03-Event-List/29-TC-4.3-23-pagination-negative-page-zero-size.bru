@@ -1,0 +1,30 @@
+meta {
+  name: TC-4.3-23 - BVA page=-1&size=0 được Spring Data chuẩn hóa -> page=0, size=20
+  type: http
+  seq: 29
+  tags: [
+    event-list
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/events?page=-1&size=0
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenSv001}}
+}
+
+tests {
+  test("HTTP 200 OK với number=0 và size=20 sau chuẩn hóa", function() {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody().number).to.equal(0);
+    expect(res.getBody().size).to.equal(20);
+  });
+}
+
+docs {
+  TC-4.3-23 (BVA-01): page âm và size=0 được Spring Data chuẩn hóa về 0 và 20.
+}
