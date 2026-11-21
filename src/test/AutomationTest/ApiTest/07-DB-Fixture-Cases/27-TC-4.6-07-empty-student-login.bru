@@ -1,0 +1,33 @@
+meta {
+  name: TC-4.6-07 - Đăng nhập bruno_sv_empty (chưa đăng ký sự kiện nào)
+  type: http
+  seq: 27
+  tags: [
+    db-fixture
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/auth/login
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "loginId": "{{brunoSvEmpty}}",
+    "password": "{{demoPassword}}"
+  }
+}
+
+script:post-response {
+  if (res.getStatus() === 200) bru.setVar("tokenSvEmpty", res.getBody().accessToken);
+}
+
+tests {
+  test("Đăng nhập bruno_sv_empty (200)", function() { expect(res.getStatus()).to.equal(200); });
+}
+
+docs {
+  TC-4.6-07: Tài khoản sinh viên sạch chưa có bất kỳ bản ghi đăng ký nào.
+}

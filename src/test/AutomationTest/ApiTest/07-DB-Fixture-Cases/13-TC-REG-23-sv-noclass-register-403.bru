@@ -1,0 +1,35 @@
+meta {
+  name: TC-REG-23 - SV class_id=NULL đăng ký sự kiện -> 403 NOT_IN_AUDIENCE (không 500 NPE)
+  type: http
+  seq: 13
+  tags: [
+    db-fixture
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/events/{{brunoActiveEventId}}/registrations
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenSvNoClass}}
+}
+
+tests {
+  test("HTTP 403 và mã lỗi NOT_IN_AUDIENCE", function() {
+    expect(res.getStatus()).to.equal(403);
+    const body = res.getBody();
+    expect(body).to.be.an("object");
+    expect(body.code).to.equal("NOT_IN_AUDIENCE");
+    expect(body.message).to.be.a("string").and.not.be.empty;
+    expect(body.traceId).to.be.a("string").and.not.be.empty;
+    expect(body.timestamp).to.be.a("string").and.not.be.empty;
+    expect(body.details).to.be.an("object");
+  });
+}
+
+docs {
+  TC-REG-23, TC-REG-WB-05: student.getClassId() == null bị từ chối 403 NOT_IN_AUDIENCE an toàn.
+}

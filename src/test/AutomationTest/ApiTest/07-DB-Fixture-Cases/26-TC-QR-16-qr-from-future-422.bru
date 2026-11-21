@@ -1,0 +1,65 @@
+meta {
+  name: TC-QR-16 - Token QR ký hợp lệ với epoch tương lai (+5) -> 422 QR_FROM_FUTURE
+  type: http
+  seq: 26
+  tags: [
+    db-fixture
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/events/{{brunoReRegEventId}}/attendance/qr
+  body: json
+  auth: bearer
+}
+
+headers {
+  Idempotency-Key: {{freshIdemKey}}
+}
+
+auth:bearer {
+  token: {{tokenSvReReg}}
+}
+
+body:json {
+  {
+    "token": "{{qrFutureToken}}"
+  }
+}
+
+script:pre-request {
+  const CryptoJS = require("crypto-js");
+  const secret = bru.getEnvVar("qrSigningSecret");
+  if (!secret || secret.length < 32) {
+    throw new Error("Thiếu biến secret 'qrSigningSecret' (>= 32 ký tự). Hãy chạy qua scripts/run-bruno.ps1 hoặc khai báo qrSigningSecret trong environment local.");
+  }
+  const eventId = bru.getEnvVar("brunoReRegEventId");
+  const futureEpoch = Math.floor(Date.now() / 1000 / 10) + 5;
+  const payload = "qr1." + eventId + "." + futureEpoch;
+  const sig = CryptoJS.HmacSHA256(payload, secret)
+    .toString(CryptoJS.enc.Base64)
+    .replace(/=+$/, "").replace(/\+/g, "-").replace(/\//g, "_");
+  bru.setVar("qrFutureToken", payload + "." + sig);
+}
+
+tests {
+  test("HTTP 422 và mã lỗi QR_FROM_FUTURE", function() {
+    expect(res.getStatus()).to.equal(422);
+    const body = res.getBody();
+    expect(body).to.be.an("object");
+    expect(body.code).to.equal("QR_FROM_FUTURE");
+    expect(body.message).to.be.a("string").and.not.be.empty;
+    expect(body.message).to.equal("Mã QR không hợp lệ (thời gian tương lai).");
+    expect(body.traceId).to.be.a("string").and.not.be.empty;
+    expect(body.timestamp).to.be.a("string").and.not.be.empty;
+    expect(body.details).to.be.an("object");
+  });
+
+  test("attemptCount=1 cho lỗi QR_FROM_FUTURE", function() {
+    expect(res.getBody().details.attemptCount).to.equal(1);
+  });
+}
+
+docs {
+  TC-QR-16 (EP-08-I4): Token ký bằng đúng QR_SIGNING_SECRET nhưng mang epoch tương lai bị từ chối 422 QR_FROM_FUTURE.
+}

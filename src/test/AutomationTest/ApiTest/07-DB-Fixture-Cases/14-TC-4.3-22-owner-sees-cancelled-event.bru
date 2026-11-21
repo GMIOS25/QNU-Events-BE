@@ -1,0 +1,32 @@
+meta {
+  name: TC-4.3-22 - Owner01 xem chi tiết sự kiện CANCELLED -> 200, registrationOpen=false, attendanceOpen=false
+  type: http
+  seq: 14
+  tags: [
+    db-fixture
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/events/{{brunoCancelledEventId}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenOwner01}}
+}
+
+tests {
+  test("HTTP 200 OK, status=CANCELLED, cả registrationOpen và attendanceOpen đều false", function() {
+    expect(res.getStatus()).to.equal(200);
+    const e = res.getBody();
+    expect(e.status).to.equal("CANCELLED");
+    expect(e.registrationOpen).to.equal(false);
+    expect(e.attendanceOpen).to.equal(false);
+  });
+}
+
+docs {
+  TC-4.3-22: Chủ sự kiện vẫn thấy sự kiện CANCELLED với cờ mở đăng ký/điểm danh là false.
+}

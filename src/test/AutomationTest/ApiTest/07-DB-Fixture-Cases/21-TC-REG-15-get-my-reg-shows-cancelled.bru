@@ -1,0 +1,29 @@
+meta {
+  name: TC-REG-15 - GET /registrations/me khi chỉ có bản ghi CANCELLED -> 200 status=CANCELLED
+  type: http
+  seq: 21
+  tags: [
+    db-fixture
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/events/{{brunoReRegEventId}}/registrations/me
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenSvReReg}}
+}
+
+tests {
+  test("HTTP 200 OK trả về bản ghi gần nhất có status=CANCELLED", function() {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody().status).to.equal("CANCELLED");
+  });
+}
+
+docs {
+  TC-REG-15, TC-REG-WB-09: Fallback findLatestByEventAndStudent trả về bản ghi CANCELLED.
+}

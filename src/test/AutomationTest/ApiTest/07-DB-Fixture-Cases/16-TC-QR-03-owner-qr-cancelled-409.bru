@@ -1,0 +1,35 @@
+meta {
+  name: TC-QR-03 - Owner01 gọi GET /qr trên sự kiện CANCELLED -> 409 EVENT_NOT_PUBLISHED
+  type: http
+  seq: 16
+  tags: [
+    db-fixture
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/events/{{brunoCancelledEventId}}/qr
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenOwner01}}
+}
+
+tests {
+  test("HTTP 409 và mã lỗi EVENT_NOT_PUBLISHED", function() {
+    expect(res.getStatus()).to.equal(409);
+    const body = res.getBody();
+    expect(body).to.be.an("object");
+    expect(body.code).to.equal("EVENT_NOT_PUBLISHED");
+    expect(body.message).to.be.a("string").and.not.be.empty;
+    expect(body.traceId).to.be.a("string").and.not.be.empty;
+    expect(body.timestamp).to.be.a("string").and.not.be.empty;
+    expect(body.details).to.be.an("object");
+  });
+}
+
+docs {
+  TC-QR-03: Sự kiện CANCELLED bị từ chối phát QR với 409 EVENT_NOT_PUBLISHED.
+}
