@@ -1,0 +1,30 @@
+meta {
+  name: [Setup] Publish sự kiện evtQr02
+  type: http
+  seq: 8
+  tags: [
+    qr
+    setup
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/events/{{evtQr02}}/publish
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenOwner02}}
+}
+
+body:json {
+  {
+    "confirm": true,
+    "previewVersion": 0
+  }
+}
+
+tests {
+  test("Setup publish evtQr02 (200)", function() { expect(res.getStatus()).to.equal(200); });
+}

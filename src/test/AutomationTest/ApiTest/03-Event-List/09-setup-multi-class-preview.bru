@@ -1,0 +1,23 @@
+meta {
+  name: [Setup] Xem trước sự kiện evtListMultiClass
+  type: http
+  seq: 9
+  tags: [
+    event-list
+    setup
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/events/{{evtListMultiClass}}/preview
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenOwner01}}
+}
+
+tests {
+  test("Setup preview evtListMultiClass thành công (200)", function() { expect(res.getStatus()).to.equal(200); });
+}

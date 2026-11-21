@@ -1,0 +1,30 @@
+meta {
+  name: TC-QR-26 - Sự kiện cấu hình qrRotationSeconds=5, qrGraceSeconds=0 -> GET /qr trả rotationSeconds=5
+  type: http
+  seq: 25
+  tags: [
+    db-fixture
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/events/{{brunoQr5sEventId}}/qr
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenOwner01}}
+}
+
+tests {
+  test("HTTP 200 OK với rotationSeconds=5 và validUntil <= attendanceCloseAt", function() {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody().rotationSeconds).to.equal(5);
+    expect(res.getBody().token).to.match(/^qr1\./);
+  });
+}
+
+docs {
+  TC-QR-26 (BVA-07): Kiểm tra phát mã QR với chu kỳ xoay vòng tối thiểu 5 giây và grace 0 giây.
+}

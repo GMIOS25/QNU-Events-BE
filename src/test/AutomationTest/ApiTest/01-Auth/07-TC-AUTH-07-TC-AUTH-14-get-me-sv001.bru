@@ -1,0 +1,35 @@
+meta {
+  name: TC-AUTH-07 & TC-AUTH-14 - GET /auth/me cho STUDENT (sv001)
+  type: http
+  seq: 7
+  tags: [
+    auth
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/auth/me
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenSv001}}
+}
+
+tests {
+  test("HTTP 200 OK và UserInfo khớp sv001", function() {
+    expect(res.getStatus()).to.equal(200);
+    const u = res.getBody();
+    expect(u.id).to.equal(bru.getVar("sv001Id"));
+    expect(u.loginId).to.equal("sv001");
+    expect(u.fullName).to.equal("Trần Sinh Viên 1");
+    expect(u.studentCode).to.equal("4901040001");
+    expect(u.roles).to.deep.equal(["STUDENT"]);
+    expect(u.classId).to.equal(bru.getEnvVar("classK49Cntt1"));
+  });
+}
+
+docs {
+  TC-AUTH-07, TC-AUTH-14: Kiểm tra đồng bộ thông tin phiên qua GET /api/v1/auth/me cho sv001.
+}

@@ -1,0 +1,42 @@
+meta {
+  name: TC-EVT-027 - Cô lập Ownership: owner02 POST /publish của owner01 -> 403
+  type: http
+  seq: 48
+  tags: [
+    events
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/events/{{evtDraftMainId}}/publish
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenOwner02}}
+}
+
+body:json {
+  {
+    "confirm": true,
+    "previewVersion": 2
+  }
+}
+
+tests {
+  test("HTTP 403 và mã lỗi FORBIDDEN", function() {
+    expect(res.getStatus()).to.equal(403);
+    const body = res.getBody();
+    expect(body).to.be.an("object");
+    expect(body.code).to.equal("FORBIDDEN");
+    expect(body.message).to.be.a("string").and.not.be.empty;
+    expect(body.traceId).to.be.a("string").and.not.be.empty;
+    expect(body.timestamp).to.be.a("string").and.not.be.empty;
+    expect(body.details).to.be.an("object");
+  });
+}
+
+docs {
+  TC-EVT-027: owner02 không được công bố sự kiện của owner01 (403 FORBIDDEN).
+}

@@ -1,0 +1,39 @@
+meta {
+  name: TC-QR-25 - sv002 (bị khóa ở evtQr01) vẫn điểm danh thành công ở evtQr03 -> 200 ACCEPTED
+  type: http
+  seq: 84
+  tags: [
+    qr
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/events/{{evtQr03}}/attendance/qr
+  body: json
+  auth: bearer
+}
+
+headers {
+  Idempotency-Key: {{freshIdemKey}}
+}
+
+auth:bearer {
+  token: {{tokenSv002}}
+}
+
+body:json {
+  {
+    "token": "{{qrToken03Fresh}}"
+  }
+}
+
+tests {
+  test("HTTP 200 ACCEPTED chứng minh bộ đếm 3 lần độc lập theo cặp (event_id, student_id)", function() {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody().status).to.equal("ACCEPTED");
+  });
+}
+
+docs {
+  TC-QR-25: Bộ đếm thử sai độc lập giữa các sự kiện khác nhau của cùng sinh viên.
+}

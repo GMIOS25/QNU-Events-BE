@@ -1,0 +1,47 @@
+meta {
+  name: [Setup] Tạo sự kiện evtListExpired
+  type: http
+  seq: 11
+  tags: [
+    event-list
+    setup
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/events
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenOwner01}}
+}
+
+body:json {
+  {
+    "title": "[BRU-{{runSuffix}}] Sự kiện Đã Hết Hạn Không Mô Tả",
+    "description": null,
+    "location": "Hội trường A - Trường ĐH Quy Nhơn",
+    "startAt": "{{expiredStartAt}}",
+    "endAt": "{{expiredEndAt}}",
+    "registrationDeadline": "{{expiredRegDeadline}}",
+    "attendanceOpenAt": "{{expiredAttOpen}}",
+    "attendanceCloseAt": "{{expiredAttClose}}",
+    "attendanceMethod": "DYNAMIC_QR",
+    "quotaTotal": 15,
+    "audienceClassIds": [
+      "{{classK49Cntt1}}"
+    ],
+    "activityType": "Hội thảo khoa học",
+    "activityPoints": 5
+  }
+}
+
+script:post-response {
+  if (res.getStatus() === 201) bru.setVar("evtListExpired", res.getBody().id);
+}
+
+tests {
+  test("Setup tạo sự kiện evtListExpired thành công (201)", function() { expect(res.getStatus()).to.equal(201); });
+}

@@ -1,0 +1,30 @@
+meta {
+  name: TC-EVT-023 - Xem trước lại phiên bản mới nhất (version 2) -> 200
+  type: http
+  seq: 49
+  tags: [
+    events
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/events/{{evtDraftMainId}}/preview
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenOwner01}}
+}
+
+tests {
+  test("HTTP 200 OK, previewVersion cập nhật lên 2", function() {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody().previewVersion).to.equal(2);
+    expect(res.getBody().event.previewedVersion).to.equal(2);
+  });
+}
+
+docs {
+  TC-EVT-023: Xem trước lại bản mới nhất (v2) trước khi công bố.
+}

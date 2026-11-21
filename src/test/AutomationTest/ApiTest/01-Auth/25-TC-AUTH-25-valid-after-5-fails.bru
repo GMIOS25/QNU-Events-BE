@@ -1,0 +1,32 @@
+meta {
+  name: TC-AUTH-25 - Lần 6 mật khẩu đúng vẫn 200 OK (phạm vi Sprint 1)
+  type: http
+  seq: 25
+  tags: [
+    auth
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/auth/login
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "loginId": "{{owner02}}",
+    "password": "{{demoPassword}}"
+  }
+}
+
+tests {
+  test("Lần thứ 6 nhập đúng mật khẩu vẫn trả 200 OK (chưa tự khóa ở Sprint 1)", function() {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody().user.loginId).to.equal("owner02");
+  });
+}
+
+docs {
+  TC-AUTH-25 (BVA-08): Xác minh sau 5 lần sai liên tiếp tài khoản ACTIVE vẫn đăng nhập được ở lần 6 theo phạm vi Sprint 1.
+}

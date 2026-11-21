@@ -1,0 +1,35 @@
+meta {
+  name: TC-AUTH-27 & TC-4.6-16 - CLASS_REPRESENTATIVE gọi GET /api/v1/me/history -> 403 FORBIDDEN
+  type: http
+  seq: 9
+  tags: [
+    db-fixture
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/me/history
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenBcs01}}
+}
+
+tests {
+  test("HTTP 403 và mã lỗi FORBIDDEN", function() {
+    expect(res.getStatus()).to.equal(403);
+    const body = res.getBody();
+    expect(body).to.be.an("object");
+    expect(body.code).to.equal("FORBIDDEN");
+    expect(body.message).to.be.a("string").and.not.be.empty;
+    expect(body.traceId).to.be.a("string").and.not.be.empty;
+    expect(body.timestamp).to.be.a("string").and.not.be.empty;
+    expect(body.details).to.be.an("object");
+  });
+}
+
+docs {
+  TC-AUTH-27, TC-4.6-16: Vai trò CLASS_REPRESENTATIVE bị chặn 403 tại /api/v1/me/history.
+}

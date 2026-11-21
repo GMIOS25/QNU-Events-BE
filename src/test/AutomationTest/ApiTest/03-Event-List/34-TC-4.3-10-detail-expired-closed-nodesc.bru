@@ -1,0 +1,32 @@
+meta {
+  name: TC-4.3-10 - Chi tiết sự kiện quá hạn đăng ký -> registrationOpen=false, description=null
+  type: http
+  seq: 34
+  tags: [
+    event-list
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/events/{{evtListExpired}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenSv001}}
+}
+
+tests {
+  test("HTTP 200 OK, registrationOpen=false, attendanceOpen=false, description=null", function() {
+    expect(res.getStatus()).to.equal(200);
+    const e = res.getBody();
+    expect(e.registrationOpen).to.equal(false);
+    expect(e.attendanceOpen).to.equal(false);
+    expect(e.description).to.equal(null);
+  });
+}
+
+docs {
+  TC-4.3-10, TC-4.3-24: Sự kiện quá hạn đăng ký trả registrationOpen=false và description=null.
+}

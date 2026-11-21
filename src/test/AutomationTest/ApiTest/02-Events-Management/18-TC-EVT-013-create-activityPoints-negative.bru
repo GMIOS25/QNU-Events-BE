@@ -1,0 +1,59 @@
+meta {
+  name: TC-EVT-013 - BVA activityPoints = -1 -> 400 VALIDATION_FAILED
+  type: http
+  seq: 18
+  tags: [
+    events
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/events
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenOwner01}}
+}
+
+body:json {
+  {
+    "title": "[BRU-{{runSuffix}}] Hội thảo AI & Khởi nghiệp 2026",
+    "description": "Nội dung chi tiết sự kiện kiểm thử tự động Bruno.",
+    "location": "Hội trường A - Trường ĐH Quy Nhơn",
+    "startAt": "{{futureStartAt}}",
+    "endAt": "{{futureEndAt}}",
+    "registrationDeadline": "{{futureRegDeadline}}",
+    "attendanceOpenAt": "{{futureAttOpen}}",
+    "attendanceCloseAt": "{{futureAttClose}}",
+    "attendanceMethod": "DYNAMIC_QR",
+    "quotaTotal": 50,
+    "audienceClassIds": [
+      "{{classK49Cntt1}}"
+    ],
+    "activityType": "Hội thảo khoa học",
+    "activityPoints": -1
+  }
+}
+
+tests {
+  test("HTTP 400 và mã lỗi VALIDATION_FAILED", function() {
+    expect(res.getStatus()).to.equal(400);
+    const body = res.getBody();
+    expect(body).to.be.an("object");
+    expect(body.code).to.equal("VALIDATION_FAILED");
+    expect(body.message).to.be.a("string").and.not.be.empty;
+    expect(body.traceId).to.be.a("string").and.not.be.empty;
+    expect(body.timestamp).to.be.a("string").and.not.be.empty;
+    expect(body.details).to.be.an("object");
+  });
+
+  test("details.fields.activityPoints báo lỗi >= 0", function() {
+    expect(res.getBody().details.fields.activityPoints).to.be.a("string").and.not.be.empty;
+  });
+}
+
+docs {
+  TC-EVT-013 (BVA-05): activityPoints âm bị @Min(0) chặn 400.
+}

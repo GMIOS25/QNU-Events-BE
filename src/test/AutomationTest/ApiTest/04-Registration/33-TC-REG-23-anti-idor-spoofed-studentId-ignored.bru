@@ -1,0 +1,35 @@
+meta {
+  name: TC-REG-23 (R9 Anti-IDOR) - Giả mạo ?studentId=sv002 và body studentId bị server bỏ qua
+  type: http
+  seq: 33
+  tags: [
+    registration
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/events/{{evtRegMulti}}/registrations?studentId={{sv002Id}}
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenSv001}}
+}
+
+body:json {
+  {
+    "studentId": "{{sv002Id}}"
+  }
+}
+
+tests {
+  test("HTTP 201 Created cho chính sv001 (server bỏ qua studentId giả mạo)", function() {
+    expect(res.getStatus()).to.equal(201);
+    expect(res.getBody().status).to.equal("REGISTERED");
+  });
+}
+
+docs {
+  TC-REG-23 (R9): Server chỉ lấy studentId từ JWT, bỏ qua tham số client.
+}

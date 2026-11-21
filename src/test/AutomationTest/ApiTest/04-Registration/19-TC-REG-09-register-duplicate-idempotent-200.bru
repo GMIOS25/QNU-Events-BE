@@ -1,0 +1,32 @@
+meta {
+  name: TC-REG-09 - Đăng ký lặp lần 2 cùng sv001 -> 200 OK & alreadyRegistered=true
+  type: http
+  seq: 19
+  tags: [
+    registration
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/events/{{evtRegE1}}/registrations
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenSv001}}
+}
+
+tests {
+  test("HTTP 200 OK (không phải 201), giữ nguyên id cũ, alreadyRegistered=true", function() {
+    expect(res.getStatus()).to.equal(200);
+    const b = res.getBody();
+    expect(b.id).to.equal(bru.getVar("sv001RegE1Id"));
+    expect(b.status).to.equal("REGISTERED");
+    expect(b.alreadyRegistered).to.equal(true);
+  });
+}
+
+docs {
+  TC-REG-09: Đăng ký lặp bởi cùng sinh viên mang tính idempotent, trả 200 và alreadyRegistered=true.
+}

@@ -1,0 +1,50 @@
+meta {
+  name: TC-EVT-029 - BVA location 1 char, +1s, deadline == attClose -> 201
+  type: http
+  seq: 23
+  tags: [
+    events
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/events
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenOwner01}}
+}
+
+body:json {
+  {
+    "title": "[BRU-{{runSuffix}}] BVA Min Boundaries",
+    "description": "Nội dung chi tiết sự kiện kiểm thử tự động Bruno.",
+    "location": "A",
+    "startAt": "{{bvaStartAt}}",
+    "endAt": "{{bvaEndAtPlus1s}}",
+    "registrationDeadline": "{{bvaAttClosePlus1s}}",
+    "attendanceOpenAt": "{{bvaAttOpen}}",
+    "attendanceCloseAt": "{{bvaAttClosePlus1s}}",
+    "attendanceMethod": "DYNAMIC_QR",
+    "quotaTotal": 50,
+    "audienceClassIds": [
+      "{{classK49Cntt1}}"
+    ],
+    "activityType": "Hội thảo khoa học",
+    "activityPoints": 5
+  }
+}
+
+tests {
+  test("HTTP 201 Created với location 1 ký tự, endAt=startAt+1s, deadline==attendanceCloseAt", function() {
+    expect(res.getStatus()).to.equal(201);
+    expect(res.getBody().location).to.equal("A");
+    expect(res.getBody().status).to.equal("DRAFT");
+  });
+}
+
+docs {
+  TC-EVT-029 (BVA-02/06/07/08): Kiểm định các giá trị tại biên hợp lệ tối thiểu và dấu bằng deadline == attendanceCloseAt.
+}

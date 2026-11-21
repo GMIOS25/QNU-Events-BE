@@ -1,0 +1,23 @@
+meta {
+  name: [Setup] Preview sự kiện evtQr02
+  type: http
+  seq: 7
+  tags: [
+    qr
+    setup
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/events/{{evtQr02}}/preview
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenOwner02}}
+}
+
+tests {
+  test("Setup preview evtQr02 (200)", function() { expect(res.getStatus()).to.equal(200); });
+}

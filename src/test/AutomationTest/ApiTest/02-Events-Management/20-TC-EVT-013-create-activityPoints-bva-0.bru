@@ -1,0 +1,49 @@
+meta {
+  name: TC-EVT-013 - BVA activityPoints = 0 -> 201 Created
+  type: http
+  seq: 20
+  tags: [
+    events
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/events
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenOwner01}}
+}
+
+body:json {
+  {
+    "title": "[BRU-{{runSuffix}}] BVA Points 0",
+    "description": "Nội dung chi tiết sự kiện kiểm thử tự động Bruno.",
+    "location": "Hội trường A - Trường ĐH Quy Nhơn",
+    "startAt": "{{futureStartAt}}",
+    "endAt": "{{futureEndAt}}",
+    "registrationDeadline": "{{futureRegDeadline}}",
+    "attendanceOpenAt": "{{futureAttOpen}}",
+    "attendanceCloseAt": "{{futureAttClose}}",
+    "attendanceMethod": "DYNAMIC_QR",
+    "quotaTotal": 50,
+    "audienceClassIds": [
+      "{{classK49Cntt1}}"
+    ],
+    "activityType": "Hoạt động phong trào",
+    "activityPoints": 0
+  }
+}
+
+tests {
+  test("HTTP 201 Created với activityPoints = 0", function() {
+    expect(res.getStatus()).to.equal(201);
+    expect(res.getBody().activityPoints).to.equal(0);
+  });
+}
+
+docs {
+  TC-EVT-013 (BVA-05): activityPoints = 0 là giá trị biên hợp lệ.
+}

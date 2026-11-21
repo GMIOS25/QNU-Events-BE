@@ -1,0 +1,31 @@
+meta {
+  name: TC-4.6 (QE-72 HistoryIT #10) - Lọc upcoming=false (chỉ sự kiện đã bắt đầu/đã qua)
+  type: http
+  seq: 31
+  tags: [
+    history
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/me/history?upcoming=false&size=100
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenSv001}}
+}
+
+tests {
+  test("Chỉ trả về sự kiện startAt <= now (gồm evtHistAccepted, loại evtHistNotChecked)", function() {
+    expect(res.getStatus()).to.equal(200);
+    const ids = res.getBody().content.map((i) => i.eventId);
+    expect(ids).to.include(bru.getVar("evtHistAccepted"));
+    expect(ids).to.not.include(bru.getVar("evtHistNotChecked"));
+  });
+}
+
+docs {
+  QE-72 / HistoryIT #10: Lọc lịch sử sự kiện đã bắt đầu/đã qua (upcoming=false).
+}

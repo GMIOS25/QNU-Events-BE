@@ -1,0 +1,33 @@
+meta {
+  name: [Setup] Lấy mã QR epoch N cho kiểm thử Grace Period (TC-QR-11) & Expired (TC-QR-12)
+  type: http
+  seq: 85
+  tags: [
+    qr
+    setup
+    slow
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/events/{{evtQrGrace}}/qr
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenOwner01}}
+}
+
+script:post-response {
+  if (res.getStatus() === 200) {
+    const b = res.getBody();
+    bru.setVar("qrGraceToken", b.token);
+    bru.setVar("qrGraceEpoch", String(b.epoch));
+    bru.setVar("qrClockOffsetMs", String(new Date(b.serverTime).getTime() - Date.now()));
+  }
+}
+
+tests {
+  test("Lấy QR epoch N thành công (200)", function() { expect(res.getStatus()).to.equal(200); });
+}

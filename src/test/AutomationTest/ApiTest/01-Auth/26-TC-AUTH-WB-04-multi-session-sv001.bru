@@ -1,0 +1,47 @@
+meta {
+  name: TC-AUTH-WB-04 - Đăng nhập phiên thứ 2 cho sv001 (sid độc lập)
+  type: http
+  seq: 26
+  tags: [
+    auth
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/auth/login
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "loginId": "{{sv001}}",
+    "password": "{{demoPassword}}"
+  }
+}
+
+script:post-response {
+  if (res.getStatus() === 200) {
+    bru.setVar("tokenSv001Temp", res.getBody().accessToken);
+  }
+}
+
+tests {
+  function decodeJwtPart(part) {
+    const b64 = part.replace(/-/g, "+").replace(/_/g, "/");
+    const pad = b64.length % 4 === 0 ? "" : "=".repeat(4 - (b64.length % 4));
+    const CryptoJS = require("crypto-js");
+    return JSON.parse(CryptoJS.enc.Base64.parse(b64 + pad).toString(CryptoJS.enc.Utf8));
+  }
+
+  test("Tạo auth_session độc lập có sid khác phiên 1", function() {
+    expect(res.getStatus()).to.equal(200);
+    const payload = decodeJwtPart(res.getBody().accessToken.split(".")[1]);
+    expect(payload.sid).to.be.a("string");
+    expect(payload.sid).to.not.equal(bru.getVar("sv001Sid1"));
+  });
+}
+
+docs {
+  TC-AUTH-WB-04: Đăng nhập nhiều phiên đồng thời cho cùng user tạo 2 session ID (sid) độc lập.
+}

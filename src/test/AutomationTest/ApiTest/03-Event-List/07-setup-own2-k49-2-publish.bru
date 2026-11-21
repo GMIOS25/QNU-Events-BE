@@ -1,0 +1,30 @@
+meta {
+  name: [Setup] Công bố sự kiện evtListOwn2K49_2
+  type: http
+  seq: 7
+  tags: [
+    event-list
+    setup
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/events/{{evtListOwn2K49_2}}/publish
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenOwner02}}
+}
+
+body:json {
+  {
+    "confirm": true,
+    "previewVersion": 0
+  }
+}
+
+tests {
+  test("Setup publish evtListOwn2K49_2 thành công (200)", function() { expect(res.getStatus()).to.equal(200); expect(res.getBody().status).to.equal("PUBLISHED"); });
+}

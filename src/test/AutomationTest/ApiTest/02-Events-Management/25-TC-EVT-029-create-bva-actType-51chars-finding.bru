@@ -1,0 +1,55 @@
+meta {
+  name: TC-EVT-029 & WB-03 - BVA activityType 51 chars (Finding thiếu @Size max 50)
+  type: http
+  seq: 25
+  tags: [
+    events
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/events
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenOwner01}}
+}
+
+body:json {
+  {
+    "title": "[BRU-{{runSuffix}}] BVA Act51",
+    "description": "Nội dung chi tiết sự kiện kiểm thử tự động Bruno.",
+    "location": "Hội trường A - Trường ĐH Quy Nhơn",
+    "startAt": "{{futureStartAt}}",
+    "endAt": "{{futureEndAt}}",
+    "registrationDeadline": "{{futureRegDeadline}}",
+    "attendanceOpenAt": "{{futureAttOpen}}",
+    "attendanceCloseAt": "{{futureAttClose}}",
+    "attendanceMethod": "DYNAMIC_QR",
+    "quotaTotal": 50,
+    "audienceClassIds": [
+      "{{classK49Cntt1}}"
+    ],
+    "activityType": "{{actType51}}",
+    "activityPoints": 5
+  }
+}
+
+script:pre-request {
+  bru.setVar("actType51", "T".repeat(51));
+}
+
+tests {
+  test("Bị từ chối và không lộ stack trace (500 INTERNAL_ERROR theo code hiện tại hoặc 400 nếu đã thêm @Size)", function() {
+    expect([400, 500]).to.include(res.getStatus());
+    const b = res.getBody();
+    expect(["VALIDATION_FAILED", "INTERNAL_ERROR"]).to.include(b.code);
+    expect(JSON.stringify(b)).to.not.include("DataIntegrityViolationException");
+  });
+}
+
+docs {
+  TC-EVT-029, TC-EVT-WB-03: activityType 51 ký tự vượt DB varchar(50). Ghi nhận White-box Finding nếu trả 500 thay vì 400.
+}

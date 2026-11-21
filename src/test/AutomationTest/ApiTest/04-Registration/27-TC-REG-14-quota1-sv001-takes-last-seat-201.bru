@@ -1,0 +1,33 @@
+meta {
+  name: TC-REG-14 - BVA Quota=1: sv001 giữ suất duy nhất -> 201 Created
+  type: http
+  seq: 27
+  tags: [
+    registration
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/events/{{evtRegE2}}/registrations
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenSv001}}
+}
+
+script:post-response {
+  if (res.getStatus() === 201) bru.setVar("sv001RegE2Id", res.getBody().id);
+}
+
+tests {
+  test("sv001 lấy suất cuối thành công 201 Created", function() {
+    expect(res.getStatus()).to.equal(201);
+    expect(res.getBody().status).to.equal("REGISTERED");
+  });
+}
+
+docs {
+  TC-REG-14 (BVA-02): sv001 lấy suất cuối cùng của sự kiện E2 (quotaTotal=1).
+}

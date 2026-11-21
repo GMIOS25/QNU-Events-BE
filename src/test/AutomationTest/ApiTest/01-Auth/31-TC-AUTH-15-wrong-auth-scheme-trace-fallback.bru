@@ -1,0 +1,41 @@
+meta {
+  name: TC-AUTH-15 & WB-22 - Sai scheme Basic + X-Trace-Id -> 401 UNAUTHENTICATED
+  type: http
+  seq: 31
+  tags: [
+    auth
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/auth/me
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Basic YWJjOjEyMw==
+  X-Trace-Id: trace-auth-02
+}
+
+tests {
+  test("HTTP 401 và mã lỗi UNAUTHENTICATED", function() {
+    expect(res.getStatus()).to.equal(401);
+    const body = res.getBody();
+    expect(body).to.be.an("object");
+    expect(body.code).to.equal("UNAUTHENTICATED");
+    expect(body.message).to.be.a("string").and.not.be.empty;
+    expect(body.message).to.equal("Yêu cầu đăng nhập để thực hiện.");
+    expect(body.traceId).to.be.a("string").and.not.be.empty;
+    expect(body.timestamp).to.be.a("string").and.not.be.empty;
+    expect(body.details).to.be.an("object");
+  });
+
+  test("Fallback traceId sang header X-Trace-Id", function() {
+    expect(res.getBody().traceId).to.equal("trace-auth-02");
+  });
+}
+
+docs {
+  TC-AUTH-15, TC-AUTH-WB-22: Scheme Basic bị từ chối 401 và dùng X-Trace-Id khi thiếu X-Request-Id.
+}

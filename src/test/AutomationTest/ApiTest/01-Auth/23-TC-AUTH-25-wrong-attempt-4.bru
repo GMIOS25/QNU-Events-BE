@@ -1,0 +1,38 @@
+meta {
+  name: TC-AUTH-25 - Đăng nhập sai lần 4/5 (owner02) -> 401
+  type: http
+  seq: 23
+  tags: [
+    auth
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/auth/login
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "loginId": "{{owner02}}",
+    "password": "WrongAttempt@4"
+  }
+}
+
+tests {
+  test("HTTP 401 và mã lỗi INVALID_CREDENTIALS", function() {
+    expect(res.getStatus()).to.equal(401);
+    const body = res.getBody();
+    expect(body).to.be.an("object");
+    expect(body.code).to.equal("INVALID_CREDENTIALS");
+    expect(body.message).to.be.a("string").and.not.be.empty;
+    expect(body.traceId).to.be.a("string").and.not.be.empty;
+    expect(body.timestamp).to.be.a("string").and.not.be.empty;
+    expect(body.details).to.be.an("object");
+  });
+}
+
+docs {
+  TC-AUTH-25 (BVA-08): Lần sai 4/5 trong phạm vi Sprint 1 (chưa tự khóa REQ-AUTH-015).
+}

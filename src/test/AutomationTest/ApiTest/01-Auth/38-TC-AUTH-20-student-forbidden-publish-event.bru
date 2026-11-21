@@ -1,0 +1,43 @@
+meta {
+  name: TC-AUTH-20 - RBAC STUDENT gọi POST /events/id/publish -> 403 + Audit
+  type: http
+  seq: 38
+  tags: [
+    auth
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/events/{{nonExistentUuid}}/publish
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenSv001}}
+}
+
+body:json {
+  {
+    "confirm": true,
+    "previewVersion": 0
+  }
+}
+
+tests {
+  test("HTTP 403 và mã lỗi FORBIDDEN", function() {
+    expect(res.getStatus()).to.equal(403);
+    const body = res.getBody();
+    expect(body).to.be.an("object");
+    expect(body.code).to.equal("FORBIDDEN");
+    expect(body.message).to.be.a("string").and.not.be.empty;
+    expect(body.message).to.equal("Bạn không có quyền thực hiện thao tác này.");
+    expect(body.traceId).to.be.a("string").and.not.be.empty;
+    expect(body.timestamp).to.be.a("string").and.not.be.empty;
+    expect(body.details).to.be.an("object");
+  });
+}
+
+docs {
+  TC-AUTH-20 & TC-AUTH-WB-21: Sinh viên gọi POST /publish bị chặn 403 FORBIDDEN và AccessDeniedHandler ghi audit EVENT_PUBLISH_DENIED.
+}

@@ -1,0 +1,50 @@
+meta {
+  name: TC-QR-10 & TC-QR-23 - Điểm danh lần 2 với Idempotency-Key mới (token sai) -> 409 ALREADY_CHECKED_IN
+  type: http
+  seq: 79
+  tags: [
+    qr
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/events/{{evtQr01}}/attendance/qr
+  body: json
+  auth: bearer
+}
+
+headers {
+  Idempotency-Key: {{freshIdemKey}}
+}
+
+auth:bearer {
+  token: {{tokenSv001}}
+}
+
+body:json {
+  {
+    "token": "malformed"
+  }
+}
+
+tests {
+  test("HTTP 409 và mã lỗi ALREADY_CHECKED_IN", function() {
+    expect(res.getStatus()).to.equal(409);
+    const body = res.getBody();
+    expect(body).to.be.an("object");
+    expect(body.code).to.equal("ALREADY_CHECKED_IN");
+    expect(body.message).to.be.a("string").and.not.be.empty;
+    expect(body.message).to.equal("Bạn đã điểm danh sự kiện này rồi.");
+    expect(body.traceId).to.be.a("string").and.not.be.empty;
+    expect(body.timestamp).to.be.a("string").and.not.be.empty;
+    expect(body.details).to.be.an("object");
+  });
+
+  test("Ưu tiên ALREADY_CHECKED_IN trước QR_MALFORMED và counted=false", function() {
+    expect(res.getBody().details).to.not.have.property("attemptCount");
+  });
+}
+
+docs {
+  TC-QR-10, TC-QR-23: Sau khi đã ACCEPTED, gửi key mới luôn trả 409 ALREADY_CHECKED_IN trước khi verify token.
+}

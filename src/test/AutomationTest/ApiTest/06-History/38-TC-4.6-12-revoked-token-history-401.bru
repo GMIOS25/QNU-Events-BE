@@ -1,0 +1,35 @@
+meta {
+  name: TC-4.6-12 - Token đã logout GET /me/history -> 401 SESSION_REVOKED
+  type: http
+  seq: 38
+  tags: [
+    history
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/me/history
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenSv001Revoked}}
+}
+
+tests {
+  test("HTTP 401 và mã lỗi SESSION_REVOKED", function() {
+    expect(res.getStatus()).to.equal(401);
+    const body = res.getBody();
+    expect(body).to.be.an("object");
+    expect(body.code).to.equal("SESSION_REVOKED");
+    expect(body.message).to.be.a("string").and.not.be.empty;
+    expect(body.traceId).to.be.a("string").and.not.be.empty;
+    expect(body.timestamp).to.be.a("string").and.not.be.empty;
+    expect(body.details).to.be.an("object");
+  });
+}
+
+docs {
+  TC-4.6-12: Phiên đã thu hồi bị từ chối 401 SESSION_REVOKED.
+}

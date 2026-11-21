@@ -1,0 +1,48 @@
+meta {
+  name: TC-QR-01 & TC-QR-02 - Owner01 lấy mã Dynamic QR (cấu trúc qr1.uuid.epoch.sig)
+  type: http
+  seq: 34
+  tags: [
+    qr
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/events/{{evtQr01}}/qr
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenOwner01}}
+}
+
+script:post-response {
+  if (res.getStatus() === 200) {
+    const b = res.getBody();
+    bru.setVar("qrToken01", b.token);
+    bru.setVar("qrSig01", b.token.split(".")[3]);
+  }
+}
+
+tests {
+  test("HTTP 200 OK, đúng cấu trúc 4 phần qr1.<uuid>.<epoch>.<base64url-no-pad>, rotation=10s", function() {
+    expect(res.getStatus()).to.equal(200);
+    const b = res.getBody();
+    expect(b.rotationSeconds).to.equal(10);
+    expect(b.epoch).to.be.a("number");
+    expect(b.validUntil).to.match(/Z$/);
+    expect(b.serverTime).to.match(/Z$/);
+    const parts = b.token.split(".");
+    expect(parts).to.have.lengthOf(4);
+    expect(parts[0]).to.equal("qr1");
+    expect(parts[1]).to.equal(bru.getVar("evtQr01"));
+    expect(parts[2]).to.equal(String(b.epoch));
+    expect(parts[3]).to.match(/^[A-Za-z0-9_-]+$/);
+    expect(parts[3]).to.not.include("=");
+  });
+}
+
+docs {
+  TC-QR-01, TC-QR-02: Kiểm tra phát mã Dynamic QR hợp lệ và định dạng chữ ký HMAC-SHA256 không padding.
+}

@@ -1,0 +1,23 @@
+meta {
+  name: [Setup] Xem trước sự kiện evtListOwn2K49_2
+  type: http
+  seq: 6
+  tags: [
+    event-list
+    setup
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/events/{{evtListOwn2K49_2}}/preview
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenOwner02}}
+}
+
+tests {
+  test("Setup preview evtListOwn2K49_2 thành công (200)", function() { expect(res.getStatus()).to.equal(200); });
+}

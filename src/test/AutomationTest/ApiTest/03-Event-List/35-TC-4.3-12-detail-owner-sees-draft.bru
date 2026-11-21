@@ -1,0 +1,32 @@
+meta {
+  name: TC-4.3-12 - Owner01 xem chi tiết sự kiện DRAFT của mình -> 200 OK
+  type: http
+  seq: 35
+  tags: [
+    event-list
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/events/{{evtListDraftK49}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenOwner01}}
+}
+
+tests {
+  test("HTTP 200 OK cho DRAFT với registrationOpen=false và attendanceOpen=false", function() {
+    expect(res.getStatus()).to.equal(200);
+    const e = res.getBody();
+    expect(e.status).to.equal("DRAFT");
+    expect(e.registrationOpen).to.equal(false);
+    expect(e.attendanceOpen).to.equal(false);
+  });
+}
+
+docs {
+  TC-4.3-12: Chủ sự kiện xem được chi tiết bản nháp của chính mình.
+}

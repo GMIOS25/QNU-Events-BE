@@ -1,0 +1,50 @@
+meta {
+  name: TC-QR-08 - Sinh viên WAITING_LIST điểm danh QR -> 403 NOT_REGISTERED
+  type: http
+  seq: 24
+  tags: [
+    db-fixture
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/events/{{brunoActiveEventId}}/attendance/qr
+  body: json
+  auth: bearer
+}
+
+headers {
+  Idempotency-Key: {{freshIdemKey}}
+}
+
+auth:bearer {
+  token: {{tokenSvWaiting}}
+}
+
+body:json {
+  {
+    "token": "qr1.{{brunoActiveEventId}}.100.any"
+  }
+}
+
+tests {
+  test("HTTP 403 và mã lỗi NOT_REGISTERED", function() {
+    expect(res.getStatus()).to.equal(403);
+    const body = res.getBody();
+    expect(body).to.be.an("object");
+    expect(body.code).to.equal("NOT_REGISTERED");
+    expect(body.message).to.be.a("string").and.not.be.empty;
+    expect(body.message).to.equal("Bạn chưa có suất đăng ký sự kiện này.");
+    expect(body.traceId).to.be.a("string").and.not.be.empty;
+    expect(body.timestamp).to.be.a("string").and.not.be.empty;
+    expect(body.details).to.be.an("object");
+  });
+
+  test("counted=false không trừ lượt thử", function() {
+    expect(res.getBody().details).to.not.have.property("attemptCount");
+  });
+}
+
+docs {
+  TC-QR-08 (EP-06-I2): Chỉ đăng ký trạng thái REGISTERED mới được điểm danh; WAITING_LIST bị chặn 403 NOT_REGISTERED.
+}

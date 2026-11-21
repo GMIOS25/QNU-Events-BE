@@ -1,0 +1,30 @@
+meta {
+  name: TC-4.3-23 & WB-07 - GET /api/v1/events/not-a-uuid (ẩn stack trace)
+  type: http
+  seq: 32
+  tags: [
+    event-list
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/events/not-a-uuid
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenSv001}}
+}
+
+tests {
+  test("Trả ApiError không lộ stack trace", function() {
+    expect([400, 500]).to.include(res.getStatus());
+    expect(["VALIDATION_FAILED", "INTERNAL_ERROR"]).to.include(res.getBody().code);
+    expect(JSON.stringify(res.getBody())).to.not.include("IllegalArgumentException");
+  });
+}
+
+docs {
+  TC-4.3-23, TC-4.3-WB-07: UUID đường dẫn sai định dạng không lộ stack trace.
+}

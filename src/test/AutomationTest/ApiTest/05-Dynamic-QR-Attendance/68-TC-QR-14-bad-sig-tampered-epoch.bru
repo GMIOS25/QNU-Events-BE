@@ -1,0 +1,50 @@
+meta {
+  name: TC-QR-14 - QR_BAD_SIGNATURE: sửa epoch giữ nguyên chữ ký -> 422
+  type: http
+  seq: 68
+  tags: [
+    qr
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/events/{{evtQrMalB}}/attendance/qr
+  body: json
+  auth: bearer
+}
+
+headers {
+  Idempotency-Key: {{freshIdemKey}}
+}
+
+auth:bearer {
+  token: {{tokenSv002}}
+}
+
+body:json {
+  {
+    "token": "{{qrBadSigEpochTampered}}"
+  }
+}
+
+tests {
+  test("HTTP 422 và mã lỗi QR_BAD_SIGNATURE", function() {
+    expect(res.getStatus()).to.equal(422);
+    const body = res.getBody();
+    expect(body).to.be.an("object");
+    expect(body.code).to.equal("QR_BAD_SIGNATURE");
+    expect(body.message).to.be.a("string").and.not.be.empty;
+    expect(body.message).to.equal("Chữ ký mã QR không hợp lệ.");
+    expect(body.traceId).to.be.a("string").and.not.be.empty;
+    expect(body.timestamp).to.be.a("string").and.not.be.empty;
+    expect(body.details).to.be.an("object");
+  });
+
+  test("attemptCount tăng lên 2", function() {
+    expect(res.getBody().details.attemptCount).to.equal(2);
+  });
+}
+
+docs {
+  TC-QR-14: Thay đổi epoch mà giữ chữ ký cũ bị từ chối 422 QR_BAD_SIGNATURE.
+}

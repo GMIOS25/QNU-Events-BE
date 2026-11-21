@@ -1,0 +1,51 @@
+meta {
+  name: TC-EVT-022 - Chỉnh sửa sau khi xem trước làm version tăng 1 -> 2
+  type: http
+  seq: 42
+  tags: [
+    events
+  ]
+}
+
+put {
+  url: {{baseUrl}}/api/v1/events/{{evtDraftMainId}}
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenOwner01}}
+}
+
+body:json {
+  {
+    "title": "[BRU-{{runSuffix}}] Hội thảo AI (Sửa sau preview v2)",
+    "description": "Nội dung chi tiết sự kiện kiểm thử tự động Bruno.",
+    "location": "Hội trường A - Trường ĐH Quy Nhơn",
+    "startAt": "{{futureStartAt}}",
+    "endAt": "{{futureEndAt}}",
+    "registrationDeadline": "{{futureRegDeadline}}",
+    "attendanceOpenAt": "{{futureAttOpen}}",
+    "attendanceCloseAt": "{{futureAttClose}}",
+    "attendanceMethod": "DYNAMIC_QR",
+    "quotaTotal": 60,
+    "audienceClassIds": [
+      "{{classK49Cntt1}}"
+    ],
+    "activityType": "Hội thảo khoa học",
+    "activityPoints": 5,
+    "version": 1
+  }
+}
+
+tests {
+  test("HTTP 200 OK, version = 2 trong khi previewedVersion vẫn là 1", function() {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody().version).to.equal(2);
+    expect(res.getBody().previewedVersion).to.equal(1);
+  });
+}
+
+docs {
+  TC-EVT-022: Sửa sự kiện sau preview khiến previewedVersion (1) < version (2).
+}

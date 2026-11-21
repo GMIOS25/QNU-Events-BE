@@ -1,0 +1,25 @@
+meta {
+  name: TC-AUTH-28 & WB-22 - Public GET /v3/api-docs trên profile dev -> 200 OK
+  type: http
+  seq: 50
+  tags: [
+    auth
+  ]
+}
+
+get {
+  url: {{baseUrl}}/v3/api-docs
+  body: none
+  auth: none
+}
+
+tests {
+  test("GET /v3/api-docs mở trên profile dev (springdoc.api-docs.enabled=true)", function() {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody().openapi).to.match(/^3\./);
+  });
+}
+
+docs {
+  TC-AUTH-28, TC-AUTH-WB-22: Kiểm tra OpenAPI docs mở công khai khi chạy profile dev.
+}

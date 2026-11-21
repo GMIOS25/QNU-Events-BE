@@ -1,0 +1,27 @@
+meta {
+  name: [Setup] Lấy mã QR hợp lệ mới nhất của evtQr01
+  type: http
+  seq: 75
+  tags: [
+    qr
+    setup
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/events/{{evtQr01}}/qr
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenOwner01}}
+}
+
+script:post-response {
+  if (res.getStatus() === 200) bru.setVar("qrToken01Fresh", res.getBody().token);
+}
+
+tests {
+  test("Lấy QR mới evtQr01 (200)", function() { expect(res.getStatus()).to.equal(200); });
+}

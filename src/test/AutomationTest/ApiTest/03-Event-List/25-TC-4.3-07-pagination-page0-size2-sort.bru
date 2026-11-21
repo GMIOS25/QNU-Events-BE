@@ -1,0 +1,42 @@
+meta {
+  name: TC-4.3-07 - Phân trang page=0&size=2&sort=startAt,desc
+  type: http
+  seq: 25
+  tags: [
+    event-list
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/events?q={{runSuffix}}&page=0&size=2&sort=startAt,desc
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenOwner01}}
+}
+
+script:post-response {
+  if (res.getStatus() === 200) {
+    bru.setVar("evtListPage0Ids", JSON.stringify(res.getBody().content.map((i) => i.id)));
+  }
+}
+
+tests {
+  test("HTTP 200 OK, size=2, number=0, totalElements>=3, sắp xếp startAt giảm dần", function() {
+    expect(res.getStatus()).to.equal(200);
+    const p = res.getBody();
+    expect(p.size).to.equal(2);
+    expect(p.number).to.equal(0);
+    expect(p.content).to.have.lengthOf(2);
+    expect(p.totalElements).to.be.at.least(3);
+    const t0 = new Date(p.content[0].startAt).getTime();
+    const t1 = new Date(p.content[1].startAt).getTime();
+    expect(t0).to.be.at.least(t1);
+  });
+}
+
+docs {
+  TC-4.3-07: Kiểm tra phân trang và sắp xếp startAt giảm dần trang 0.
+}

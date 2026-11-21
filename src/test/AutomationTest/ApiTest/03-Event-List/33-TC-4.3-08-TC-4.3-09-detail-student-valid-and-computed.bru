@@ -1,0 +1,42 @@
+meta {
+  name: TC-4.3-08 & TC-4.3-09 - SV xem chi tiết sự kiện & các trường tính toán động từ server
+  type: http
+  seq: 33
+  tags: [
+    event-list
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/events/{{evtListPubK49}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenSv001}}
+}
+
+tests {
+  test("HTTP 200 OK và đủ tất cả trường EventDetail + computed fields", function() {
+    expect(res.getStatus()).to.equal(200);
+    const e = res.getBody();
+    expect(e.id).to.equal(bru.getVar("evtListPubK49"));
+    expect(e.status).to.equal("PUBLISHED");
+    expect(e.description).to.equal("Mô tả chi tiết hội thảo AI 4.3");
+    expect(e.quotaTotal).to.equal(10);
+    expect(e.registeredCount).to.equal(0);
+    expect(e.remainingQuota).to.equal(10);
+    expect(e.registrationOpen).to.equal(true);
+    expect(e.attendanceOpen).to.equal(true);
+    expect(e.myRegistrationStatus).to.equal(null);
+    expect(e.eligible).to.equal(true);
+    expect(e.audienceClasses).to.be.an("array").and.have.lengthOf(1);
+    expect(e.audienceClasses[0].code).to.equal("K49CNTT1");
+    expect(e.startAt).to.match(/Z$/);
+  });
+}
+
+docs {
+  TC-4.3-08, TC-4.3-09: Kiểm tra đầy đủ EventDetail, remainingQuota, registrationOpen, attendanceOpen, audienceClasses và eligible.
+}

@@ -1,0 +1,55 @@
+meta {
+  name: TC-EVT-029 - BVA location 300 chars & activityType 50 chars -> 201
+  type: http
+  seq: 24
+  tags: [
+    events
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/events
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenOwner01}}
+}
+
+body:json {
+  {
+    "title": "[BRU-{{runSuffix}}] BVA Max Loc300 Act50",
+    "description": "Nội dung chi tiết sự kiện kiểm thử tự động Bruno.",
+    "location": "{{location300}}",
+    "startAt": "{{futureStartAt}}",
+    "endAt": "{{futureEndAt}}",
+    "registrationDeadline": "{{futureRegDeadline}}",
+    "attendanceOpenAt": "{{futureAttOpen}}",
+    "attendanceCloseAt": "{{futureAttClose}}",
+    "attendanceMethod": "DYNAMIC_QR",
+    "quotaTotal": 50,
+    "audienceClassIds": [
+      "{{classK49Cntt1}}"
+    ],
+    "activityType": "{{actType50}}",
+    "activityPoints": 5
+  }
+}
+
+script:pre-request {
+  bru.setVar("location300", "L".repeat(300));
+  bru.setVar("actType50", "T".repeat(50));
+}
+
+tests {
+  test("HTTP 201 Created với location=300 và activityType=50 ký tự", function() {
+    expect(res.getStatus()).to.equal(201);
+    expect(res.getBody().location.length).to.equal(300);
+    expect(res.getBody().activityType.length).to.equal(50);
+  });
+}
+
+docs {
+  TC-EVT-029 (BVA-02/03): Giá trị biên tối đa hợp lệ cho location (300) và activityType (50).
+}

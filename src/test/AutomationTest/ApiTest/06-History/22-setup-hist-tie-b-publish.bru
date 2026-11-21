@@ -1,0 +1,30 @@
+meta {
+  name: [Setup] Publish sự kiện evtHistTieB
+  type: http
+  seq: 22
+  tags: [
+    history
+    setup
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/events/{{evtHistTieB}}/publish
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenOwner01}}
+}
+
+body:json {
+  {
+    "confirm": true,
+    "previewVersion": 0
+  }
+}
+
+tests {
+  test("Setup publish evtHistTieB (200)", function() { expect(res.getStatus()).to.equal(200); });
+}

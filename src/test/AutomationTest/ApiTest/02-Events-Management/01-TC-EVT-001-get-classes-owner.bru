@@ -1,0 +1,38 @@
+meta {
+  name: TC-EVT-001 & WB-04 - EVENT_OWNER lấy danh sách lớp GET /api/v1/classes
+  type: http
+  seq: 1
+  tags: [
+    events
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/classes
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenOwner01}}
+}
+
+tests {
+  test("HTTP 200 OK và có đủ K49CNTT1, K49CNTT2 đúng cấu trúc ClassResponse", function() {
+    expect(res.getStatus()).to.equal(200);
+    const list = res.getBody();
+    expect(list).to.be.an("array").and.have.length.at.least(2);
+    const c1 = list.find((c) => c.code === "K49CNTT1");
+    const c2 = list.find((c) => c.code === "K49CNTT2");
+    expect(c1).to.be.an("object");
+    expect(c1.id).to.equal(bru.getEnvVar("classK49Cntt1"));
+    expect(c1.facultyName).to.be.a("string").and.not.be.empty;
+    expect(c1).to.not.have.property("cohortYear");
+    expect(c2).to.be.an("object");
+    expect(c2.id).to.equal(bru.getEnvVar("classK49Cntt2"));
+  });
+}
+
+docs {
+  TC-EVT-001, TC-EVT-WB-04: Lấy danh sách lớp cho form tạo sự kiện.
+}

@@ -1,0 +1,51 @@
+meta {
+  name: TC-QR-17 - Lần sai 2/3 (sv002): token sai chữ ký -> 422 attemptCount=2
+  type: http
+  seq: 73
+  tags: [
+    qr
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/events/{{evtQr01}}/attendance/qr
+  body: json
+  auth: bearer
+}
+
+headers {
+  Idempotency-Key: {{freshIdemKey}}
+}
+
+auth:bearer {
+  token: {{tokenSv002}}
+}
+
+body:json {
+  {
+    "token": "{{qrBadSigTampered}}"
+  }
+}
+
+tests {
+  test("HTTP 422 và mã lỗi QR_BAD_SIGNATURE", function() {
+    expect(res.getStatus()).to.equal(422);
+    const body = res.getBody();
+    expect(body).to.be.an("object");
+    expect(body.code).to.equal("QR_BAD_SIGNATURE");
+    expect(body.message).to.be.a("string").and.not.be.empty;
+    expect(body.traceId).to.be.a("string").and.not.be.empty;
+    expect(body.timestamp).to.be.a("string").and.not.be.empty;
+    expect(body.details).to.be.an("object");
+  });
+
+  test("attemptCount=2, remainingAttempts=1, canRetry=true", function() {
+    expect(res.getBody().details.attemptCount).to.equal(2);
+    expect(res.getBody().details.remainingAttempts).to.equal(1);
+    expect(res.getBody().details.canRetry).to.equal(true);
+  });
+}
+
+docs {
+  TC-QR-17: Lần thử sai thứ 2 tăng bộ đếm lên 2/3.
+}

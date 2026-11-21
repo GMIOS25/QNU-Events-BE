@@ -1,0 +1,51 @@
+meta {
+  name: TC-QR-23 - (evtQr03, sv001) Lần thử sai 2/3 -> 422
+  type: http
+  seq: 81
+  tags: [
+    qr
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/events/{{evtQr03}}/attendance/qr
+  body: json
+  auth: bearer
+}
+
+headers {
+  Idempotency-Key: {{freshIdemKey}}
+}
+
+auth:bearer {
+  token: {{tokenSv001}}
+}
+
+body:json {
+  {
+    "token": "qr1.{{evtQr03}}.100.wrong-sig"
+  }
+}
+
+tests {
+  test("HTTP 422 và mã lỗi QR_BAD_SIGNATURE", function() {
+    expect(res.getStatus()).to.equal(422);
+    const body = res.getBody();
+    expect(body).to.be.an("object");
+    expect(body.code).to.equal("QR_BAD_SIGNATURE");
+    expect(body.message).to.be.a("string").and.not.be.empty;
+    expect(body.traceId).to.be.a("string").and.not.be.empty;
+    expect(body.timestamp).to.be.a("string").and.not.be.empty;
+    expect(body.details).to.be.an("object");
+  });
+
+  test("attemptCount=2, remainingAttempts=1, canRetry=true", function() {
+    expect(res.getBody().details.attemptCount).to.equal(2);
+    expect(res.getBody().details.remainingAttempts).to.equal(1);
+    expect(res.getBody().details.canRetry).to.equal(true);
+  });
+}
+
+docs {
+  TC-QR-23: Thử sai lần 2 trên evtQr03, vẫn còn 1 lượt.
+}

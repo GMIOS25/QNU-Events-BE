@@ -1,0 +1,36 @@
+meta {
+  name: TC-REG-10 - Đăng ký sự kiện DRAFT -> 409 EVENT_NOT_PUBLISHED
+  type: http
+  seq: 21
+  tags: [
+    registration
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/events/{{evtRegE3}}/registrations
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenSv001}}
+}
+
+tests {
+  test("HTTP 409 và mã lỗi EVENT_NOT_PUBLISHED", function() {
+    expect(res.getStatus()).to.equal(409);
+    const body = res.getBody();
+    expect(body).to.be.an("object");
+    expect(body.code).to.equal("EVENT_NOT_PUBLISHED");
+    expect(body.message).to.be.a("string").and.not.be.empty;
+    expect(body.message).to.equal("Sự kiện chưa được công bố.");
+    expect(body.traceId).to.be.a("string").and.not.be.empty;
+    expect(body.timestamp).to.be.a("string").and.not.be.empty;
+    expect(body.details).to.be.an("object");
+  });
+}
+
+docs {
+  TC-REG-10: Từ chối đăng ký sự kiện ở trạng thái DRAFT.
+}

@@ -1,0 +1,45 @@
+meta {
+  name: TC-QR-22 - Body JSON sai cú pháp {invalid -> 400 VALIDATION_FAILED
+  type: http
+  seq: 50
+  tags: [
+    qr
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/events/{{evtQr01}}/attendance/qr
+  body: text
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+  Idempotency-Key: {{freshIdemKey}}
+}
+
+auth:bearer {
+  token: {{tokenSv001}}
+}
+
+body:text {
+  {invalid
+}
+
+tests {
+  test("HTTP 400 và mã lỗi VALIDATION_FAILED", function() {
+    expect(res.getStatus()).to.equal(400);
+    const body = res.getBody();
+    expect(body).to.be.an("object");
+    expect(body.code).to.equal("VALIDATION_FAILED");
+    expect(body.message).to.be.a("string").and.not.be.empty;
+    expect(body.message).to.equal("Dữ liệu yêu cầu không hợp lệ hoặc sai định dạng.");
+    expect(body.traceId).to.be.a("string").and.not.be.empty;
+    expect(body.timestamp).to.be.a("string").and.not.be.empty;
+    expect(body.details).to.be.an("object");
+  });
+}
+
+docs {
+  TC-QR-22 (EP-04-I1): JSON lỗi cú pháp bị HttpMessageNotReadableException chặn 400.
+}

@@ -1,0 +1,30 @@
+meta {
+  name: TC-4.6-07 - GET /me/history của sinh viên chưa đăng ký gì -> 200 content=[], totalElements=0
+  type: http
+  seq: 28
+  tags: [
+    db-fixture
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/me/history
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenSvEmpty}}
+}
+
+tests {
+  test("HTTP 200 OK với content=[] và totalElements=0", function() {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody().content).to.deep.equal([]);
+    expect(res.getBody().totalElements).to.equal(0);
+  });
+}
+
+docs {
+  TC-4.6-07: Sinh viên chưa có bản ghi nào trong registrations nhận Page rỗng hợp lệ.
+}

@@ -1,0 +1,72 @@
+headers {
+  Accept: application/json
+}
+
+script:pre-request {
+  // Khởi tạo các mốc thời gian động ISO-8601 UTC dùng chung cho toàn bộ Collection
+  const now = Date.now();
+  const iso = (offsetMs) => new Date(Math.floor((now + offsetMs) / 1000) * 1000).toISOString();
+
+  // Mốc sự kiện tương lai (ngày mai: mở đăng ký, chưa mở điểm danh)
+  bru.setVar("futureStartAt", iso(24 * 3600 * 1000));
+  bru.setVar("futureEndAt", iso(27 * 3600 * 1000));
+  bru.setVar("futureRegDeadline", iso(23.5 * 3600 * 1000));
+  bru.setVar("futureAttOpen", iso(23.75 * 3600 * 1000));
+  bru.setVar("futureAttClose", iso(27.5 * 3600 * 1000));
+
+  // Mốc sự kiện sau 3 ngày (dùng kiểm tra sắp xếp startAt DESC & upcoming=true)
+  bru.setVar("laterStartAt", iso(72 * 3600 * 1000));
+  bru.setVar("laterEndAt", iso(75 * 3600 * 1000));
+  bru.setVar("laterRegDeadline", iso(71.5 * 3600 * 1000));
+  bru.setVar("laterAttOpen", iso(71.75 * 3600 * 1000));
+  bru.setVar("laterAttClose", iso(75.5 * 3600 * 1000));
+
+  // Mốc sự kiện đang diễn ra (mở cả đăng ký lẫn cửa sổ Dynamic QR ngay lúc chạy)
+  bru.setVar("activeStartAt", iso(-10 * 60 * 1000));
+  bru.setVar("activeEndAt", iso(2 * 3600 * 1000));
+  bru.setVar("activeRegDeadline", iso(1 * 3600 * 1000));
+  bru.setVar("activeAttOpen", iso(-10 * 60 * 1000));
+  bru.setVar("activeAttClose", iso(2 * 3600 * 1000));
+
+  // Mốc sự kiện đang diễn ra sớm hơn 5 phút (dùng kiểm tra thứ tự startAt DESC)
+  bru.setVar("activeEarlierStartAt", iso(-15 * 60 * 1000));
+
+  // Mốc sự kiện đã hết hạn đăng ký (quá hạn 5 phút trước, vẫn thỏa regDeadline <= attClose)
+  bru.setVar("expiredStartAt", iso(1 * 3600 * 1000));
+  bru.setVar("expiredEndAt", iso(3 * 3600 * 1000));
+  bru.setVar("expiredRegDeadline", iso(-5 * 60 * 1000));
+  bru.setVar("expiredAttOpen", iso(45 * 60 * 1000));
+  bru.setVar("expiredAttClose", iso(3 * 3600 * 1000));
+
+  // Mốc biên +1s cho BVA (TC-EVT-029)
+  bru.setVar("bvaStartAt", iso(30 * 3600 * 1000));
+  bru.setVar("bvaEndAtPlus1s", iso(30 * 3600 * 1000 + 1000));
+  bru.setVar("bvaAttOpen", iso(30 * 3600 * 1000));
+  bru.setVar("bvaAttClosePlus1s", iso(30 * 3600 * 1000 + 1000));
+
+  // Mốc cố định cho 2 sự kiện trùng startAt (tie-breaker ORDER BY e.start_at DESC, r.created_at DESC)
+  if (!bru.getVar("tieStartAt")) {
+    bru.setVar("tieStartAt", iso(48 * 3600 * 1000));
+    bru.setVar("tieEndAt", iso(50 * 3600 * 1000));
+    bru.setVar("tieRegDeadline", iso(47 * 3600 * 1000));
+    bru.setVar("tieAttOpen", iso(47.5 * 3600 * 1000));
+    bru.setVar("tieAttClose", iso(50.5 * 3600 * 1000));
+  }
+
+  // Năm học và học kỳ hiện tại khớp HistoryService.resolveDateRange (UTC)
+  const d = new Date(now);
+  const y = d.getUTCFullYear();
+  const m = d.getUTCMonth() + 1;
+  const acadStart = m >= 9 ? y : y - 1;
+  const semester = (m >= 9 || m === 1) ? 1 : (m >= 2 && m <= 6 ? 2 : 3);
+  bru.setVar("currentAcademicYear", `${acadStart}-${acadStart + 1}`);
+  bru.setVar("currentSemester", String(semester));
+
+  // Idempotency-Key ngẫu nhiên mới cho mỗi request điểm danh
+  bru.setVar("freshIdemKey", `bru-${now}-${Math.random().toString(36).substring(2, 10)}`);
+
+  // Chuỗi định danh duy nhất cho mỗi lần chạy tránh trùng tiêu đề & hỗ trợ cleanup [BRU-*]
+  if (!bru.getVar("runSuffix")) {
+    bru.setVar("runSuffix", Math.random().toString(36).substring(2, 8).toUpperCase());
+  }
+}

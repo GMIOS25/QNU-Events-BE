@@ -1,0 +1,40 @@
+meta {
+  name: TC-QR-18 - Replay cùng Idempotency-Key ("k") với token sai -> vẫn trả 200 ACCEPTED cũ
+  type: http
+  seq: 78
+  tags: [
+    qr
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/events/{{evtQr01}}/attendance/qr
+  body: json
+  auth: bearer
+}
+
+headers {
+  Idempotency-Key: k
+}
+
+auth:bearer {
+  token: {{tokenSv001}}
+}
+
+body:json {
+  {
+    "token": "invalid.token.after.accept"
+  }
+}
+
+tests {
+  test("Replay nguyên trạng 200 ACCEPTED và giữ nguyên acceptedAt cũ", function() {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody().status).to.equal("ACCEPTED");
+    expect(res.getBody().acceptedAt).to.equal(bru.getVar("sv001Qr01AcceptedAt"));
+  });
+}
+
+docs {
+  TC-QR-18: Replay Idempotency-Key thành công trả về bản ghi đã lưu.
+}

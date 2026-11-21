@@ -1,0 +1,37 @@
+meta {
+  name: [Setup] sv001 điểm danh evtHistAccepted -> ACCEPTED
+  type: http
+  seq: 6
+  tags: [
+    history
+    setup
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/events/{{evtHistAccepted}}/attendance/qr
+  body: json
+  auth: bearer
+}
+
+headers {
+  Idempotency-Key: {{freshIdemKey}}
+}
+
+auth:bearer {
+  token: {{tokenSv001}}
+}
+
+body:json {
+  {
+    "token": "{{qrHistAccepted}}"
+  }
+}
+
+script:post-response {
+  if (res.getStatus() === 200) bru.setVar("evtHistAcceptedAt", res.getBody().acceptedAt);
+}
+
+tests {
+  test("sv001 điểm danh evtHistAccepted (200 ACCEPTED)", function() { expect(res.getStatus()).to.equal(200); expect(res.getBody().status).to.equal("ACCEPTED"); });
+}

@@ -1,0 +1,51 @@
+meta {
+  name: TC-QR-14 - QR_BAD_SIGNATURE: sửa ký tự chữ ký HMAC -> 422 (không lộ token)
+  type: http
+  seq: 67
+  tags: [
+    qr
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/events/{{evtQrMalB}}/attendance/qr
+  body: json
+  auth: bearer
+}
+
+headers {
+  Idempotency-Key: {{freshIdemKey}}
+}
+
+auth:bearer {
+  token: {{tokenSv002}}
+}
+
+body:json {
+  {
+    "token": "{{qrBadSigTampered}}"
+  }
+}
+
+tests {
+  test("HTTP 422 và mã lỗi QR_BAD_SIGNATURE", function() {
+    expect(res.getStatus()).to.equal(422);
+    const body = res.getBody();
+    expect(body).to.be.an("object");
+    expect(body.code).to.equal("QR_BAD_SIGNATURE");
+    expect(body.message).to.be.a("string").and.not.be.empty;
+    expect(body.message).to.equal("Chữ ký mã QR không hợp lệ.");
+    expect(body.traceId).to.be.a("string").and.not.be.empty;
+    expect(body.timestamp).to.be.a("string").and.not.be.empty;
+    expect(body.details).to.be.an("object");
+  });
+
+  test("attemptCount=1 và response không làm lộ chuỗi token QR gốc", function() {
+    expect(res.getBody().details.attemptCount).to.equal(1);
+    expect(JSON.stringify(res.getBody())).to.not.include(bru.getVar("qrBadSigTampered"));
+  });
+}
+
+docs {
+  TC-QR-14, TC-QR-20: Sửa chữ ký trả 422 QR_BAD_SIGNATURE và không rò rỉ token gốc trong response.
+}

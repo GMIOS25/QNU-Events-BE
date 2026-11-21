@@ -1,0 +1,32 @@
+meta {
+  name: TC-4.6 (QE-72 HistoryIT #9) - Lọc theo activityType không phân biệt hoa/thường
+  type: http
+  seq: 29
+  tags: [
+    history
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/me/history?activityType=ho%E1%BA%A1t%20%C4%91%E1%BB%99ng%20t%C3%ACnh%20nguy%E1%BB%87n&size=100
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenSv001}}
+}
+
+tests {
+  test("Chỉ trả về các sự kiện có activityType = Hoạt động tình nguyện", function() {
+    expect(res.getStatus()).to.equal(200);
+    const items = res.getBody().content;
+    expect(items.length).to.be.at.least(1);
+    items.forEach((i) => expect(i.activityType.toLowerCase()).to.equal("hoạt động tình nguyện"));
+    expect(items.map((i) => i.eventId)).to.include(bru.getVar("evtHistNotChecked"));
+  });
+}
+
+docs {
+  QE-72 / HistoryIT #9: Lọc lịch sử theo activityType.
+}

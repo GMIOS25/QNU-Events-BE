@@ -1,0 +1,65 @@
+meta {
+  name: TC-AUTH-26 - JWT có exp lùi quá khứ 120s (vượt 60s skew) -> 401 UNAUTHENTICATED
+  type: http
+  seq: 5
+  tags: [
+    db-fixture
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/auth/me
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwtExpPastSkew}}
+}
+
+script:pre-request {
+  const CryptoJS = require("crypto-js");
+  const jwtSecret = bru.getEnvVar("jwtSecret");
+  if (!jwtSecret || jwtSecret.length < 32) {
+    throw new Error("Thiếu biến secret 'jwtSecret' (>= 32 ký tự). Hãy chạy qua scripts/run-bruno.ps1 hoặc khai báo jwtSecret trong environment local.");
+  }
+  function b64url(str) {
+    return CryptoJS.enc.Base64.stringify(CryptoJS.enc.Utf8.parse(str))
+      .replace(/=+$/, "").replace(/\+/g, "-").replace(/\//g, "_");
+  }
+  function signHs256Jwt(payloadObj) {
+    const h = b64url(JSON.stringify({ alg: "HS256" }));
+    const p = b64url(JSON.stringify(payloadObj));
+    const sig = CryptoJS.HmacSHA256(h + "." + p, jwtSecret)
+      .toString(CryptoJS.enc.Base64)
+      .replace(/=+$/, "").replace(/\+/g, "-").replace(/\//g, "_");
+    return h + "." + p + "." + sig;
+  }
+
+  const nowSec = Math.floor(Date.now() / 1000);
+  const tok = signHs256Jwt({
+    sub: bru.getVar("sv001Id"),
+    sid: bru.getVar("sv001Sid1"),
+    roles: ["STUDENT"],
+    iat: nowSec - 30000,
+    exp: nowSec - 120,
+  });
+  bru.setVar("jwtExpPastSkew", tok);
+}
+
+tests {
+  test("HTTP 401 và mã lỗi UNAUTHENTICATED", function() {
+    expect(res.getStatus()).to.equal(401);
+    const body = res.getBody();
+    expect(body).to.be.an("object");
+    expect(body.code).to.equal("UNAUTHENTICATED");
+    expect(body.message).to.be.a("string").and.not.be.empty;
+    expect(body.traceId).to.be.a("string").and.not.be.empty;
+    expect(body.timestamp).to.be.a("string").and.not.be.empty;
+    expect(body.details).to.be.an("object");
+  });
+}
+
+docs {
+  TC-AUTH-26 (BVA-05): JwtTimestampValidator từ chối token có exp quá 60s skew.
+}

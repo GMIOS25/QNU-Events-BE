@@ -1,0 +1,30 @@
+meta {
+  name: [Setup] Công bố sự kiện evtRegE1
+  type: http
+  seq: 3
+  tags: [
+    registration
+    setup
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/events/{{evtRegE1}}/publish
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenOwner01}}
+}
+
+body:json {
+  {
+    "confirm": true,
+    "previewVersion": 0
+  }
+}
+
+tests {
+  test("Setup publish evtRegE1 thành công (200)", function() { expect(res.getStatus()).to.equal(200); expect(res.getBody().status).to.equal("PUBLISHED"); });
+}

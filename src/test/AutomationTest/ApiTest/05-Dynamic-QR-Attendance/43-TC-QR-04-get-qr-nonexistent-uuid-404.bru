@@ -1,0 +1,35 @@
+meta {
+  name: TC-QR-04 - GET /qr với UUID không tồn tại -> 404 NOT_FOUND
+  type: http
+  seq: 43
+  tags: [
+    qr
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/events/{{nonExistentUuid}}/qr
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenOwner01}}
+}
+
+tests {
+  test("HTTP 404 và mã lỗi NOT_FOUND", function() {
+    expect(res.getStatus()).to.equal(404);
+    const body = res.getBody();
+    expect(body).to.be.an("object");
+    expect(body.code).to.equal("NOT_FOUND");
+    expect(body.message).to.be.a("string").and.not.be.empty;
+    expect(body.traceId).to.be.a("string").and.not.be.empty;
+    expect(body.timestamp).to.be.a("string").and.not.be.empty;
+    expect(body.details).to.be.an("object");
+  });
+}
+
+docs {
+  TC-QR-04: UUID không tồn tại trả 404 NOT_FOUND.
+}

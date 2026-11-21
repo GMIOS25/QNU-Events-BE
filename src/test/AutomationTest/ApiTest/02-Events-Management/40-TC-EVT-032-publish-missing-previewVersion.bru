@@ -1,0 +1,45 @@
+meta {
+  name: TC-EVT-032 - Công bố thiếu previewVersion -> 400 VALIDATION_FAILED
+  type: http
+  seq: 40
+  tags: [
+    events
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/events/{{evtDraftMainId}}/publish
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenOwner01}}
+}
+
+body:json {
+  {
+    "confirm": true
+  }
+}
+
+tests {
+  test("HTTP 400 và mã lỗi VALIDATION_FAILED", function() {
+    expect(res.getStatus()).to.equal(400);
+    const body = res.getBody();
+    expect(body).to.be.an("object");
+    expect(body.code).to.equal("VALIDATION_FAILED");
+    expect(body.message).to.be.a("string").and.not.be.empty;
+    expect(body.traceId).to.be.a("string").and.not.be.empty;
+    expect(body.timestamp).to.be.a("string").and.not.be.empty;
+    expect(body.details).to.be.an("object");
+  });
+
+  test("details.fields.previewVersion báo không được để trống", function() {
+    expect(res.getBody().details.fields.previewVersion).to.include("previewVersion");
+  });
+}
+
+docs {
+  TC-EVT-032: PublishRequest thiếu previewVersion bị @NotNull chặn 400.
+}

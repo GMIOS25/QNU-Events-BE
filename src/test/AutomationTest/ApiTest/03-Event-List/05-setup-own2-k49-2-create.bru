@@ -1,0 +1,47 @@
+meta {
+  name: [Setup] Tạo sự kiện evtListOwn2K49_2
+  type: http
+  seq: 5
+  tags: [
+    event-list
+    setup
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/events
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenOwner02}}
+}
+
+body:json {
+  {
+    "title": "[BRU-{{runSuffix}}] Workshop An toàn thông tin K49CNTT2",
+    "description": "Nội dung chi tiết sự kiện kiểm thử tự động Bruno.",
+    "location": "Hội trường A - Trường ĐH Quy Nhơn",
+    "startAt": "{{futureStartAt}}",
+    "endAt": "{{futureEndAt}}",
+    "registrationDeadline": "{{futureRegDeadline}}",
+    "attendanceOpenAt": "{{futureAttOpen}}",
+    "attendanceCloseAt": "{{futureAttClose}}",
+    "attendanceMethod": "DYNAMIC_QR",
+    "quotaTotal": 20,
+    "audienceClassIds": [
+      "{{classK49Cntt2}}"
+    ],
+    "activityType": "Workshop",
+    "activityPoints": 5
+  }
+}
+
+script:post-response {
+  if (res.getStatus() === 201) bru.setVar("evtListOwn2K49_2", res.getBody().id);
+}
+
+tests {
+  test("Setup tạo sự kiện evtListOwn2K49_2 thành công (201)", function() { expect(res.getStatus()).to.equal(201); });
+}

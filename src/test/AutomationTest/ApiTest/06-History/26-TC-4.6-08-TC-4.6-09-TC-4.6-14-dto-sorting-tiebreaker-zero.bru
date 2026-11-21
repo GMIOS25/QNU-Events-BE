@@ -1,0 +1,70 @@
+meta {
+  name: TC-4.6-08 & 09 & 14 & WB-03 - Kiểm tra DTO HistoryItem, @JsonInclude(NON_NULL), startAt DESC, tie-breaker & điểm 0
+  type: http
+  seq: 26
+  tags: [
+    history
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/me/history?size=100
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenSv001}}
+}
+
+tests {
+  test("TC-4.6-08 & WB-03 - DTO ACCEPTED có đầy đủ 11 trường & attendanceAt ISO-8601 UTC", function() {
+    expect(res.getStatus()).to.equal(200);
+    const items = res.getBody().content;
+    expect(items).to.be.an("array");
+
+    const acc = items.find((i) => i.eventId === bru.getVar("evtHistAccepted"));
+    expect(acc).to.be.an("object");
+    expect(acc.registrationStatus).to.equal("REGISTERED");
+    expect(acc.attendanceStatus).to.equal("ACCEPTED");
+    expect(acc.attendanceAt).to.be.a("string").and.match(/Z$/);
+    expect(acc.method).to.equal("DYNAMIC_QR");
+    expect(acc.activityType).to.equal("Hội thảo khoa học");
+    expect(acc.activityPoints).to.equal(10);
+    expect(acc.startAt).to.match(/Z$/);
+    expect(acc.registeredAt).to.match(/Z$/);
+  });
+  test("TC-4.6-08 & WB-03 - DTO NOT_CHECKED_IN ẩn hoàn toàn key attendanceAt (@JsonInclude NON_NULL)", function() {
+    const items = res.getBody().content;
+    const notChecked = items.find((i) => i.eventId === bru.getVar("evtHistNotChecked"));
+    expect(notChecked).to.be.an("object");
+    expect(notChecked.registrationStatus).to.equal("REGISTERED");
+    expect(notChecked.attendanceStatus).to.equal("NOT_CHECKED_IN");
+    expect(Object.prototype.hasOwnProperty.call(notChecked, "attendanceAt")).to.equal(false);
+    expect(notChecked.method).to.equal("DYNAMIC_QR");
+    expect(notChecked.activityPoints).to.equal(5);
+  });
+  test("TC-4.6-14 - Biên activityPoints=0 vẫn trả 0 khi ACCEPTED", function() {
+    const items = res.getBody().content;
+    const zero = items.find((i) => i.eventId === bru.getVar("evtHistZero"));
+    expect(zero).to.be.an("object");
+    expect(zero.attendanceStatus).to.equal("ACCEPTED");
+    expect(zero.activityPoints).to.equal(0);
+  });
+  test("TC-4.6-09 & TC-4.6-14 - Thứ tự sắp xếp e.start_at DESC và tie-breaker r.created_at DESC", function() {
+    const ids = res.getBody().content.map((i) => i.eventId);
+    const idxLater = ids.indexOf(bru.getVar("evtHistNotChecked"));
+    const idxTieB = ids.indexOf(bru.getVar("evtHistTieB"));
+    const idxTieA = ids.indexOf(bru.getVar("evtHistTieA"));
+    const idxAcc = ids.indexOf(bru.getVar("evtHistAccepted"));
+    const idxZero = ids.indexOf(bru.getVar("evtHistZero"));
+    expect(idxLater).to.be.below(idxTieB);
+    expect(idxTieB).to.be.below(idxTieA);
+    expect(idxTieA).to.be.below(idxAcc);
+    expect(idxAcc).to.be.below(idxZero);
+  });
+}
+
+docs {
+  TC-4.6-08, TC-4.6-09, TC-4.6-14, TC-4.6-WB-03: Kiểm tra cấu trúc DTO, ẩn attendanceAt khi null, điểm 0, sắp xếp startAt DESC và tie-breaker registeredAt DESC.
+}

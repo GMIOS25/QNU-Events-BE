@@ -1,0 +1,40 @@
+meta {
+  name: TC-4.3-01 & TC-4.3-22 - SV K49CNTT1 chỉ thấy PUBLISHED đúng lớp & DISTINCT đa lớp
+  type: http
+  seq: 14
+  tags: [
+    event-list
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/events?q={{runSuffix}}&size=50
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenSv001}}
+}
+
+tests {
+  test("HTTP 200 OK, chứa sự kiện PUBLISHED K49CNTT1, ẩn DRAFT và lớp khác", function() {
+    expect(res.getStatus()).to.equal(200);
+    const items = res.getBody().content;
+    expect(items).to.be.an("array");
+    const ids = items.map((i) => i.id);
+    expect(ids).to.include(bru.getVar("evtListPubK49"));
+    expect(ids).to.include(bru.getVar("evtListMultiClass"));
+    expect(ids).to.not.include(bru.getVar("evtListDraftK49"));
+    expect(ids).to.not.include(bru.getVar("evtListOwn2K49_2"));
+    items.forEach((i) => expect(i.status).to.equal("PUBLISHED"));
+  });
+  test("TC-4.3-22 - Sự kiện đa lớp chỉ xuất hiện đúng 1 lần (SELECT DISTINCT)", function() {
+    const multiMatches = res.getBody().content.filter((i) => i.id === bru.getVar("evtListMultiClass"));
+    expect(multiMatches).to.have.lengthOf(1);
+  });
+}
+
+docs {
+  TC-4.3-01, TC-4.3-22: Sinh viên lớp K49CNTT1 chỉ thấy sự kiện PUBLISHED thuộc lớp mình; ẩn DRAFT và không trùng dòng đa lớp.
+}

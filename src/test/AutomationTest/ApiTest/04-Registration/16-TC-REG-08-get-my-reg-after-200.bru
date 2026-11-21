@@ -1,0 +1,32 @@
+meta {
+  name: TC-REG-08 - GET /registrations/me sau khi đăng ký -> 200 REGISTERED
+  type: http
+  seq: 16
+  tags: [
+    registration
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/events/{{evtRegE1}}/registrations/me
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenSv001}}
+}
+
+tests {
+  test("HTTP 200 OK khớp id, status=REGISTERED và registeredAt ISO-8601 UTC", function() {
+    expect(res.getStatus()).to.equal(200);
+    const b = res.getBody();
+    expect(b.id).to.equal(bru.getVar("sv001RegE1Id"));
+    expect(b.status).to.equal("REGISTERED");
+    expect(b.registeredAt).to.match(/Z$/);
+  });
+}
+
+docs {
+  TC-REG-08, TC-REG-02: Tra cứu đăng ký cá nhân sau khi đăng ký trả 200 OK.
+}

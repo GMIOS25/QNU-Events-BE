@@ -1,0 +1,71 @@
+meta {
+  name: TC-EVT-003 & WB-05 - Tạo sự kiện DRAFT hợp lệ đầy đủ trường -> 201
+  type: http
+  seq: 2
+  tags: [
+    events
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/events
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenOwner01}}
+}
+
+body:json {
+  {
+    "title": "[BRU-{{runSuffix}}] Hội thảo AI & Khởi nghiệp 2026",
+    "description": "Nội dung chi tiết sự kiện kiểm thử tự động Bruno.",
+    "location": "Hội trường A - Trường ĐH Quy Nhơn",
+    "startAt": "{{futureStartAt}}",
+    "endAt": "{{futureEndAt}}",
+    "registrationDeadline": "{{futureRegDeadline}}",
+    "attendanceOpenAt": "{{futureAttOpen}}",
+    "attendanceCloseAt": "{{futureAttClose}}",
+    "attendanceMethod": "DYNAMIC_QR",
+    "quotaTotal": 50,
+    "audienceClassIds": [
+      "{{classK49Cntt1}}"
+    ],
+    "activityType": "Hội thảo khoa học",
+    "activityPoints": 5
+  }
+}
+
+script:post-response {
+  if (res.getStatus() === 201) {
+    bru.setVar("evtDraftMainId", res.getBody().id);
+  }
+}
+
+tests {
+  test("HTTP 201 Created với DRAFT, v=0, DYNAMIC_QR, 10s/3s và audienceClasses", function() {
+    expect(res.getStatus()).to.equal(201);
+    const e = res.getBody();
+    expect(e.id).to.match(/^[0-9a-f-]{36}$/i);
+    expect(e.status).to.equal("DRAFT");
+    expect(e.version).to.equal(0);
+    expect(e.previewedVersion).to.equal(null);
+    expect(e.publishedAt).to.equal(null);
+    expect(e.registeredCount).to.equal(0);
+    expect(e.remainingQuota).to.equal(50);
+    expect(e.registrationOpen).to.equal(false);
+    expect(e.attendanceOpen).to.equal(false);
+    expect(e.attendanceMethod).to.equal("DYNAMIC_QR");
+    expect(e.qrRotationSeconds).to.equal(10);
+    expect(e.qrGraceSeconds).to.equal(3);
+    expect(e.ownerId).to.equal(bru.getVar("owner01Id"));
+    expect(e.audienceClassIds).to.include(bru.getEnvVar("classK49Cntt1"));
+    expect(e.audienceClasses).to.be.an("array").and.have.lengthOf(1);
+    expect(e.audienceClasses[0].code).to.equal("K49CNTT1");
+  });
+}
+
+docs {
+  TC-EVT-003, TC-EVT-WB-05: Tạo mới sự kiện DRAFT hợp lệ đầy đủ các trường.
+}

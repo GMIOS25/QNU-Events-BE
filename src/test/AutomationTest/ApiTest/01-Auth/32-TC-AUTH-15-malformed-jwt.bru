@@ -1,0 +1,36 @@
+meta {
+  name: TC-AUTH-15 - Token JWT sai định dạng -> 401 UNAUTHENTICATED
+  type: http
+  seq: 32
+  tags: [
+    auth
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/auth/me
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: invalid.jwt.token
+}
+
+tests {
+  test("HTTP 401 và mã lỗi UNAUTHENTICATED", function() {
+    expect(res.getStatus()).to.equal(401);
+    const body = res.getBody();
+    expect(body).to.be.an("object");
+    expect(body.code).to.equal("UNAUTHENTICATED");
+    expect(body.message).to.be.a("string").and.not.be.empty;
+    expect(body.message).to.equal("Yêu cầu đăng nhập để thực hiện.");
+    expect(body.traceId).to.be.a("string").and.not.be.empty;
+    expect(body.timestamp).to.be.a("string").and.not.be.empty;
+    expect(body.details).to.be.an("object");
+  });
+}
+
+docs {
+  TC-AUTH-15: Token không đúng cấu trúc JWT bị từ chối 401 UNAUTHENTICATED.
+}
