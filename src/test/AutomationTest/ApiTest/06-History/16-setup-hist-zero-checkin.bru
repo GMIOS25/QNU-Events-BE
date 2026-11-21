@@ -1,0 +1,33 @@
+meta {
+  name: [Setup] sv001 điểm danh evtHistZero (activityPoints=0) -> ACCEPTED
+  type: http
+  seq: 16
+  tags: [
+    history
+    setup
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/events/{{evtHistZero}}/attendance/qr
+  body: json
+  auth: bearer
+}
+
+headers {
+  Idempotency-Key: {{freshIdemKey}}
+}
+
+auth:bearer {
+  token: {{tokenSv001}}
+}
+
+body:json {
+  {
+    "token": "{{qrHistZero}}"
+  }
+}
+
+tests {
+  test("sv001 điểm danh evtHistZero (200 ACCEPTED)", function() { expect(res.getStatus()).to.equal(200); });
+}

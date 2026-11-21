@@ -1,0 +1,23 @@
+meta {
+  name: [Setup] sv001 đăng ký evtHistNotChecked
+  type: http
+  seq: 10
+  tags: [
+    history
+    setup
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/events/{{evtHistNotChecked}}/registrations
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenSv001}}
+}
+
+tests {
+  test("Setup đăng ký sv001 thành công (200/201)", function() { expect([200, 201]).to.include(res.getStatus()); });
+}

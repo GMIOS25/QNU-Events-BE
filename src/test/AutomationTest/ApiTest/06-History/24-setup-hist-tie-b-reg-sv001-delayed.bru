@@ -1,0 +1,27 @@
+meta {
+  name: [Setup] sv001 đăng ký evtHistTieB sau 1.1s để kiểm tra tie-breaker created_at DESC
+  type: http
+  seq: 24
+  tags: [
+    history
+    setup
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/events/{{evtHistTieB}}/registrations
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenSv001}}
+}
+
+script:pre-request {
+  await new Promise((r) => setTimeout(r, 1100));
+}
+
+tests {
+  test("Đăng ký evtHistTieB sau evtHistTieA thành công (201)", function() { expect([200, 201]).to.include(res.getStatus()); });
+}

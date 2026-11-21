@@ -1,0 +1,47 @@
+meta {
+  name: [Setup] Tạo sự kiện evtHistZero
+  type: http
+  seq: 11
+  tags: [
+    history
+    setup
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/events
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenOwner01}}
+}
+
+body:json {
+  {
+    "title": "[BRU-{{runSuffix}}] Hist-Zero Điểm 0 (+0đ)",
+    "description": "Nội dung chi tiết sự kiện kiểm thử tự động Bruno.",
+    "location": "Hội trường A - Trường ĐH Quy Nhơn",
+    "startAt": "{{activeEarlierStartAt}}",
+    "endAt": "{{activeEndAt}}",
+    "registrationDeadline": "{{activeRegDeadline}}",
+    "attendanceOpenAt": "{{activeAttOpen}}",
+    "attendanceCloseAt": "{{activeAttClose}}",
+    "attendanceMethod": "DYNAMIC_QR",
+    "quotaTotal": 10,
+    "audienceClassIds": [
+      "{{classK49Cntt1}}"
+    ],
+    "activityType": "Phong trào",
+    "activityPoints": 0
+  }
+}
+
+script:post-response {
+  if (res.getStatus() === 201) bru.setVar("evtHistZero", res.getBody().id);
+}
+
+tests {
+  test("Setup tạo sự kiện evtHistZero (201)", function() { expect(res.getStatus()).to.equal(201); });
+}

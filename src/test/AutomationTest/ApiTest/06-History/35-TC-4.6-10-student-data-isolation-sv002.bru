@@ -1,0 +1,32 @@
+meta {
+  name: TC-4.6-10 - Cô lập dữ liệu: sv002 không nhìn thấy lịch sử của sv001
+  type: http
+  seq: 35
+  tags: [
+    history
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/me/history?size=100
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenSv002}}
+}
+
+tests {
+  test("sv002 không chứa bất kỳ sự kiện Hist-* nào của riêng sv001", function() {
+    expect(res.getStatus()).to.equal(200);
+    const ids = res.getBody().content.map((i) => i.eventId);
+    expect(ids).to.not.include(bru.getVar("evtHistAccepted"));
+    expect(ids).to.not.include(bru.getVar("evtHistNotChecked"));
+    expect(ids).to.not.include(bru.getVar("evtHistZero"));
+  });
+}
+
+docs {
+  TC-4.6-10: Cô lập dữ liệu lịch sử giữa hai sinh viên cùng lớp (sv001 vs sv002).
+}

@@ -1,0 +1,34 @@
+meta {
+  name: TC-4.6 (QE-72 HistoryIT #8) - Lọc attendanceStatus=ACCEPTED
+  type: http
+  seq: 27
+  tags: [
+    history
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/me/history?attendanceStatus=ACCEPTED&size=100
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenSv001}}
+}
+
+tests {
+  test("Tất cả phần tử trả về đều có attendanceStatus=ACCEPTED", function() {
+    expect(res.getStatus()).to.equal(200);
+    const items = res.getBody().content;
+    expect(items.length).to.be.at.least(1);
+    items.forEach((i) => expect(i.attendanceStatus).to.equal("ACCEPTED"));
+    const ids = items.map((i) => i.eventId);
+    expect(ids).to.include(bru.getVar("evtHistAccepted"));
+    expect(ids).to.not.include(bru.getVar("evtHistNotChecked"));
+  });
+}
+
+docs {
+  QE-72 / HistoryIT #8: Lọc lịch sử theo attendanceStatus=ACCEPTED.
+}

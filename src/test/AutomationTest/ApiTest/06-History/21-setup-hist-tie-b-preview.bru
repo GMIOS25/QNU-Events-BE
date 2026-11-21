@@ -1,0 +1,23 @@
+meta {
+  name: [Setup] Preview sự kiện evtHistTieB
+  type: http
+  seq: 21
+  tags: [
+    history
+    setup
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/events/{{evtHistTieB}}/preview
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenOwner01}}
+}
+
+tests {
+  test("Setup preview evtHistTieB (200)", function() { expect(res.getStatus()).to.equal(200); });
+}

@@ -1,0 +1,35 @@
+meta {
+  name: TC-4.6-11 (R9 Anti-IDOR) - Truyền ?studentId=sv001 & X-Student-Id bị bỏ qua
+  type: http
+  seq: 36
+  tags: [
+    history
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/me/history?studentId={{sv001Id}}&userId={{sv001Id}}&size=100
+  body: none
+  auth: bearer
+}
+
+headers {
+  X-Student-Id: {{sv001Id}}
+}
+
+auth:bearer {
+  token: {{tokenSv002}}
+}
+
+tests {
+  test("Server chỉ lấy userId từ JWT sv002, tuyệt đối không rò rỉ dữ liệu sv001", function() {
+    expect(res.getStatus()).to.equal(200);
+    const ids = res.getBody().content.map((i) => i.eventId);
+    expect(ids).to.not.include(bru.getVar("evtHistAccepted"));
+    expect(ids).to.not.include(bru.getVar("evtHistNotChecked"));
+  });
+}
+
+docs {
+  TC-4.6-11 (R9): Chống tấn công IDOR qua query param studentId/userId và header X-Student-Id.
+}
