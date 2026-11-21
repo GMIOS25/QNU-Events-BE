@@ -8,4 +8,4 @@ Step 2b (enum NFC) -> HTTP 400 {"code":"VALIDATION_FAILED","message":"Dữ liệ
 Step 3 (null attendanceMethod) -> HTTP 201, method=DYNAMIC_QR
 Step 4 (PUT /events/not-a-uuid) -> HTTP 500 {"code":"INTERNAL_ERROR","message":"Đã xảy ra lỗi hệ thống.","details":{},"traceId":"ebf2d735-d777-4635-bc02-ce964363241b","timestamp":"2026-11-20T09:02:42.138374900Z"}
 ------------------------------------------------------------
-Summary: Step 1-3 đạt kỳ vọng (400 / 201 DYNAMIC_QR), nhưng Step 4 (PUT /events/not-a-uuid) trả HTTP 500 (INTERNAL_ERROR) do thiếu handler MethodArgumentTypeMismatchException.
+Summary: Step 2-3 đạt kỳ vọng (400 / 201 DYNAMIC_QR); Step 1 ({}) trả HTTP 400 VALIDATION_FAILED nhưng details rỗng {} (không có details.fields do EventUpsert dùng kiểu nguyên thủy int nên Jackson ném HttpMessageNotReadableException trước @Valid); Step 4 (PUT /events/not-a-uuid) trả HTTP 500 (INTERNAL_ERROR) do thiếu handler MethodArgumentTypeMismatchException.
