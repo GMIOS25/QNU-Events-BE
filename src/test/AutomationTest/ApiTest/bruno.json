@@ -1,0 +1,10 @@
+{
+  "version": "1",
+  "name": "QNU-Events API Automation Tests",
+  "type": "collection",
+  "ignore": [
+    "node_modules",
+    ".git",
+    "scripts"
+  ]
+}

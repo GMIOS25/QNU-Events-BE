@@ -1,0 +1,35 @@
+headers {
+  Accept: application/json
+}
+
+script:pre-request {
+  // Khởi tạo các mốc thời gian động ISO-8601 UTC dùng chung cho toàn bộ Collection
+  const now = Date.now();
+  const iso = (offsetMs) => new Date(Math.floor((now + offsetMs) / 1000) * 1000).toISOString();
+
+  // Mốc sự kiện tương lai (ngày mai: mở đăng ký, chưa mở điểm danh)
+  bru.setVar("futureStartAt", iso(24 * 3600 * 1000));
+  bru.setVar("futureEndAt", iso(27 * 3600 * 1000));
+  bru.setVar("futureRegDeadline", iso(23.5 * 3600 * 1000));
+  bru.setVar("futureAttOpen", iso(23.75 * 3600 * 1000));
+  bru.setVar("futureAttClose", iso(27.5 * 3600 * 1000));
+
+  // Mốc sự kiện đang diễn ra (mở cả đăng ký lẫn cửa sổ Dynamic QR ngay lúc chạy)
+  bru.setVar("activeStartAt", iso(-10 * 60 * 1000));
+  bru.setVar("activeEndAt", iso(2 * 3600 * 1000));
+  bru.setVar("activeRegDeadline", iso(1 * 3600 * 1000));
+  bru.setVar("activeAttOpen", iso(-10 * 60 * 1000));
+  bru.setVar("activeAttClose", iso(2 * 3600 * 1000));
+
+  // Mốc sự kiện đã hết hạn đăng ký (quá hạn 5 phút trước)
+  bru.setVar("expiredStartAt", iso(1 * 3600 * 1000));
+  bru.setVar("expiredEndAt", iso(3 * 3600 * 1000));
+  bru.setVar("expiredRegDeadline", iso(-5 * 60 * 1000));
+  bru.setVar("expiredAttOpen", iso(45 * 60 * 1000));
+  bru.setVar("expiredAttClose", iso(3 * 3600 * 1000));
+
+  // Chuỗi định danh duy nhất cho mỗi lần chạy tránh trùng tiêu đề
+  if (!bru.getVar("runSuffix")) {
+    bru.setVar("runSuffix", Math.random().toString(36).substring(2, 8).toUpperCase());
+  }
+}
