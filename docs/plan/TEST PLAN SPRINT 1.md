@@ -32,7 +32,7 @@ B. Nền tảng Runtime và Framework Backend gồm Java 21, Spring Boot 4.1.2, 
 
 C. Hệ quản trị cơ sở dữ liệu PostgreSQL 17 kết hợp Flyway Migration phiên bản kịch bản V1__sprint1_core_schema.sql. Toàn bộ danh sách bảng dữ liệu, chỉ mục duy nhất, ràng buộc CHECK và trigger bất biến được cố định theo thiết kế; mọi thay đổi cấu trúc sau khi hợp nhất phải tạo tệp migration V2 trở đi. 
 
-D. Ứng dụng QNU Events Frontend, tên gói qnu-events-fe, phiên bản khởi tạo 0.0.0 cho Sprint 1 MVP, xây dựng trên React 19.3.1, React Router 7.18.5, TanStack React Query 5.107.1, TypeScript 7.0.2 và Vite 6.1.2. Danh sách chi tiết các màn hình, thành phần giao diện và luồng điều hướng được quy định trong tài liệu thiết kế giao diện. 
+D. Ứng dụng QNU Events Frontend, tên gói qnu-events-fe, phiên bản khởi tạo 0.0.0 cho Sprint 1 MVP, xây dựng trên React 19.3.1, React Router 7.18.5, TanStack React Query 5.107.1, TypeScript 7.0.2 và Vite 8.3.6. Danh sách chi tiết các màn hình, thành phần giao diện và luồng điều hướng được quy định trong tài liệu thiết kế giao diện. 
 
 E. Bộ thư viện xử lý QR phía giao diện gồm qrcode.react phiên bản 4.2.0 phục vụ trình chiếu mã QR động cho Ban tổ chức và html5-qrcode phiên bản 2.3.8 phục vụ quét mã bằng camera trên trình duyệt di động của Sinh viên. 
 
@@ -396,7 +396,7 @@ B. Figma với tệp thiết kế jVs22zFVUQjDbYQ5d0pwmU được sử dụng đ
 
 C. Bộ công cụ phát triển, biên dịch và kiểm thử tự động lõi gồm Maven Wrapper, Java 21, JUnit 5, Spring Boot Test MockMvc và AssertJ cho phía Backend; kết hợp cùng Vite, TypeScript, oxlint, Vitest, React Testing Library và Playwright cho việc kiểm tra tĩnh, gỡ lỗi và kiểm thử tự động phía Frontend. 
 
-D. Bộ công cụ kiểm thử chuyên dụng bổ sung gồm Postman, Selenium và k2. Trong đó, Postman được sử dụng để kiểm thử nhanh các REST API endpoint theo hợp đồng contract-v1, kiểm tra mã lỗi ApiError và xác thực JWT; Selenium được sử dụng để hỗ trợ kiểm thử tự động hóa thao tác trình duyệt trên các luồng giao diện trọng tâm bên cạnh Playwright; và k2 được sử dụng để hỗ trợ kiểm thử hiệu năng, giả lập tải truy cập đồng thời vào các điểm nóng như đăng ký giữ suất và điểm danh QR. 
+D. Bộ công cụ kiểm thử chuyên dụng bổ sung gồm Postman, Selenium và k6. Trong đó, Postman được sử dụng để kiểm thử nhanh các REST API endpoint theo hợp đồng contract-v1, kiểm tra mã lỗi ApiError và xác thực JWT; Selenium được sử dụng để hỗ trợ kiểm thử tự động hóa thao tác trình duyệt trên các luồng giao diện trọng tâm bên cạnh Playwright; và k6 được sử dụng để hỗ trợ kiểm thử hiệu năng, giả lập tải truy cập đồng thời vào các điểm nóng như đăng ký giữ suất và điểm danh QR. 
 
 E. Công cụ quản lý cơ sở dữ liệu và tạo dữ liệu kiểm thử gồm PostgreSQL 17 trên Docker WSL2, Flyway Migration V1, psql, DBeaver, DemoDataSeeder, TestUsers, TestAuth và MutableClock. Dữ liệu kiểm thử được khởi tạo cô lập hoặc nhân bản từ bộ dữ liệu mẫu để mô phỏng nhiều sinh viên đăng ký tranh suất đồng thời qua ExecutorService và CountDownLatch, bảo đảm tuyệt đối không gây ảnh hưởng hay làm sai lệch dữ liệu trên môi trường trình diễn chính thức. 
 
@@ -416,9 +416,22 @@ Functional Testing áp dụng các kỹ thuật Black-box Testing gồm Equivale
 
 Về Security Testing, các bài kiểm thử rà soát việc băm mật khẩu bằng BCrypt cost factor 12, chống dò quét tài khoản bằng dummy hash và thu hồi ngay AuthSession khi đăng xuất. Hệ thống cũng được kiểm tra kiểm soát truy cập theo vai trò RBAC và chống truy cập ngang IDOR ở các API xem sự kiện hoặc lịch sử cá nhân. Song song đó, nhóm kiểm chứng việc so sánh chữ ký HMAC-SHA256 bằng MessageDigest.isEqual để chống Timing Attack, đảm bảo không lưu mật khẩu, JWT hay chuỗi QR đầy đủ vào bảng audit_logs, và xác minh trigger cơ sở dữ liệu chặn mọi thao tác UPDATE hoặc DELETE trên nhật ký kiểm toán. 
 
-Với Concurrency và Performance Testing, hệ thống dùng ExecutorService kết hợp CountDownLatch để giả lập các đợt truy cập đồng thời cao trực tiếp vào PostgreSQL 17. Các kịch bản gồm 2 luồng tranh 1 suất cuối, 30 luồng tranh 5 suất và 10 luồng gửi lặp của cùng 1 sinh viên, đảm bảo không xảy ra Overbooking hay phát sinh bản ghi mồ côi. Ngoài ra, Postman và k2 cũng được dùng để kiểm tra độ ổn định phản hồi của API dưới tải thử nghiệm. 
+Với Concurrency và Performance Testing, hệ thống dùng ExecutorService kết hợp CountDownLatch để giả lập các đợt truy cập đồng thời cao trực tiếp vào PostgreSQL 17. Các kịch bản gồm 2 luồng tranh 1 suất cuối, 30 luồng tranh 5 suất và 10 luồng gửi lặp của cùng 1 sinh viên, đảm bảo không xảy ra Overbooking hay phát sinh bản ghi mồ côi. Ngoài ra, Postman và k6 cũng được dùng để kiểm tra độ ổn định phản hồi của API dưới tải thử nghiệm. 
 
 Ở giai đoạn End-to-End và UAT Testing, bộ kiểm thử tự động Playwright trên trình duyệt Chromium cho các luồng giao diện chính được kết hợp với buổi kiểm thử chấp nhận UAT theo kịch bản 8 bước. Quá trình UAT chạy trên cả máy tính trình chiếu của Ban tổ chức lẫn điện thoại thật của Sinh viên qua kết nối HTTPS Tunnel cloudflared, nhằm xác minh luồng quét camera bằng html5-qrcode và phương án dán chuỗi token dự phòng. 
+
+# **8. Tiêu chí kiểm thử & Quản lý lỗi**
+
+# **8.1. Tiêu chí Bắt đầu & Kết thúc Kiểm thử (Entry & Exit Criteria)**
+
+- **Entry Criteria (Tiêu chí bắt đầu kiểm thử tích hợp & E2E):** Mã nguồn Backend/Frontend đã hợp nhất hợp lệ vào nhánh kiểm thử, dịch vụ PostgreSQL 17 chạy ổn định với Flyway migration `V1__sprint1_core_schema.sql`, dữ liệu mẫu `DemoDataSeeder` nạp thành công ở profile `dev`, và toàn bộ lệnh kiểm tra tĩnh (`lint`, `typecheck`) cùng unit test vượt qua 100%.
+- **Exit Criteria (Tiêu chí kết thúc & nghiệm thu Sprint 1):** Toàn bộ bộ kiểm thử tự động Backend (`.\mvnw.cmd -B -ntp verify -Pintegration`) và Frontend (`npm run lint && npm run typecheck && npm run test && npm run build`, kèm Playwright E2E) đạt 100% Pass mà không dùng `-DskipTests` hay `@Disabled` (tuân thủ R1, R2); các ca kiểm thử manual trọng yếu cho 6 phân hệ `4.1`–`4.6` được thực thi có bằng chứng thực tế; không còn lỗi mức Blocker/Critical chưa được ghi nhận và xử lý trước Demo.
+
+# **8.2. Phân loại Mức độ Nghiêm trọng (Severity) & Độ Ưu tiên (Priority)**
+
+- **Blocker / Critical (P0):** Lỗi gây mất tính toàn vẹn dữ liệu (Overbooking vượt `quota_total`, điểm danh trùng `ACCEPTED`, sửa/xóa được `audit_logs`), lỗ hổng phân quyền/IDOR, rò rỉ bí mật/token QR, hoặc làm sập hoàn toàn luồng chính (đăng nhập, đăng ký, điểm danh QR) với HTTP 500 hoặc crash giao diện — **bắt buộc sửa ngay trước khi nghiệm thu**.
+- **Major (P1):** Sai lệch hợp đồng API (`ApiError`, thiếu/lệch field DTO giữa BE–FE), sai xử lý múi giờ `Asia/Ho_Chi_Minh`, hoặc lỗi hiển thị/thông báo gây hiểu nhầm cho người dùng nhưng có phương án tránh tạm thời — **lập Jira Bug và ưu tiên sửa trong Sprint hoặc đầu Sprint kế tiếp**.
+- **Minor / Cosmetic (P2):** Sai chính tả nhỏ, lệch căn lề/màu nhẹ hoặc thiếu tinh chỉnh UX phụ trợ không ảnh hưởng nghiệp vụ lõi — **ghi nhận để hoàn thiện theo backlog**.
 
 # **8.3. Quy trình quản lý lỗi và kiểm thử hồi quy** 
 
