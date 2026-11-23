@@ -42,11 +42,19 @@ public class HistoryService {
             pageable = Pageable.unpaged();
         }
 
+        // Mỗi sự kiện chỉ lấy registration MỚI NHẤT của sinh viên (hủy rồi đăng ký lại tạo nhiều dòng),
+        // khử trùng trước khi lọc/đếm/phân trang để totalElements và LIMIT/OFFSET tính theo số sự kiện.
         StringBuilder whereSql = new StringBuilder("""
-            FROM registrations r
+            FROM (
+                SELECT DISTINCT ON (reg.event_id)
+                    reg.id, reg.event_id, reg.student_id, reg.status, reg.created_at
+                FROM registrations reg
+                WHERE reg.student_id = ?
+                ORDER BY reg.event_id, reg.created_at DESC, reg.id DESC
+            ) r
             JOIN events e ON r.event_id = e.id
             LEFT JOIN attendances a ON a.event_id = e.id AND a.student_id = r.student_id AND a.status = 'ACCEPTED'
-            WHERE r.student_id = ?
+            WHERE 1 = 1
         """);
 
         List<Object> params = new ArrayList<>();
@@ -191,7 +199,7 @@ public class HistoryService {
 
     private String buildOrderBy(Sort sort) {
         if (sort == null || sort.isUnsorted()) {
-            return " ORDER BY e.start_at DESC, r.created_at DESC";
+            return " ORDER BY e.start_at DESC, r.created_at DESC, e.id ASC";
         }
         List<String> orders = new ArrayList<>();
         for (Sort.Order order : sort) {
@@ -209,9 +217,10 @@ public class HistoryService {
             }
         }
         if (orders.isEmpty()) {
-            return " ORDER BY e.start_at DESC, r.created_at DESC";
+            return " ORDER BY e.start_at DESC, r.created_at DESC, e.id ASC";
         }
-        return " ORDER BY " + String.join(", ", orders);
+        // Tie-breaker e.id để thứ tự ổn định giữa các trang khi giá trị sort trùng nhau
+        return " ORDER BY " + String.join(", ", orders) + ", e.id ASC";
     }
 
     private record DateRange(Instant from, Instant to) {
