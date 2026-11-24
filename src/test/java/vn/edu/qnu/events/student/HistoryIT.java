@@ -9,6 +9,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import com.jayway.jsonpath.JsonPath;
 import vn.edu.qnu.events.attendance.Attendance;
 import vn.edu.qnu.events.attendance.AttendanceRepository;
 import vn.edu.qnu.events.auth.AppUserRepository;
@@ -24,10 +25,13 @@ import vn.edu.qnu.events.registration.RegistrationStatus;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
 import static org.hamcrest.Matchers.emptyOrNullString;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.everyItem;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasSize;
@@ -367,5 +371,112 @@ class HistoryIT {
                         .header("Authorization", "Bearer " + student1Token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content", hasSize(2)));
+    }
+
+    private void saveRegistration(UUID eventId, UUID studentId, RegistrationStatus status, Instant createdAt) {
+        registrationRepository.saveAndFlush(new Registration(
+                UUID.randomUUID(), eventId, studentId, status, createdAt, createdAt
+        ));
+    }
+
+    @Test
+    @DisplayName("12. Hủy rồi đăng ký lại cùng sự kiện -> chỉ 1 item, registrationStatus REGISTERED, totalElements 1")
+    void cancelledThenReRegisteredReturnsSingleItem() throws Exception {
+        Event event = createEvent("Sự kiện đăng ký lại", 10);
+        Instant now = Instant.now();
+        saveRegistration(event.getId(), student1Id, RegistrationStatus.CANCELLED, now.minus(1, ChronoUnit.HOURS));
+        saveRegistration(event.getId(), student1Id, RegistrationStatus.REGISTERED, now);
+
+        mockMvc.perform(get("/api/v1/me/history")
+                        .header("Authorization", "Bearer " + student1Token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content", hasSize(1)))
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].eventId").value(event.getId().toString()))
+                .andExpect(jsonPath("$.content[0].registrationStatus").value("REGISTERED"))
+                .andExpect(jsonPath("$.content[0].attendanceStatus").value("NOT_CHECKED_IN"));
+    }
+
+    @Test
+    @DisplayName("13. Hủy, đăng ký lại rồi điểm danh -> 1 item ACCEPTED, lọc attendanceStatus=ACCEPTED cũng 1 item")
+    void cancelledThenReRegisteredAndAttendedReturnsSingleAcceptedItem() throws Exception {
+        Event event = createEvent("Sự kiện đăng ký lại và điểm danh", 10);
+        Instant now = Instant.now();
+        saveRegistration(event.getId(), student1Id, RegistrationStatus.CANCELLED, now.minus(1, ChronoUnit.HOURS));
+        saveRegistration(event.getId(), student1Id, RegistrationStatus.REGISTERED, now);
+        attendanceRepository.saveAndFlush(new Attendance(
+                UUID.randomUUID(), event.getId(), student1Id, "DYNAMIC_QR", "ACCEPTED", now
+        ));
+
+        mockMvc.perform(get("/api/v1/me/history")
+                        .header("Authorization", "Bearer " + student1Token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content", hasSize(1)))
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].registrationStatus").value("REGISTERED"))
+                .andExpect(jsonPath("$.content[0].attendanceStatus").value("ACCEPTED"));
+
+        mockMvc.perform(get("/api/v1/me/history?attendanceStatus=ACCEPTED")
+                        .header("Authorization", "Bearer " + student1Token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content", hasSize(1)))
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].eventId").value(event.getId().toString()))
+                .andExpect(jsonPath("$.content[0].attendanceStatus").value("ACCEPTED"));
+    }
+
+    @Test
+    @DisplayName("14. Chỉ có 1 đăng ký đã CANCELLED -> vẫn hiện 1 item CANCELLED, NOT_CHECKED_IN")
+    void onlyCancelledRegistrationStillShown() throws Exception {
+        Event event = createEvent("Sự kiện đã hủy", 10);
+        saveRegistration(event.getId(), student1Id, RegistrationStatus.CANCELLED, Instant.now());
+
+        mockMvc.perform(get("/api/v1/me/history")
+                        .header("Authorization", "Bearer " + student1Token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content", hasSize(1)))
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].eventId").value(event.getId().toString()))
+                .andExpect(jsonPath("$.content[0].registrationStatus").value("CANCELLED"))
+                .andExpect(jsonPath("$.content[0].attendanceStatus").value("NOT_CHECKED_IN"));
+    }
+
+    @Test
+    @DisplayName("15. Phân trang sau khử trùng: 3 sự kiện (1 sự kiện có 2 registration), size=2 -> totalElements 3, totalPages 2, không lặp eventId")
+    void paginationCountsEventsNotRegistrations() throws Exception {
+        Instant base = Instant.now().plus(2, ChronoUnit.DAYS);
+        Event e1 = createEventWithCustom("Sự kiện phân trang 1", 10, "Hội thảo khoa học", base);
+        Event e2 = createEventWithCustom("Sự kiện phân trang 2", 10, "Hội thảo khoa học", base.plus(1, ChronoUnit.DAYS));
+        Event e3 = createEventWithCustom("Sự kiện phân trang 3", 10, "Hội thảo khoa học", base.plus(2, ChronoUnit.DAYS));
+
+        Instant now = Instant.now();
+        saveRegistration(e1.getId(), student1Id, RegistrationStatus.REGISTERED, now);
+        saveRegistration(e2.getId(), student1Id, RegistrationStatus.CANCELLED, now.minus(1, ChronoUnit.HOURS));
+        saveRegistration(e2.getId(), student1Id, RegistrationStatus.REGISTERED, now);
+        saveRegistration(e3.getId(), student1Id, RegistrationStatus.REGISTERED, now);
+
+        String page0 = mockMvc.perform(get("/api/v1/me/history?page=0&size=2")
+                        .header("Authorization", "Bearer " + student1Token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content", hasSize(2)))
+                .andExpect(jsonPath("$.totalElements").value(3))
+                .andExpect(jsonPath("$.totalPages").value(2))
+                .andReturn().getResponse().getContentAsString();
+
+        String page1 = mockMvc.perform(get("/api/v1/me/history?page=1&size=2")
+                        .header("Authorization", "Bearer " + student1Token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content", hasSize(1)))
+                .andExpect(jsonPath("$.totalElements").value(3))
+                .andExpect(jsonPath("$.totalPages").value(2))
+                .andReturn().getResponse().getContentAsString();
+
+        List<String> ids0 = JsonPath.read(page0, "$.content[*].eventId");
+        List<String> ids1 = JsonPath.read(page1, "$.content[*].eventId");
+        Set<String> all = new HashSet<>(ids0);
+        all.addAll(ids1);
+
+        assertThat(all).hasSize(3)
+                .containsExactlyInAnyOrder(e1.getId().toString(), e2.getId().toString(), e3.getId().toString());
     }
 }
