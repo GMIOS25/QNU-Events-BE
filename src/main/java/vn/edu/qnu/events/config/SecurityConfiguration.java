@@ -1,12 +1,15 @@
 package vn.edu.qnu.events.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
@@ -139,14 +142,17 @@ public class SecurityConfiguration {
         return converter;
     }
 
+    public static final String DEV_FALLBACK_JWT_SECRET =
+            "qnu-events-dev-secret-key-must-be-at-least-256-bits-long-for-hmac-sha256!";
+    private static final int MIN_JWT_SECRET_BYTES = 32;
+
     @Bean
     JwtDecoder jwtDecoder(
             @Value("${app.security.jwt-secret:}") String jwtSecret,
+            Environment environment,
             ObjectProvider<SessionJwtValidator> sessionJwtValidatorProvider
     ) {
-        String secret = (jwtSecret != null && jwtSecret.length() >= 32)
-                ? jwtSecret
-                : "qnu-events-dev-secret-key-must-be-at-least-256-bits-long-for-hmac-sha256!";
+        String secret = resolveJwtSecret(jwtSecret, environment);
         SecretKey key = new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
         NimbusJwtDecoder decoder = NimbusJwtDecoder.withSecretKey(key).build();
         sessionJwtValidatorProvider.ifAvailable(validator -> {
@@ -159,9 +165,26 @@ public class SecurityConfiguration {
         return decoder;
     }
 
+    public static String resolveJwtSecret(String jwtSecret, Environment environment) {
+        if (jwtSecret != null && !jwtSecret.isBlank()
+                && jwtSecret.getBytes(StandardCharsets.UTF_8).length >= MIN_JWT_SECRET_BYTES) {
+            return jwtSecret;
+        }
+        if (environment != null && environment.acceptsProfiles(Profiles.of("dev", "demo", "test"))) {
+            return DEV_FALLBACK_JWT_SECRET;
+        }
+        throw new IllegalStateException("JWT_SECRET phải có ít nhất 32 byte khi chạy ngoài profile dev/demo/test.");
+    }
+
+    private static ObjectMapper createFallbackObjectMapper() {
+        return new ObjectMapper()
+                .findAndRegisterModules()
+                .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+    }
+
     @Bean
     AuthenticationEntryPoint authenticationEntryPoint(ObjectProvider<ObjectMapper> objectMapperProvider) {
-        ObjectMapper objectMapper = objectMapperProvider.getIfAvailable(() -> new ObjectMapper().findAndRegisterModules());
+        ObjectMapper objectMapper = objectMapperProvider.getIfAvailable(SecurityConfiguration::createFallbackObjectMapper);
         return (request, response, authException) -> {
             String traceId = GlobalExceptionHandler.resolveTraceId(request);
             ErrorCode errorCode = ErrorCode.UNAUTHENTICATED;
@@ -184,7 +207,7 @@ public class SecurityConfiguration {
 
     @Bean
     AccessDeniedHandler accessDeniedHandler(ObjectProvider<ObjectMapper> objectMapperProvider, ObjectProvider<AuditService> auditServiceProvider) {
-        ObjectMapper objectMapper = objectMapperProvider.getIfAvailable(() -> new ObjectMapper().findAndRegisterModules());
+        ObjectMapper objectMapper = objectMapperProvider.getIfAvailable(SecurityConfiguration::createFallbackObjectMapper);
         return (request, response, accessDeniedException) -> {
             String traceId = GlobalExceptionHandler.resolveTraceId(request);
             String path = request.getRequestURI();

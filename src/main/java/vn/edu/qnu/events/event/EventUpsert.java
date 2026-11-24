@@ -38,17 +38,20 @@ public record EventUpsert(
 
         AttendanceMethod attendanceMethod,
 
+        @NotNull(message = "Số lượng chỗ không được để trống")
         @Min(value = 1, message = "Số lượng chỗ tối thiểu là 1")
-        int quotaTotal,
+        Integer quotaTotal,
 
         @NotEmpty(message = "Phải chọn ít nhất một lớp đối tượng tham gia")
-        Set<UUID> audienceClassIds,
+        Set<@NotNull(message = "Mã lớp đối tượng không được để trống") UUID> audienceClassIds,
 
         @NotBlank(message = "Loại hoạt động không được để trống")
+        @Size(max = 50, message = "Loại hoạt động không vượt quá 50 ký tự")
         String activityType,
 
+        @NotNull(message = "Điểm rèn luyện không được để trống")
         @Min(value = 0, message = "Điểm rèn luyện phải lớn hơn hoặc bằng 0")
-        int activityPoints,
+        Integer activityPoints,
 
         Integer version
 ) {}
