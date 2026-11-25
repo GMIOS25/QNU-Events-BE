@@ -1,0 +1,11 @@
+Test Case: TC-EVT-028 - Unauthenticated requests -> 401 UNAUTHENTICATED
+Status: PASS
+Timestamp: 2026-11-20T09:02:43.256Z
+------------------------------------------------------------
+GET /classes -> HTTP 401 (UNAUTHENTICATED, traceId=f5860cb7-c3c9-42c2-9d77-3e7ef6b8be4b)
+POST /events -> HTTP 401 (UNAUTHENTICATED, traceId=a1e69d53-3621-44f8-8008-23e4aa90ae03)
+PUT /events/30698738-7835-4a2a-a1f5-83adb4cb88db -> HTTP 401 (UNAUTHENTICATED, traceId=c7886154-da42-421d-bf6d-47984ef0292d)
+GET /preview -> HTTP 401 (UNAUTHENTICATED, traceId=87c19167-5800-4d02-ac86-4c94987e32f0)
+POST /publish -> HTTP 401 (UNAUTHENTICATED, traceId=2d593123-e20a-4d58-9aed-23c044dee900)
+------------------------------------------------------------
+Summary: Cả 5 endpoint trả 401 UNAUTHENTICATED kèm traceId.

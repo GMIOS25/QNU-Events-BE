@@ -1,0 +1,46 @@
+meta {
+  name: TC-AUTH-05 & TC-AUTH-13 - Login user không tồn tại (so sánh chống dò tài khoản)
+  type: http
+  seq: 16
+  tags: [
+    auth
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/auth/login
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "loginId": "non_existent_user_999",
+    "password": "AnyPassword@123"
+  }
+}
+
+tests {
+  test("HTTP 401 và mã lỗi INVALID_CREDENTIALS", function() {
+    expect(res.getStatus()).to.equal(401);
+    const body = res.getBody();
+    expect(body).to.be.an("object");
+    expect(body.code).to.equal("INVALID_CREDENTIALS");
+    expect(body.message).to.be.a("string").and.not.be.empty;
+    expect(body.message).to.equal("Thông tin đăng nhập không chính xác.");
+    expect(body.traceId).to.be.a("string").and.not.be.empty;
+    expect(body.timestamp).to.be.a("string").and.not.be.empty;
+    expect(body.details).to.be.an("object");
+  });
+
+  test("Thông báo lỗi giống hệt TC-AUTH-04 (chống dò tài khoản)", function() {
+    const b = res.getBody();
+    expect(b.code).to.equal(bru.getVar("authErrCodeWrongPass"));
+    expect(b.message).to.equal(bru.getVar("authErrMsgWrongPass"));
+    expect(JSON.stringify(b.details || {})).to.equal(bru.getVar("authErrDetailsWrongPass"));
+  });
+}
+
+docs {
+  TC-AUTH-05, TC-AUTH-13: So sánh response giữa user không tồn tại và sai mật khẩu phải giống hệt nhau (REQ-AUTH-004, NFR-SEC-003).
+}

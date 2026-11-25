@@ -1,0 +1,10 @@
+Test Case: TC-EVT-031 - Multi-class, duplicate, mixed invalid, PUT audience update
+Status: PASS
+Timestamp: 2026-11-20T09:02:42.338Z
+------------------------------------------------------------
+Step 1 ([K49CNTT1, K49CNTT1, K49CNTT2]) -> HTTP 201, audience=["00000000-0000-0000-0000-000000000001","00000000-0000-0000-0000-000000000002"]
+Step 2 ([K49CNTT1, missing]) -> HTTP 400 {"code":"VALIDATION_FAILED","message":"Thông tin sự kiện không hợp lệ.","details":{"fields":{"audienceClassIds":"Lớp học có ID 99999999-9999-9999-9999-999999999999 không tồn tại."}},"traceId":"abb740f5-c265-46b9-8a4a-e6cf18032fe3","timestamp":"2026-11-20T09:02:42.171437500Z"}
+Step 3 (PUT -> [K49CNTT2]) -> HTTP 200, audience=["00000000-0000-0000-0000-000000000002"]
+DB event_audience -> 00000000-0000-0000-0000-000000000002
+------------------------------------------------------------
+Summary: Khử trùng 2 lớp thành công, từ chối UUID không tồn tại (400), PUT cập nhật đúng 1 lớp K49CNTT2 trong DB.

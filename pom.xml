@@ -20,6 +20,14 @@
         <poi.version>6.0.0</poi.version>
         <commons-csv.version>1.14.1</commons-csv.version>
         <zxing.version>3.5.4</zxing.version>
+        <jmeter-maven-plugin.version>3.8.0</jmeter-maven-plugin.version>
+        <jmeter.version>5.6.3</jmeter.version>
+        <jmeter.testFile>*.jmx</jmeter.testFile>
+        <jmeter.host>localhost</jmeter.host>
+        <jmeter.port>8080</jmeter.port>
+        <jmeter.protocol>http</jmeter.protocol>
+        <test.groups></test.groups>
+        <test.excludedGroups>selenium</test.excludedGroups>
     </properties>
     <dependencies>
         <dependency>
@@ -100,12 +108,43 @@
             <artifactId>spring-boot-starter-security-test</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>org.seleniumhq.selenium</groupId>
+            <artifactId>selenium-java</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
     <build>
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>add-automation-test-source</id>
+                        <phase>generate-test-sources</phase>
+                        <goals>
+                            <goal>add-test-source</goal>
+                        </goals>
+                        <configuration>
+                            <sources>
+                                <source>${project.basedir}/src/test/AutomationTest</source>
+                            </sources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <groups>${test.groups}</groups>
+                    <excludedGroups>${test.excludedGroups}</excludedGroups>
+                </configuration>
             </plugin>
         </plugins>
     </build>
@@ -122,6 +161,66 @@
                                 <goals>
                                     <goal>integration-test</goal>
                                     <goal>verify</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>selenium-test</id>
+            <properties>
+                <test.groups>selenium</test.groups>
+                <test.excludedGroups></test.excludedGroups>
+            </properties>
+        </profile>
+        <profile>
+            <id>jmeter-test</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>com.lazerycode.jmeter</groupId>
+                        <artifactId>jmeter-maven-plugin</artifactId>
+                        <version>${jmeter-maven-plugin.version}</version>
+                        <configuration>
+                            <jmeterVersion>${jmeter.version}</jmeterVersion>
+                            <testFilesDirectory>${project.basedir}/src/test/AutomationTest/JMeterTest/plans</testFilesDirectory>
+                            <testFilesIncluded>
+                                <jMeterTestFile>${jmeter.testFile}</jMeterTestFile>
+                            </testFilesIncluded>
+                            <propertiesFilesDirectory>${project.basedir}/src/test/AutomationTest/JMeterTest/config</propertiesFilesDirectory>
+                            <resultsDirectory>${project.build.directory}/jmeter/results</resultsDirectory>
+                            <generateReports>true</generateReports>
+                            <resultsFileFormat>csv</resultsFileFormat>
+                            <jMeterProcessJVMSettings>
+                                <xms>512</xms>
+                                <xmx>2048</xmx>
+                            </jMeterProcessJVMSettings>
+                            <propertiesUser>
+                                <host>${jmeter.host}</host>
+                                <port>${jmeter.port}</port>
+                                <protocol>${jmeter.protocol}</protocol>
+                                <dataDir>${project.basedir}/src/test/AutomationTest/JMeterTest/data</dataDir>
+                            </propertiesUser>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>configuration</id>
+                                <goals>
+                                    <goal>configure</goal>
+                                </goals>
+                            </execution>
+                            <execution>
+                                <id>jmeter-tests</id>
+                                <goals>
+                                    <goal>jmeter</goal>
+                                </goals>
+                            </execution>
+                            <execution>
+                                <id>jmeter-check-results</id>
+                                <goals>
+                                    <goal>results</goal>
                                 </goals>
                             </execution>
                         </executions>

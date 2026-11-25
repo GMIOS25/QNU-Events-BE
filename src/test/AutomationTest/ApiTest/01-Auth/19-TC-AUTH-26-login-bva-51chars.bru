@@ -1,0 +1,43 @@
+meta {
+  name: TC-AUTH-26 & WB-01 - BVA loginId vượt biên 51 ký tự -> 401 (không lỗi SQL 500)
+  type: http
+  seq: 19
+  tags: [
+    auth
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/auth/login
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "loginId": "{{loginId51}}",
+    "password": "{{demoPassword}}"
+  }
+}
+
+script:pre-request {
+  bru.setVar("loginId51", "u".repeat(51));
+}
+
+tests {
+  test("HTTP 401 và mã lỗi INVALID_CREDENTIALS", function() {
+    expect(res.getStatus()).to.equal(401);
+    const body = res.getBody();
+    expect(body).to.be.an("object");
+    expect(body.code).to.equal("INVALID_CREDENTIALS");
+    expect(body.message).to.be.a("string").and.not.be.empty;
+    expect(body.message).to.equal("Thông tin đăng nhập không chính xác.");
+    expect(body.traceId).to.be.a("string").and.not.be.empty;
+    expect(body.timestamp).to.be.a("string").and.not.be.empty;
+    expect(body.details).to.be.an("object");
+  });
+}
+
+docs {
+  TC-AUTH-26, TC-AUTH-WB-01: loginId 51 ký tự không gây lỗi SQL 500 mà trả 401 INVALID_CREDENTIALS.
+}

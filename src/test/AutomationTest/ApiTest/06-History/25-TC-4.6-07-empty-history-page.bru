@@ -1,0 +1,31 @@
+meta {
+  name: TC-4.6-07 - GET /me/history không có kết quả -> 200 OK Page rỗng content=[]
+  type: http
+  seq: 25
+  tags: [
+    history
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/me/history?activityType=KhongTonTai_{{runSuffix}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenSv003}}
+}
+
+tests {
+  test("HTTP 200 OK trả về Page rỗng content=[] và totalElements=0 (không trả null/404)", function() {
+    expect(res.getStatus()).to.equal(200);
+    const p = res.getBody();
+    expect(p.content).to.deep.equal([]);
+    expect(p.totalElements).to.equal(0);
+  });
+}
+
+docs {
+  TC-4.6-07: Khi không có bản ghi phù hợp, GET /api/v1/me/history trả 200 OK với content rỗng (ca SV chưa đăng ký gì nằm thêm ở Folder 07).
+}

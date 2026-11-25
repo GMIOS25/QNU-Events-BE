@@ -1,0 +1,49 @@
+meta {
+  name: TC-EVT-012 - BVA quotaTotal = 1 (biên hợp lệ nhỏ nhất) -> 201 Created
+  type: http
+  seq: 17
+  tags: [
+    events
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/events
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenOwner01}}
+}
+
+body:json {
+  {
+    "title": "[BRU-{{runSuffix}}] BVA Quota 1",
+    "description": "Nội dung chi tiết sự kiện kiểm thử tự động Bruno.",
+    "location": "Hội trường A - Trường ĐH Quy Nhơn",
+    "startAt": "{{futureStartAt}}",
+    "endAt": "{{futureEndAt}}",
+    "registrationDeadline": "{{futureRegDeadline}}",
+    "attendanceOpenAt": "{{futureAttOpen}}",
+    "attendanceCloseAt": "{{futureAttClose}}",
+    "attendanceMethod": "DYNAMIC_QR",
+    "quotaTotal": 1,
+    "audienceClassIds": [
+      "{{classK49Cntt1}}"
+    ],
+    "activityType": "Hội thảo khoa học",
+    "activityPoints": 5
+  }
+}
+
+tests {
+  test("HTTP 201 Created với quotaTotal = 1", function() {
+    expect(res.getStatus()).to.equal(201);
+    expect(res.getBody().quotaTotal).to.equal(1);
+  });
+}
+
+docs {
+  TC-EVT-012 (BVA-04): quotaTotal = 1 hợp lệ.
+}

@@ -1,0 +1,36 @@
+meta {
+  name: TC-AUTH-21 - RBAC EVENT_OWNER gọi POST /registrations -> 403 FORBIDDEN
+  type: http
+  seq: 40
+  tags: [
+    auth
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/events/{{nonExistentUuid}}/registrations
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenOwner01}}
+}
+
+tests {
+  test("HTTP 403 và mã lỗi FORBIDDEN", function() {
+    expect(res.getStatus()).to.equal(403);
+    const body = res.getBody();
+    expect(body).to.be.an("object");
+    expect(body.code).to.equal("FORBIDDEN");
+    expect(body.message).to.be.a("string").and.not.be.empty;
+    expect(body.message).to.equal("Bạn không có quyền thực hiện thao tác này.");
+    expect(body.traceId).to.be.a("string").and.not.be.empty;
+    expect(body.timestamp).to.be.a("string").and.not.be.empty;
+    expect(body.details).to.be.an("object");
+  });
+}
+
+docs {
+  TC-AUTH-21: EVENT_OWNER gọi POST /registrations bị chặn 403 FORBIDDEN.
+}

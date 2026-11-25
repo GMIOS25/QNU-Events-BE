@@ -1,0 +1,35 @@
+meta {
+  name: TC-4.3-21 - Chặn phiên đã logout gọi GET /api/v1/events -> 401 SESSION_REVOKED
+  type: http
+  seq: 19
+  tags: [
+    event-list
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/events
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenSv001Revoked}}
+}
+
+tests {
+  test("HTTP 401 và mã lỗi SESSION_REVOKED", function() {
+    expect(res.getStatus()).to.equal(401);
+    const body = res.getBody();
+    expect(body).to.be.an("object");
+    expect(body.code).to.equal("SESSION_REVOKED");
+    expect(body.message).to.be.a("string").and.not.be.empty;
+    expect(body.traceId).to.be.a("string").and.not.be.empty;
+    expect(body.timestamp).to.be.a("string").and.not.be.empty;
+    expect(body.details).to.be.an("object");
+  });
+}
+
+docs {
+  TC-4.3-21: Token đã thu hồi bị từ chối 401 SESSION_REVOKED.
+}

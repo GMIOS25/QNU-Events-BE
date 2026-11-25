@@ -1,0 +1,487 @@
+﻿[INFO] Scanning for projects...
+[INFO] 
+[INFO] -----------------------< vn.edu.qnu:qnu-events >------------------------
+[INFO] Building QNU Events Backend 0.0.1-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ qnu-events ---
+[INFO] Copying 2 resources from src\main\resources to target\classes
+[INFO] Copying 1 resource from src\main\resources to target\classes
+[INFO] 
+[INFO] --- compiler:3.15.0:compile (default-compile) @ qnu-events ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ qnu-events ---
+[INFO] skip non existing resourceDirectory D:\QNU-EVENT\QNU-Events-BE\src\test\resources
+[INFO] 
+[INFO] --- compiler:3.15.0:testCompile (default-testCompile) @ qnu-events ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.5.6:test (default-test) @ qnu-events ---
+[INFO] Using auto detected provider org.apache.maven.surefire.junitplatform.JUnitPlatformProvider
+[INFO] 
+[INFO] -------------------------------------------------------
+[INFO]  T E S T S
+[INFO] -------------------------------------------------------
+[INFO] Running vn.edu.qnu.events.audit.AuditIT
+16:03:06.167 [main] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [vn.edu.qnu.events.audit.AuditIT]: AuditIT does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+16:03:06.295 [main] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration vn.edu.qnu.events.QnuEventsApplication for test class vn.edu.qnu.events.audit.AuditIT
+16:03:06.373 [main] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [vn.edu.qnu.events.audit.AuditIT]: AuditIT does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+16:03:06.375 [main] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration vn.edu.qnu.events.QnuEventsApplication for test class vn.edu.qnu.events.audit.AuditIT
+16:03:06.449 [main] INFO org.springframework.boot.devtools.restart.RestartApplicationListener -- Restart disabled due to context in which it is running
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v4.1.2)
+
+2026-11-20T16:03:06.732+07:00  INFO 22760 --- [qnu-events] [           main] vn.edu.qnu.events.audit.AuditIT          : Starting AuditIT using Java 25.0.4 with PID 22760 (started by yangk in D:\QNU-EVENT\QNU-Events-BE)
+2026-11-20T16:03:06.734+07:00  INFO 22760 --- [qnu-events] [           main] vn.edu.qnu.events.audit.AuditIT          : The following 1 profile is active: "dev"
+2026-11-20T16:03:07.825+07:00  INFO 22760 --- [qnu-events] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-11-20T16:03:07.894+07:00  INFO 22760 --- [qnu-events] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 60 ms. Found 8 JPA repository interfaces.
+2026-11-20T16:03:08.596+07:00  INFO 22760 --- [qnu-events] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-11-20T16:03:08.786+07:00  INFO 22760 --- [qnu-events] [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@2f61de04
+2026-11-20T16:03:08.788+07:00  INFO 22760 --- [qnu-events] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-11-20T16:03:08.811+07:00  INFO 22760 --- [qnu-events] [           main] org.flywaydb.core.FlywayExecutor         : Database: jdbc:postgresql://localhost:5432/qnu_events (PostgreSQL 17.11)
+2026-11-20T16:03:08.897+07:00  INFO 22760 --- [qnu-events] [           main] o.f.core.internal.command.DbValidate     : Successfully validated 1 migration (execution time 00:00.035s)
+2026-11-20T16:03:08.934+07:00  INFO 22760 --- [qnu-events] [           main] o.f.core.internal.command.DbMigrate      : Current version of schema "public": 1
+2026-11-20T16:03:08.943+07:00  INFO 22760 --- [qnu-events] [           main] o.f.core.internal.command.DbMigrate      : Schema "public" is up to date. No migration necessary.
+2026-11-20T16:03:09.130+07:00  INFO 22760 --- [qnu-events] [           main] org.hibernate.orm.jpa                    : HHH008540: Processing PersistenceUnitInfo [name: default]
+2026-11-20T16:03:09.242+07:00  INFO 22760 --- [qnu-events] [           main] org.hibernate.orm.core                   : HHH000001: Hibernate ORM core version 7.4.13.Final
+2026-11-20T16:03:09.650+07:00  INFO 22760 --- [qnu-events] [           main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-11-20T16:03:09.753+07:00  INFO 22760 --- [qnu-events] [           main] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [jdbc:postgresql://localhost:5432/qnu_events]
+	Database driver: PostgreSQL JDBC Driver
+	Database dialect: PostgreSQLDialect
+	Database version: 17.11
+	Default catalog/schema: qnu_events/public
+	Autocommit mode: undefined/unknown
+	Isolation level: READ_COMMITTED [default READ_COMMITTED]
+	JDBC fetch size: none
+	Pool: DataSourceConnectionProvider
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-11-20T16:03:10.739+07:00  INFO 22760 --- [qnu-events] [           main] org.hibernate.orm.core                   : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-11-20T16:03:10.787+07:00  INFO 22760 --- [qnu-events] [           main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-11-20T16:03:10.859+07:00  INFO 22760 --- [qnu-events] [           main] o.s.d.j.r.query.QueryEnhancerFactories   : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-11-20T16:03:13.351+07:00  INFO 22760 --- [qnu-events] [           main] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 1 endpoint beneath base path '/actuator'
+2026-11-20T16:03:13.401+07:00  INFO 22760 --- [qnu-events] [           main] vn.edu.qnu.events.audit.AuditIT          : Started AuditIT in 6.962 seconds (process running for 8.244)
+2026-11-20T16:03:13.484+07:00  INFO 22760 --- [qnu-events] [           main] vn.edu.qnu.events.auth.DemoDataSeeder    : Running DemoDataSeeder for dev/demo profile...
+2026-11-20T16:03:13.845+07:00  INFO 22760 --- [qnu-events] [           main] vn.edu.qnu.events.auth.DemoDataSeeder    : DemoDataSeeder completed successfully.
+.\mvnw.cmd : Mockito is currently self-attaching to enable the inline-mock-maker. This will no longer work in future 
+releases of the JDK. Please add Mockito as an agent to your build as described in Mockito's documentation: 
+https://javadoc.io/doc/org.mockito/mockito-core/latest/org.mockito/org/mockito/Mockito.html#0.3
+At line:1 char:181
++ ... mvnw.cmd) { .\mvnw.cmd test -Dtest="EventIT,AuthIT,AuditIT,MigrationI ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Mockito is curr...ockito.html#0.3:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Java HotSpot(TM) 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap 
+classpath has been appended
+WARNING: A Java agent has been loaded dynamically 
+(C:\Users\yangk\.m2\repository\net\bytebuddy\byte-buddy-agent\1.18.15\byte-buddy-agent-1.18.15.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+2026-11-20T16:03:14.172+07:00  INFO 22760 --- [qnu-events] [           main] vn.edu.qnu.events.audit.AuditService     : Audit logged: action=SECURITY_TEST_DELETE, targetType=SYSTEM, targetId=system-2, outcome=SUCCESS, reason=null
+2026-11-20T16:03:14.317+07:00  INFO 22760 --- [qnu-events] [           main] vn.edu.qnu.events.audit.AuditService     : Audit logged: action=TEST_AUDIT_ACTION, targetType=TEST_TARGET, targetId=0b6b15fb-bd97-4d8a-b347-735c82b68d63, outcome=SUCCESS, reason=null
+2026-11-20T16:03:14.336+07:00  INFO 22760 --- [qnu-events] [           main] vn.edu.qnu.events.audit.AuditService     : Audit logged: action=SECURITY_TEST_UPDATE, targetType=SYSTEM, targetId=system-1, outcome=SUCCESS, reason=null
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 8.349 s -- in vn.edu.qnu.events.audit.AuditIT
+[INFO] Running vn.edu.qnu.events.auth.AuthIT
+2026-11-20T16:03:14.353+07:00  INFO 22760 --- [qnu-events] [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [vn.edu.qnu.events.auth.AuthIT]: AuthIT does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-11-20T16:03:14.390+07:00  INFO 22760 --- [qnu-events] [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration vn.edu.qnu.events.QnuEventsApplication for test class vn.edu.qnu.events.auth.AuthIT
+2026-11-20T16:03:14.391+07:00  INFO 22760 --- [qnu-events] [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [vn.edu.qnu.events.auth.AuthIT]: AuthIT does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-11-20T16:03:14.394+07:00  INFO 22760 --- [qnu-events] [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration vn.edu.qnu.events.QnuEventsApplication for test class vn.edu.qnu.events.auth.AuthIT
+2026-11-20T16:03:14.404+07:00  INFO 22760 --- [qnu-events] [           main] o.s.b.d.r.RestartApplicationListener     : Restart disabled due to context in which it is running
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v4.1.2)
+
+2026-11-20T16:03:14.423+07:00  INFO 22760 --- [qnu-events] [           main] vn.edu.qnu.events.auth.AuthIT            : Starting AuthIT using Java 25.0.4 with PID 22760 (started by yangk in D:\QNU-EVENT\QNU-Events-BE)
+2026-11-20T16:03:14.424+07:00  INFO 22760 --- [qnu-events] [           main] vn.edu.qnu.events.auth.AuthIT            : The following 1 profile is active: "dev"
+2026-11-20T16:03:14.694+07:00  INFO 22760 --- [qnu-events] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-11-20T16:03:14.710+07:00  INFO 22760 --- [qnu-events] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 15 ms. Found 8 JPA repository interfaces.
+2026-11-20T16:03:14.830+07:00  INFO 22760 --- [qnu-events] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-2 - Starting...
+2026-11-20T16:03:14.847+07:00  INFO 22760 --- [qnu-events] [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-2 - Added connection org.postgresql.jdbc.PgConnection@4eb7521e
+2026-11-20T16:03:14.848+07:00  INFO 22760 --- [qnu-events] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-2 - Start completed.
+2026-11-20T16:03:14.850+07:00  INFO 22760 --- [qnu-events] [           main] org.flywaydb.core.FlywayExecutor         : Database: jdbc:postgresql://localhost:5432/qnu_events (PostgreSQL 17.11)
+2026-11-20T16:03:14.879+07:00  INFO 22760 --- [qnu-events] [           main] o.f.core.internal.command.DbValidate     : Successfully validated 1 migration (execution time 00:00.010s)
+2026-11-20T16:03:14.912+07:00  INFO 22760 --- [qnu-events] [           main] o.f.core.internal.command.DbMigrate      : Current version of schema "public": 1
+2026-11-20T16:03:14.913+07:00  INFO 22760 --- [qnu-events] [           main] o.f.core.internal.command.DbMigrate      : Schema "public" is up to date. No migration necessary.
+2026-11-20T16:03:14.935+07:00  INFO 22760 --- [qnu-events] [           main] org.hibernate.orm.jpa                    : HHH008540: Processing PersistenceUnitInfo [name: default]
+2026-11-20T16:03:14.950+07:00  INFO 22760 --- [qnu-events] [           main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-11-20T16:03:14.963+07:00  INFO 22760 --- [qnu-events] [           main] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [jdbc:postgresql://localhost:5432/qnu_events]
+	Database driver: PostgreSQL JDBC Driver
+	Database dialect: PostgreSQLDialect
+	Database version: 17.11
+	Default catalog/schema: qnu_events/public
+	Autocommit mode: undefined/unknown
+	Isolation level: READ_COMMITTED [default READ_COMMITTED]
+	JDBC fetch size: none
+	Pool: DataSourceConnectionProvider
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-11-20T16:03:15.029+07:00  INFO 22760 --- [qnu-events] [           main] org.hibernate.orm.core                   : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-11-20T16:03:15.049+07:00  INFO 22760 --- [qnu-events] [           main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-11-20T16:03:15.411+07:00  INFO 22760 --- [qnu-events] [           main] o.s.b.t.m.w.SpringBootMockServletContext : Initializing Spring TestDispatcherServlet ''
+2026-11-20T16:03:15.411+07:00  INFO 22760 --- [qnu-events] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-11-20T16:03:15.415+07:00  INFO 22760 --- [qnu-events] [           main] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 1 endpoint beneath base path '/actuator'
+2026-11-20T16:03:15.419+07:00  INFO 22760 --- [qnu-events] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 8 ms
+2026-11-20T16:03:15.472+07:00  INFO 22760 --- [qnu-events] [           main] vn.edu.qnu.events.auth.AuthIT            : Started AuthIT in 1.068 seconds (process running for 10.315)
+2026-11-20T16:03:15.474+07:00  INFO 22760 --- [qnu-events] [           main] vn.edu.qnu.events.auth.DemoDataSeeder    : Running DemoDataSeeder for dev/demo profile...
+2026-11-20T16:03:15.731+07:00  INFO 22760 --- [qnu-events] [           main] vn.edu.qnu.events.auth.DemoDataSeeder    : DemoDataSeeder completed successfully.
+2026-11-20T16:03:16.733+07:00  WARN 22760 --- [qnu-events] [           main] v.e.q.e.common.GlobalExceptionHandler    : Business error [INVALID_CREDENTIALS]: Th�ng tin ??ng nh?p kh�ng ch�nh x�c. (traceId: b9b3c1a5-4ab9-4b6f-8edb-78b1c874a692)
+2026-11-20T16:03:16.959+07:00  WARN 22760 --- [qnu-events] [           main] v.e.q.e.common.GlobalExceptionHandler    : Business error [INVALID_CREDENTIALS]: Th�ng tin ??ng nh?p kh�ng ch�nh x�c. (traceId: 92a0b42e-3946-4e55-99ca-5687425f2b54)
+2026-11-20T16:03:17.274+07:00  WARN 22760 --- [qnu-events] [           main] v.e.q.e.common.GlobalExceptionHandler    : Business error [FORBIDDEN]: T�i kho?n c?a b?n ?� b? kh�a. (traceId: 2def8954-074c-445c-8800-845ccfc70a04)
+[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 3.459 s -- in vn.edu.qnu.events.auth.AuthIT
+[INFO] Running vn.edu.qnu.events.common.SharedKernelSecurityIT
+2026-11-20T16:03:17.813+07:00  INFO 22760 --- [qnu-events] [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [vn.edu.qnu.events.common.SharedKernelSecurityIT]: SharedKernelSecurityIT does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-11-20T16:03:17.859+07:00  INFO 22760 --- [qnu-events] [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration vn.edu.qnu.events.QnuEventsApplication for test class vn.edu.qnu.events.common.SharedKernelSecurityIT
+2026-11-20T16:03:17.859+07:00  INFO 22760 --- [qnu-events] [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [vn.edu.qnu.events.common.SharedKernelSecurityIT]: SharedKernelSecurityIT does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-11-20T16:03:17.861+07:00  INFO 22760 --- [qnu-events] [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration vn.edu.qnu.events.QnuEventsApplication for test class vn.edu.qnu.events.common.SharedKernelSecurityIT
+2026-11-20T16:03:17.863+07:00  INFO 22760 --- [qnu-events] [           main] o.s.b.d.r.RestartApplicationListener     : Restart disabled due to context in which it is running
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v4.1.2)
+
+2026-11-20T16:03:17.878+07:00  INFO 22760 --- [qnu-events] [           main] v.e.q.e.common.SharedKernelSecurityIT    : Starting SharedKernelSecurityIT using Java 25.0.4 with PID 22760 (started by yangk in D:\QNU-EVENT\QNU-Events-BE)
+2026-11-20T16:03:17.878+07:00  INFO 22760 --- [qnu-events] [           main] v.e.q.e.common.SharedKernelSecurityIT    : The following 1 profile is active: "dev"
+2026-11-20T16:03:18.747+07:00  INFO 22760 --- [qnu-events] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-11-20T16:03:18.773+07:00  INFO 22760 --- [qnu-events] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 25 ms. Found 8 JPA repository interfaces.
+2026-11-20T16:03:18.850+07:00  INFO 22760 --- [qnu-events] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-3 - Starting...
+2026-11-20T16:03:18.868+07:00  INFO 22760 --- [qnu-events] [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-3 - Added connection org.postgresql.jdbc.PgConnection@e44d90c
+2026-11-20T16:03:18.868+07:00  INFO 22760 --- [qnu-events] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-3 - Start completed.
+2026-11-20T16:03:18.870+07:00  INFO 22760 --- [qnu-events] [           main] org.flywaydb.core.FlywayExecutor         : Database: jdbc:postgresql://localhost:5432/qnu_events (PostgreSQL 17.11)
+2026-11-20T16:03:18.913+07:00  INFO 22760 --- [qnu-events] [           main] o.f.core.internal.command.DbValidate     : Successfully validated 1 migration (execution time 00:00.016s)
+2026-11-20T16:03:18.951+07:00  INFO 22760 --- [qnu-events] [           main] o.f.core.internal.command.DbMigrate      : Current version of schema "public": 1
+2026-11-20T16:03:18.952+07:00  INFO 22760 --- [qnu-events] [           main] o.f.core.internal.command.DbMigrate      : Schema "public" is up to date. No migration necessary.
+2026-11-20T16:03:18.987+07:00  INFO 22760 --- [qnu-events] [           main] org.hibernate.orm.jpa                    : HHH008540: Processing PersistenceUnitInfo [name: default]
+2026-11-20T16:03:19.030+07:00  INFO 22760 --- [qnu-events] [           main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-11-20T16:03:19.044+07:00  INFO 22760 --- [qnu-events] [           main] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [jdbc:postgresql://localhost:5432/qnu_events]
+	Database driver: PostgreSQL JDBC Driver
+	Database dialect: PostgreSQLDialect
+	Database version: 17.11
+	Default catalog/schema: qnu_events/public
+	Autocommit mode: undefined/unknown
+	Isolation level: READ_COMMITTED [default READ_COMMITTED]
+	JDBC fetch size: none
+	Pool: DataSourceConnectionProvider
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-11-20T16:03:19.109+07:00  INFO 22760 --- [qnu-events] [           main] org.hibernate.orm.core                   : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-11-20T16:03:19.127+07:00  INFO 22760 --- [qnu-events] [           main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-11-20T16:03:19.450+07:00  INFO 22760 --- [qnu-events] [           main] o.s.b.t.m.w.SpringBootMockServletContext : Initializing Spring TestDispatcherServlet ''
+2026-11-20T16:03:19.450+07:00  INFO 22760 --- [qnu-events] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-11-20T16:03:19.454+07:00  INFO 22760 --- [qnu-events] [           main] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 1 endpoint beneath base path '/actuator'
+2026-11-20T16:03:19.457+07:00  INFO 22760 --- [qnu-events] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 7 ms
+2026-11-20T16:03:19.485+07:00  INFO 22760 --- [qnu-events] [           main] v.e.q.e.common.SharedKernelSecurityIT    : Started SharedKernelSecurityIT in 1.622 seconds (process running for 14.328)
+2026-11-20T16:03:19.487+07:00  INFO 22760 --- [qnu-events] [           main] vn.edu.qnu.events.auth.DemoDataSeeder    : Running DemoDataSeeder for dev/demo profile...
+2026-11-20T16:03:19.735+07:00  INFO 22760 --- [qnu-events] [           main] vn.edu.qnu.events.auth.DemoDataSeeder    : DemoDataSeeder completed successfully.
+2026-11-20T16:03:20.239+07:00  WARN 22760 --- [qnu-events] [           main] v.e.q.e.common.GlobalExceptionHandler    : Business error [CAPACITY_FULL]: S? ki?n ?� h?t su?t. (traceId: 8478b01e-1bc7-45f5-b5ce-5d6ff0646006)
+2026-11-20T16:03:20.484+07:00 ERROR 22760 --- [qnu-events] [           main] v.e.q.e.common.GlobalExceptionHandler    : Unhandled server exception (traceId: 31b973c1-aa9b-4484-9194-75c25b34f6a6): Sensitive database credentials leaked in exception message!
+
+java.lang.RuntimeException: Sensitive database credentials leaked in exception message!
+	at vn.edu.qnu.events.common.SharedKernelSecurityIT$TestController.triggerServerError(SharedKernelSecurityIT.java:63) ~[test-classes/:na]
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:104) ~[na:na]
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565) ~[na:na]
+	at org.springframework.web.method.support.InvocableHandlerMethod.doInvoke(InvocableHandlerMethod.java:252) ~[spring-web-7.0.10.jar:7.0.10]
+	at org.springframework.web.method.support.InvocableHandlerMethod.invokeForRequest(InvocableHandlerMethod.java:184) ~[spring-web-7.0.10.jar:7.0.10]
+	at org.springframework.web.servlet.mvc.method.annotation.ServletInvocableHandlerMethod.invokeAndHandle(ServletInvocableHandlerMethod.java:117) ~[spring-webmvc-7.0.10.jar:7.0.10]
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.invokeHandlerMethod(RequestMappingHandlerAdapter.java:934) ~[spring-webmvc-7.0.10.jar:7.0.10]
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.handleInternal(RequestMappingHandlerAdapter.java:853) ~[spring-webmvc-7.0.10.jar:7.0.10]
+	at org.springframework.web.servlet.mvc.method.AbstractHandlerMethodAdapter.handle(AbstractHandlerMethodAdapter.java:86) ~[spring-webmvc-7.0.10.jar:7.0.10]
+	at org.springframework.web.servlet.DispatcherServlet.doDispatch(DispatcherServlet.java:963) ~[spring-webmvc-7.0.10.jar:7.0.10]
+	at org.springframework.web.servlet.DispatcherServlet.doService(DispatcherServlet.java:866) ~[spring-webmvc-7.0.10.jar:7.0.10]
+	at org.springframework.web.servlet.FrameworkServlet.processRequest(FrameworkServlet.java:1000) ~[spring-webmvc-7.0.10.jar:7.0.10]
+	at org.springframework.web.servlet.FrameworkServlet.doGet(FrameworkServlet.java:892) ~[spring-webmvc-7.0.10.jar:7.0.10]
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:622) ~[tomcat-embed-core-11.0.27.jar:6.1]
+	at org.springframework.web.servlet.FrameworkServlet.service(FrameworkServlet.java:874) ~[spring-webmvc-7.0.10.jar:7.0.10]
+	at org.springframework.test.web.servlet.TestDispatcherServlet.service(TestDispatcherServlet.java:72) ~[spring-test-7.0.10.jar:7.0.10]
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:710) ~[tomcat-embed-core-11.0.27.jar:6.1]
+	at org.springframework.mock.web.MockFilterChain$ServletFilterProxy.doFilter(MockFilterChain.java:160) ~[spring-test-7.0.10.jar:7.0.10]
+	at org.springframework.mock.web.MockFilterChain.doFilter(MockFilterChain.java:127) ~[spring-test-7.0.10.jar:7.0.10]
+	at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:108) ~[spring-web-7.0.10.jar:7.0.10]
+	at org.springframework.security.web.FilterChainProxy.lambda$doFilterInternal$2(FilterChainProxy.java:235) ~[spring-security-web-7.1.2.jar:7.1.2]
+	at org.springframework.security.web.ObservationFilterChainDecorator$FilterObservation$SimpleFilterObservation.lambda$wrap$1(ObservationFilterChainDecorator.java:491) ~[spring-security-web-7.1.2.jar:7.1.2]
+	at org.springframework.security.web.ObservationFilterChainDecorator$AroundFilterObservation$SimpleAroundFilterObservation.lambda$wrap$1(ObservationFilterChainDecorator.java:353) ~[spring-security-web-7.1.2.jar:7.1.2]
+	at org.springframework.security.web.ObservationFilterChainDecorator.lambda$wrapSecured$0(ObservationFilterChainDecorator.java:84) ~[spring-security-web-7.1.2.jar:7.1.2]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:131) ~[spring-security-web-7.1.2.jar:7.1.2]
+	at org.springframework.security.web.access.intercept.AuthorizationFilter.doFilter(AuthorizationFilter.java:101) ~[spring-security-web-7.1.2.jar:7.1.2]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:243) ~[spring-security-web-7.1.2.jar:7.1.2]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:230) ~[spring-security-web-7.1.2.jar:7.1.2]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:140) ~[spring-security-web-7.1.2.jar:7.1.2]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:126) ~[spring-security-web-7.1.2.jar:7.1.2]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:120) ~[spring-security-web-7.1.2.jar:7.1.2]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:243) ~[spring-security-web-7.1.2.jar:7.1.2]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:230) ~[spring-security-web-7.1.2.jar:7.1.2]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:140) ~[spring-security-web-7.1.2.jar:7.1.2]
+	at org.springframework.security.web.session.SessionManagementFilter.doFilter(SessionManagementFilter.java:132) ~[spring-security-web-7.1.2.jar:7.1.2]
+	at org.springframework.security.web.session.SessionManagementFilter.doFilter(SessionManagementFilter.java:86) ~[spring-security-web-7.1.2.jar:7.1.2]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:243) ~[spring-security-web-7.1.2.jar:7.1.2]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:230) ~[spring-security-web-7.1.2.jar:7.1.2]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:140) ~[spring-security-web-7.1.2.jar:7.1.2]
+	at org.springframework.security.web.authentication.AnonymousAuthenticationFilter.doFilter(AnonymousAuthenticationFilter.java:101) ~[spring-security-web-7.1.2.jar:7.1.2]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:243) ~[spring-security-web-7.1.2.jar:7.1.2]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:230) ~[spring-security-web-7.1.2.jar:7.1.2]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:140) ~[spring-security-web-7.1.2.jar:7.1.2]
+	at org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter.doFilter(SecurityContextHolderAwareRequestFilter.java:181) ~[spring-security-web-7.1.2.jar:7.1.2]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:243) ~[spring-security-web-7.1.2.jar:7.1.2]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:230) ~[spring-security-web-7.1.2.jar:7.1.2]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:140) ~[spring-security-web-7.1.2.jar:7.1.2]
+	at org.springframework.security.web.savedrequest.RequestCacheAwareFilter.doFilter(RequestCacheAwareFilter.java:63) ~[spring-security-web-7.1.2.jar:7.1.2]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:243) ~[spring-security-web-7.1.2.jar:7.1.2]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:230) ~[spring-security-web-7.1.2.jar:7.1.2]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:140) ~[spring-security-web-7.1.2.jar:7.1.2]
+	at org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter.doFilterInternal(BearerTokenAuthenticationFilter.java:209) ~[spring-security-oauth2-resource-server-7.1.2.jar:7.1.2]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-7.0.10.jar:7.0.10]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:243) ~[spring-security-web-7.1.2.jar:7.1.2]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:230) ~[spring-security-web-7.1.2.jar:7.1.2]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:140) ~[spring-security-web-7.1.2.jar:7.1.2]
+	at org.springframework.security.oauth2.server.resource.web.OAuth2ProtectedResourceMetadataFilter.doFilterInternal(OAuth2ProtectedResourceMetadataFilter.java:98) ~[spring-security-oauth2-resource-server-7.1.2.jar:7.1.2]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-7.0.10.jar:7.0.10]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:243) ~[spring-security-web-7.1.2.jar:7.1.2]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:230) ~[spring-security-web-7.1.2.jar:7.1.2]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:140) ~[spring-security-web-7.1.2.jar:7.1.2]
+	at org.springframework.web.filter.CorsFilter.doFilterInternal(CorsFilter.java:91) ~[spring-web-7.0.10.jar:7.0.10]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-7.0.10.jar:7.0.10]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:243) ~[spring-security-web-7.1.2.jar:7.1.2]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:230) ~[spring-security-web-7.1.2.jar:7.1.2]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:140) ~[spring-security-web-7.1.2.jar:7.1.2]
+	at org.springframework.security.web.header.HeaderWriterFilter.doHeadersAfter(HeaderWriterFilter.java:91) ~[spring-security-web-7.1.2.jar:7.1.2]
+	at org.springframework.security.web.header.HeaderWriterFilter.doFilterInternal(HeaderWriterFilter.java:76) ~[spring-security-web-7.1.2.jar:7.1.2]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-7.0.10.jar:7.0.10]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:243) ~[spring-security-web-7.1.2.jar:7.1.2]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:230) ~[spring-security-web-7.1.2.jar:7.1.2]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:140) ~[spring-security-web-7.1.2.jar:7.1.2]
+	at org.springframework.security.web.context.SecurityContextHolderFilter.doFilter(SecurityContextHolderFilter.java:82) ~[spring-security-web-7.1.2.jar:7.1.2]
+	at org.springframework.security.web.context.SecurityContextHolderFilter.doFilter(SecurityContextHolderFilter.java:69) ~[spring-security-web-7.1.2.jar:7.1.2]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:243) ~[spring-security-web-7.1.2.jar:7.1.2]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:230) ~[spring-security-web-7.1.2.jar:7.1.2]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:140) ~[spring-security-web-7.1.2.jar:7.1.2]
+	at org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter.doFilterInternal(WebAsyncManagerIntegrationFilter.java:62) ~[spring-security-web-7.1.2.jar:7.1.2]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-7.0.10.jar:7.0.10]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:243) ~[spring-security-web-7.1.2.jar:7.1.2]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:230) ~[spring-security-web-7.1.2.jar:7.1.2]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:140) ~[spring-security-web-7.1.2.jar:7.1.2]
+	at org.springframework.security.web.session.DisableEncodeUrlFilter.doFilterInternal(DisableEncodeUrlFilter.java:42) ~[spring-security-web-7.1.2.jar:7.1.2]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-7.0.10.jar:7.0.10]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:243) ~[spring-security-web-7.1.2.jar:7.1.2]
+	at org.springframework.security.web.ObservationFilterChainDecorator$AroundFilterObservation$SimpleAroundFilterObservation.lambda$wrap$0(ObservationFilterChainDecorator.java:336) ~[spring-security-web-7.1.2.jar:7.1.2]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:227) ~[spring-security-web-7.1.2.jar:7.1.2]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:140) ~[spring-security-web-7.1.2.jar:7.1.2]
+	at org.springframework.security.web.FilterChainProxy.doFilterInternal(FilterChainProxy.java:237) ~[spring-security-web-7.1.2.jar:7.1.2]
+	at org.springframework.security.web.FilterChainProxy.doFilter(FilterChainProxy.java:195) ~[spring-security-web-7.1.2.jar:7.1.2]
+	at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:113) ~[spring-web-7.0.10.jar:7.0.10]
+	at org.springframework.web.filter.ServletRequestPathFilter.doFilter(ServletRequestPathFilter.java:52) ~[spring-web-7.0.10.jar:7.0.10]
+	at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:113) ~[spring-web-7.0.10.jar:7.0.10]
+	at org.springframework.web.filter.CompositeFilter.doFilter(CompositeFilter.java:74) ~[spring-web-7.0.10.jar:7.0.10]
+	at org.springframework.security.config.annotation.web.configuration.WebSecurityConfiguration$CompositeFilterChainProxy.doFilter(WebSecurityConfiguration.java:317) ~[spring-security-config-7.1.2.jar:7.1.2]
+	at org.springframework.web.filter.DelegatingFilterProxy.invokeDelegate(DelegatingFilterProxy.java:355) ~[spring-web-7.0.10.jar:7.0.10]
+	at org.springframework.web.filter.DelegatingFilterProxy.doFilter(DelegatingFilterProxy.java:272) ~[spring-web-7.0.10.jar:7.0.10]
+	at org.springframework.test.web.servlet.setup.MockMvcFilterDecorator.doFilter(MockMvcFilterDecorator.java:160) ~[spring-test-7.0.10.jar:7.0.10]
+	at org.springframework.mock.web.MockFilterChain.doFilter(MockFilterChain.java:127) ~[spring-test-7.0.10.jar:7.0.10]
+	at org.springframework.web.filter.RequestContextFilter.doFilterInternal(RequestContextFilter.java:100) ~[spring-web-7.0.10.jar:7.0.10]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-7.0.10.jar:7.0.10]
+	at org.springframework.test.web.servlet.setup.MockMvcFilterDecorator.doFilter(MockMvcFilterDecorator.java:160) ~[spring-test-7.0.10.jar:7.0.10]
+	at org.springframework.mock.web.MockFilterChain.doFilter(MockFilterChain.java:127) ~[spring-test-7.0.10.jar:7.0.10]
+	at org.springframework.web.filter.FormContentFilter.doFilterInternal(FormContentFilter.java:93) ~[spring-web-7.0.10.jar:7.0.10]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-7.0.10.jar:7.0.10]
+	at org.springframework.test.web.servlet.setup.MockMvcFilterDecorator.doFilter(MockMvcFilterDecorator.java:160) ~[spring-test-7.0.10.jar:7.0.10]
+	at org.springframework.mock.web.MockFilterChain.doFilter(MockFilterChain.java:127) ~[spring-test-7.0.10.jar:7.0.10]
+	at org.springframework.web.filter.ServerHttpObservationFilter.doFilterInternal(ServerHttpObservationFilter.java:110) ~[spring-web-7.0.10.jar:7.0.10]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-7.0.10.jar:7.0.10]
+	at org.springframework.test.web.servlet.setup.MockMvcFilterDecorator.doFilter(MockMvcFilterDecorator.java:160) ~[spring-test-7.0.10.jar:7.0.10]
+	at org.springframework.mock.web.MockFilterChain.doFilter(MockFilterChain.java:127) ~[spring-test-7.0.10.jar:7.0.10]
+	at org.springframework.web.filter.CharacterEncodingFilter.doFilterInternal(CharacterEncodingFilter.java:199) ~[spring-web-7.0.10.jar:7.0.10]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-7.0.10.jar:7.0.10]
+	at org.springframework.test.web.servlet.setup.MockMvcFilterDecorator.doFilter(MockMvcFilterDecorator.java:160) ~[spring-test-7.0.10.jar:7.0.10]
+	at org.springframework.mock.web.MockFilterChain.doFilter(MockFilterChain.java:127) ~[spring-test-7.0.10.jar:7.0.10]
+	at org.springframework.test.web.servlet.MockMvc.perform(MockMvc.java:199) ~[spring-test-7.0.10.jar:7.0.10]
+	at vn.edu.qnu.events.common.SharedKernelSecurityIT.serverErrorDoesNotLeakStackTraceOrInternalMessage(SharedKernelSecurityIT.java:120) ~[test-classes/:na]
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:104) ~[na:na]
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565) ~[na:na]
+	at org.junit.platform.commons.util.ReflectionUtils.invokeMethod(ReflectionUtils.java:701) ~[junit-platform-commons-6.0.3.jar:6.0.3]
+	at org.junit.platform.commons.support.ReflectionSupport.invokeMethod(ReflectionSupport.java:502) ~[junit-platform-commons-6.0.3.jar:6.0.3]
+	at org.junit.jupiter.engine.support.MethodReflectionUtils.invoke(MethodReflectionUtils.java:45) ~[junit-jupiter-engine-6.0.3.jar:6.0.3]
+	at org.junit.jupiter.engine.execution.MethodInvocation.proceed(MethodInvocation.java:61) ~[junit-jupiter-engine-6.0.3.jar:6.0.3]
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain$ValidatingInvocation.proceed(InvocationInterceptorChain.java:124) ~[junit-jupiter-engine-6.0.3.jar:6.0.3]
+	at org.junit.jupiter.engine.extension.TimeoutExtension.intercept(TimeoutExtension.java:163) ~[junit-jupiter-engine-6.0.3.jar:6.0.3]
+	at org.junit.jupiter.engine.extension.TimeoutExtension.interceptTestableMethod(TimeoutExtension.java:148) ~[junit-jupiter-engine-6.0.3.jar:6.0.3]
+	at org.junit.jupiter.engine.extension.TimeoutExtension.interceptTestMethod(TimeoutExtension.java:86) ~[junit-jupiter-engine-6.0.3.jar:6.0.3]
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker$ReflectiveInterceptorCall.lambda$ofVoidMethod$0(InterceptingExecutableInvoker.java:123) ~[junit-jupiter-engine-6.0.3.jar:6.0.3]
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.lambda$invoke$0(InterceptingExecutableInvoker.java:105) ~[junit-jupiter-engine-6.0.3.jar:6.0.3]
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain$InterceptedInvocation.proceed(InvocationInterceptorChain.java:99) ~[junit-jupiter-engine-6.0.3.jar:6.0.3]
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.proceed(InvocationInterceptorChain.java:66) ~[junit-jupiter-engine-6.0.3.jar:6.0.3]
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.chainAndInvoke(InvocationInterceptorChain.java:47) ~[junit-jupiter-engine-6.0.3.jar:6.0.3]
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.invoke(InvocationInterceptorChain.java:39) ~[junit-jupiter-engine-6.0.3.jar:6.0.3]
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.invoke(InterceptingExecutableInvoker.java:104) ~[junit-jupiter-engine-6.0.3.jar:6.0.3]
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.invoke(InterceptingExecutableInvoker.java:98) ~[junit-jupiter-engine-6.0.3.jar:6.0.3]
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.invokeVoid(InterceptingExecutableInvoker.java:71) ~[junit-jupiter-engine-6.0.3.jar:6.0.3]
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.lambda$invokeTestMethod$0(TestMethodTestDescriptor.java:219) ~[junit-jupiter-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:74) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.invokeTestMethod(TestMethodTestDescriptor.java:215) ~[junit-jupiter-engine-6.0.3.jar:6.0.3]
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.execute(TestMethodTestDescriptor.java:157) ~[junit-jupiter-engine-6.0.3.jar:6.0.3]
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.execute(TestMethodTestDescriptor.java:70) ~[junit-jupiter-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$2(NodeTestTask.java:176) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:74) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$1(NodeTestTask.java:166) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:138) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$0(NodeTestTask.java:164) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:74) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:163) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:116) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604) ~[na:na]
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.invokeAll(SameThreadHierarchicalTestExecutorService.java:42) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$2(NodeTestTask.java:180) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:74) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$1(NodeTestTask.java:166) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:138) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$0(NodeTestTask.java:164) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:74) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:163) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:116) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604) ~[na:na]
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.invokeAll(SameThreadHierarchicalTestExecutorService.java:42) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$2(NodeTestTask.java:180) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:74) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$1(NodeTestTask.java:166) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:138) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$0(NodeTestTask.java:164) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:74) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:163) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:116) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.submit(SameThreadHierarchicalTestExecutorService.java:36) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.HierarchicalTestExecutor.execute(HierarchicalTestExecutor.java:52) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.HierarchicalTestEngine.execute(HierarchicalTestEngine.java:58) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.executeEngine(EngineExecutionOrchestrator.java:246) ~[junit-platform-launcher-6.0.3.jar:6.0.3]
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.failOrExecuteEngine(EngineExecutionOrchestrator.java:218) ~[junit-platform-launcher-6.0.3.jar:6.0.3]
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:179) ~[junit-platform-launcher-6.0.3.jar:6.0.3]
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:108) ~[junit-platform-launcher-6.0.3.jar:6.0.3]
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.lambda$execute$0(EngineExecutionOrchestrator.java:66) ~[junit-platform-launcher-6.0.3.jar:6.0.3]
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.withInterceptedStreams(EngineExecutionOrchestrator.java:157) ~[junit-platform-launcher-6.0.3.jar:6.0.3]
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:65) ~[junit-platform-launcher-6.0.3.jar:6.0.3]
+	at org.junit.platform.launcher.core.DefaultLauncher.execute(DefaultLauncher.java:125) ~[junit-platform-launcher-6.0.3.jar:6.0.3]
+	at org.junit.platform.launcher.core.DefaultLauncher.execute(DefaultLauncher.java:114) ~[junit-platform-launcher-6.0.3.jar:6.0.3]
+	at org.junit.platform.launcher.core.DelegatingLauncher.execute(DelegatingLauncher.java:58) ~[junit-platform-launcher-6.0.3.jar:6.0.3]
+	at org.junit.platform.launcher.core.InterceptingLauncher.lambda$execute$2(InterceptingLauncher.java:57) ~[junit-platform-launcher-6.0.3.jar:6.0.3]
+	at org.junit.platform.launcher.core.ClasspathAlignmentCheckingLauncherInterceptor.intercept(ClasspathAlignmentCheckingLauncherInterceptor.java:25) ~[junit-platform-launcher-6.0.3.jar:6.0.3]
+	at org.junit.platform.launcher.core.InterceptingLauncher.execute(InterceptingLauncher.java:56) ~[junit-platform-launcher-6.0.3.jar:6.0.3]
+	at org.junit.platform.launcher.core.DelegatingLauncher.execute(DelegatingLauncher.java:58) ~[junit-platform-launcher-6.0.3.jar:6.0.3]
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:104) ~[na:na]
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565) ~[na:na]
+	at org.apache.maven.surefire.api.util.ReflectionUtils.invokeMethodWithArray(ReflectionUtils.java:125) ~[surefire-api-3.5.6.jar:3.5.6]
+	at org.apache.maven.surefire.junitplatform.LauncherAdapter.executeWithCancellationToken(LauncherAdapter.java:68) ~[surefire-junit-platform-3.5.6.jar:3.5.6]
+	at org.apache.maven.surefire.junitplatform.LauncherAdapter.execute(LauncherAdapter.java:54) ~[surefire-junit-platform-3.5.6.jar:3.5.6]
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.execute(JUnitPlatformProvider.java:203) ~[surefire-junit-platform-3.5.6.jar:3.5.6]
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.invokeAllTests(JUnitPlatformProvider.java:168) ~[surefire-junit-platform-3.5.6.jar:3.5.6]
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.invoke(JUnitPlatformProvider.java:136) ~[surefire-junit-platform-3.5.6.jar:3.5.6]
+	at org.apache.maven.surefire.booter.ForkedBooter.runSuitesInProcess(ForkedBooter.java:385) ~[surefire-booter-3.5.6.jar:3.5.6]
+	at org.apache.maven.surefire.booter.ForkedBooter.execute(ForkedBooter.java:162) ~[surefire-booter-3.5.6.jar:3.5.6]
+	at org.apache.maven.surefire.booter.ForkedBooter.run(ForkedBooter.java:507) ~[surefire-booter-3.5.6.jar:3.5.6]
+	at org.apache.maven.surefire.booter.ForkedBooter.main(ForkedBooter.java:495) ~[surefire-booter-3.5.6.jar:3.5.6]
+
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 3.171 s -- in vn.edu.qnu.events.common.SharedKernelSecurityIT
+[INFO] Running vn.edu.qnu.events.config.SecurityConfigurationTest
+2026-11-20T16:03:20.986+07:00  INFO 22760 --- [qnu-events] [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [vn.edu.qnu.events.config.SecurityConfigurationTest]: SecurityConfigurationTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-11-20T16:03:20.999+07:00  INFO 22760 --- [qnu-events] [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration vn.edu.qnu.events.QnuEventsApplication for test class vn.edu.qnu.events.config.SecurityConfigurationTest
+2026-11-20T16:03:20.999+07:00  INFO 22760 --- [qnu-events] [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [vn.edu.qnu.events.config.SecurityConfigurationTest]: SecurityConfigurationTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-11-20T16:03:21.003+07:00  INFO 22760 --- [qnu-events] [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration vn.edu.qnu.events.QnuEventsApplication for test class vn.edu.qnu.events.config.SecurityConfigurationTest
+2026-11-20T16:03:21.017+07:00  INFO 22760 --- [qnu-events] [           main] o.s.b.d.r.RestartApplicationListener     : Restart disabled due to context in which it is running
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v4.1.2)
+
+2026-11-20T16:03:21.033+07:00  INFO 22760 --- [qnu-events] [           main] v.e.q.e.c.SecurityConfigurationTest      : Starting SecurityConfigurationTest using Java 25.0.4 with PID 22760 (started by yangk in D:\QNU-EVENT\QNU-Events-BE)
+2026-11-20T16:03:21.034+07:00  INFO 22760 --- [qnu-events] [           main] v.e.q.e.c.SecurityConfigurationTest      : No active profile set, falling back to 1 default profile: "default"
+2026-11-20T16:03:21.218+07:00  INFO 22760 --- [qnu-events] [           main] o.s.b.t.m.w.SpringBootMockServletContext : Initializing Spring TestDispatcherServlet ''
+2026-11-20T16:03:21.218+07:00  INFO 22760 --- [qnu-events] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-11-20T16:03:21.220+07:00  INFO 22760 --- [qnu-events] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 2 ms
+2026-11-20T16:03:21.230+07:00  INFO 22760 --- [qnu-events] [           main] v.e.q.e.c.SecurityConfigurationTest      : Started SecurityConfigurationTest in 0.224 seconds (process running for 16.073)
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.300 s -- in vn.edu.qnu.events.config.SecurityConfigurationTest
+[INFO] Running vn.edu.qnu.events.db.MigrationIT
+2026-11-20T16:03:21.287+07:00  INFO 22760 --- [qnu-events] [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [vn.edu.qnu.events.db.MigrationIT]: MigrationIT does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-11-20T16:03:21.294+07:00  INFO 22760 --- [qnu-events] [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration vn.edu.qnu.events.QnuEventsApplication for test class vn.edu.qnu.events.db.MigrationIT
+2026-11-20T16:03:21.295+07:00  INFO 22760 --- [qnu-events] [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [vn.edu.qnu.events.db.MigrationIT]: MigrationIT does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-11-20T16:03:21.295+07:00  INFO 22760 --- [qnu-events] [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration vn.edu.qnu.events.QnuEventsApplication for test class vn.edu.qnu.events.db.MigrationIT
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.213 s -- in vn.edu.qnu.events.db.MigrationIT
+[INFO] Running vn.edu.qnu.events.event.EventIT
+2026-11-20T16:03:21.502+07:00  INFO 22760 --- [qnu-events] [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [vn.edu.qnu.events.event.EventIT]: EventIT does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-11-20T16:03:21.513+07:00  INFO 22760 --- [qnu-events] [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration vn.edu.qnu.events.QnuEventsApplication for test class vn.edu.qnu.events.event.EventIT
+2026-11-20T16:03:21.515+07:00  INFO 22760 --- [qnu-events] [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [vn.edu.qnu.events.event.EventIT]: EventIT does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-11-20T16:03:21.516+07:00  INFO 22760 --- [qnu-events] [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration vn.edu.qnu.events.QnuEventsApplication for test class vn.edu.qnu.events.event.EventIT
+2026-11-20T16:03:22.798+07:00  INFO 22760 --- [qnu-events] [           main] vn.edu.qnu.events.audit.AuditService     : Audit logged: action=EVENT_PUBLISH, targetType=EVENT, targetId=611440f1-7232-404b-bdb7-d7d68805bbee, outcome=SUCCESS, reason=null
+2026-11-20T16:03:22.877+07:00  WARN 22760 --- [qnu-events] [           main] ration$PageModule$WarningLoggingModifier : Serializing PageImpl instances as-is is not supported, meaning that there is no guarantee about the stability of the resulting JSON structure!
+	For a stable JSON structure, please use Spring Data's PagedModel (globally via @EnableSpringDataWebSupport(pageSerializationMode = VIA_DTO))
+	or Spring HATEOAS and Spring Data's PagedResourcesAssembler as documented in https://docs.spring.io/spring-data/commons/reference/repositories/core-extensions.html#core.web.pageables.
+
+2026-11-20T16:03:24.112+07:00  INFO 22760 --- [qnu-events] [           main] vn.edu.qnu.events.audit.AuditService     : Audit logged: action=EVENT_PUBLISH, targetType=EVENT, targetId=08885aef-4132-45eb-a482-9c377ad8a29d, outcome=SUCCESS, reason=null
+2026-11-20T16:03:24.216+07:00  INFO 22760 --- [qnu-events] [           main] vn.edu.qnu.events.audit.AuditService     : Audit logged: action=EVENT_PUBLISH, targetType=EVENT, targetId=ecc5c9dd-1ea0-4789-aab0-f300f4d6994f, outcome=SUCCESS, reason=null
+2026-11-20T16:03:24.315+07:00  INFO 22760 --- [qnu-events] [           main] vn.edu.qnu.events.audit.AuditService     : Audit logged: action=EVENT_PUBLISH, targetType=EVENT, targetId=ce2740cf-1772-4810-b5f5-829e83997d95, outcome=SUCCESS, reason=null
+2026-11-20T16:03:25.550+07:00  INFO 22760 --- [qnu-events] [           main] vn.edu.qnu.events.audit.AuditService     : Audit logged: action=EVENT_PUBLISH, targetType=EVENT, targetId=9522ae24-8eb9-4458-acde-aa7de958c504, outcome=SUCCESS, reason=null
+2026-11-20T16:03:25.611+07:00  INFO 22760 --- [qnu-events] [           main] vn.edu.qnu.events.audit.AuditService     : Audit logged: action=EVENT_PUBLISH, targetType=EVENT, targetId=46b5e28d-b842-468c-a61f-a961e4f20ebe, outcome=SUCCESS, reason=null
+2026-11-20T16:03:26.853+07:00  INFO 22760 --- [qnu-events] [           main] vn.edu.qnu.events.audit.AuditService     : Audit logged: action=EVENT_PUBLISH_DENIED, targetType=EVENT, targetId=28f5af48-aa89-49eb-9c32-22470e85913a, outcome=DENIED, reason=PREVIEW_REQUIRED
+2026-11-20T16:03:26.859+07:00  WARN 22760 --- [qnu-events] [           main] v.e.q.e.common.GlobalExceptionHandler    : Business error [PREVIEW_REQUIRED]: C?n xem tr??c s? ki?n tr??c khi c�ng b?. (traceId: e4e552ce-6118-437e-b99d-8ee17c8a1ac1)
+2026-11-20T16:03:26.933+07:00  INFO 22760 --- [qnu-events] [           main] vn.edu.qnu.events.audit.AuditService     : Audit logged: action=EVENT_PUBLISH_DENIED, targetType=EVENT, targetId=28f5af48-aa89-49eb-9c32-22470e85913a, outcome=DENIED, reason=PREVIEW_OUTDATED
+2026-11-20T16:03:26.940+07:00  WARN 22760 --- [qnu-events] [           main] v.e.q.e.common.GlobalExceptionHandler    : Business error [PREVIEW_OUTDATED]: N?i dung s? ki?n ?� thay ??i, vui l�ng xem tr??c l?i. (traceId: 90cf9edb-4c78-4a58-90f8-883229d3fdc2)
+2026-11-20T16:03:26.985+07:00  INFO 22760 --- [qnu-events] [           main] vn.edu.qnu.events.audit.AuditService     : Audit logged: action=EVENT_PUBLISH, targetType=EVENT, targetId=28f5af48-aa89-49eb-9c32-22470e85913a, outcome=SUCCESS, reason=null
+2026-11-20T16:03:28.182+07:00  WARN 22760 --- [qnu-events] [           main] v.e.q.e.common.GlobalExceptionHandler    : Business error [VALIDATION_FAILED]: Th�ng tin s? ki?n kh�ng h?p l?. (traceId: 3af1773c-193b-4b3c-885b-01b496fd8d91)
+2026-11-20T16:03:29.374+07:00  WARN 22760 --- [qnu-events] [           main] v.e.q.e.common.GlobalExceptionHandler    : Business error [NOT_FOUND]: Kh�ng t�m th?y t�i nguy�n y�u c?u. (traceId: e6a8ada3-0bd0-4676-bce1-0f4ca848ea7f)
+2026-11-20T16:03:30.580+07:00  INFO 22760 --- [qnu-events] [           main] vn.edu.qnu.events.audit.AuditService     : Audit logged: action=EVENT_PUBLISH, targetType=EVENT, targetId=46e838e3-24f0-43cb-a14c-01911d89bc86, outcome=SUCCESS, reason=null
+2026-11-20T16:03:30.627+07:00  WARN 22760 --- [qnu-events] [           main] v.e.q.e.common.GlobalExceptionHandler    : Business error [NOT_FOUND]: Kh�ng t�m th?y t�i nguy�n y�u c?u. (traceId: 9ad348bb-5b27-4176-8ac8-ecbdf063621a)
+2026-11-20T16:03:31.822+07:00  INFO 22760 --- [qnu-events] [           main] vn.edu.qnu.events.audit.AuditService     : Audit logged: action=EVENT_PUBLISH_DENIED, targetType=EVENT, targetId=5838815f-3248-4514-8915-adef339f8481, outcome=DENIED, reason=PREVIEW_REQUIRED
+2026-11-20T16:03:31.829+07:00  WARN 22760 --- [qnu-events] [           main] v.e.q.e.common.GlobalExceptionHandler    : Business error [PREVIEW_REQUIRED]: C?n xem tr??c s? ki?n tr??c khi c�ng b?. (traceId: 5c86367b-0715-49e5-b3a7-1e8512119229)
+2026-11-20T16:03:31.865+07:00  WARN 22760 --- [qnu-events] [           main] v.e.q.e.common.GlobalExceptionHandler    : Business error [VALIDATION_FAILED]: C?n x�c nh?n tr??c khi c�ng b? s? ki?n. (traceId: e5d4c714-1185-4f7b-985e-cde9ea222680)
+2026-11-20T16:03:31.877+07:00  INFO 22760 --- [qnu-events] [           main] vn.edu.qnu.events.audit.AuditService     : Audit logged: action=EVENT_PUBLISH, targetType=EVENT, targetId=5838815f-3248-4514-8915-adef339f8481, outcome=SUCCESS, reason=null
+2026-11-20T16:03:31.918+07:00  WARN 22760 --- [qnu-events] [           main] v.e.q.e.common.GlobalExceptionHandler    : Business error [VERSION_CONFLICT]: Ch? c� th? ch?nh s?a s? ki?n ? tr?ng th�i b?n nh�p. (traceId: 06b7beb9-40f3-4038-a096-740a672dc1dd)
+2026-11-20T16:03:34.254+07:00  WARN 22760 --- [qnu-events] [           main] v.e.q.e.common.GlobalExceptionHandler    : Business error [FORBIDDEN]: B?n kh�ng c� quy?n th?c hi?n thao t�c n�y. (traceId: df5c0f40-d500-450c-9f44-7f1735ec494b)
+2026-11-20T16:03:35.529+07:00  INFO 22760 --- [qnu-events] [           main] vn.edu.qnu.events.audit.AuditService     : Audit logged: action=EVENT_PUBLISH, targetType=EVENT, targetId=68ec4f94-a9e9-440f-8efd-70ac3273a89c, outcome=SUCCESS, reason=null
+2026-11-20T16:03:35.601+07:00  INFO 22760 --- [qnu-events] [           main] vn.edu.qnu.events.audit.AuditService     : Audit logged: action=REGISTRATION_CREATE, targetType=REGISTRATION, targetId=910a1e63-6229-4110-aee0-429cc2f96353, outcome=SUCCESS, reason=null
+2026-11-20T16:03:36.870+07:00  INFO 22760 --- [qnu-events] [           main] vn.edu.qnu.events.audit.AuditService     : Audit logged: action=EVENT_PUBLISH, targetType=EVENT, targetId=71067c8f-bc62-4e61-b014-b64f35cc3cd4, outcome=SUCCESS, reason=null
+2026-11-20T16:03:38.267+07:00  INFO 22760 --- [qnu-events] [           main] vn.edu.qnu.events.audit.AuditService     : Audit logged: action=EVENT_PUBLISH, targetType=EVENT, targetId=a380b50b-db46-4669-85e7-38c622cc6b32, outcome=SUCCESS, reason=null
+2026-11-20T16:03:38.319+07:00  WARN 22760 --- [qnu-events] [           main] v.e.q.e.common.GlobalExceptionHandler    : Business error [NOT_FOUND]: Kh�ng t�m th?y t�i nguy�n y�u c?u. (traceId: a41d6c34-7dfe-4ee3-8a9a-94a9738b9f89)
+2026-11-20T16:03:39.621+07:00  WARN 22760 --- [qnu-events] [           main] v.e.q.e.common.GlobalExceptionHandler    : Business error [FORBIDDEN]: B?n kh�ng c� quy?n th?c hi?n thao t�c n�y. (traceId: 170c0620-315c-4df8-a498-f0578ee85f20)
+2026-11-20T16:03:39.632+07:00  WARN 22760 --- [qnu-events] [           main] v.e.q.e.common.GlobalExceptionHandler    : Business error [FORBIDDEN]: B?n kh�ng c� quy?n th?c hi?n thao t�c n�y. (traceId: 91bad3b9-c92e-4ff3-9485-7034dd978bcf)
+2026-11-20T16:03:40.934+07:00  INFO 22760 --- [qnu-events] [           main] vn.edu.qnu.events.audit.AuditService     : Audit logged: action=EVENT_PUBLISH, targetType=EVENT, targetId=1158edec-40fc-4c22-a142-59d7368f6cdf, outcome=SUCCESS, reason=null
+2026-11-20T16:03:40.981+07:00  INFO 22760 --- [qnu-events] [           main] vn.edu.qnu.events.audit.AuditService     : Audit logged: action=REGISTRATION_CREATE, targetType=REGISTRATION, targetId=e0e37dc5-cf42-45c1-a18c-abfb6801806d, outcome=SUCCESS, reason=null
+2026-11-20T16:03:42.579+07:00  WARN 22760 --- [qnu-events] [           main] v.e.q.e.common.GlobalExceptionHandler    : Business error [VALIDATION_FAILED]: C?n truy?n version hi?n t?i c?a s? ki?n khi ch?nh s?a. (traceId: 445565da-7ff5-496a-862d-e499685b37c7)
+2026-11-20T16:03:42.594+07:00  WARN 22760 --- [qnu-events] [           main] v.e.q.e.common.GlobalExceptionHandler    : Business error [VERSION_CONFLICT]: D? li?u ?� b? thay ??i b?i ng??i kh�c, vui l�ng t?i l?i. (traceId: e5b5146a-e891-4180-89de-2172ba2b8af4)
+2026-11-20T16:03:45.234+07:00  INFO 22760 --- [qnu-events] [           main] vn.edu.qnu.events.audit.AuditService     : Audit logged: action=EVENT_PUBLISH_DENIED, targetType=EVENT, targetId=41e748f7-83d5-4a1d-a069-267541671b69, outcome=DENIED, reason=PREVIEW_OUTDATED
+2026-11-20T16:03:45.240+07:00  WARN 22760 --- [qnu-events] [           main] v.e.q.e.common.GlobalExceptionHandler    : Business error [PREVIEW_OUTDATED]: N?i dung s? ki?n ?� thay ??i, vui l�ng xem tr??c l?i. (traceId: 83438fb4-be0d-4690-be68-3c9f4628b4d7)
+[INFO] Tests run: 21, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 28.26 s -- in vn.edu.qnu.events.event.EventIT
+[INFO] 
+[INFO] Results:
+[INFO] 
+[INFO] Tests run: 49, Failures: 0, Errors: 0, Skipped: 0
+[INFO] 
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  51.547 s
+[INFO] Finished at: 2026-11-20T16:03:54+07:00
+[INFO] ------------------------------------------------------------------------

@@ -1,0 +1,47 @@
+meta {
+  name: TC-QR-05 & TC-QR-22 & TC-QR-25 - sv001 điểm danh thành công với Idempotency-Key 1 ký tự ("k") -> 200 ACCEPTED
+  type: http
+  seq: 77
+  tags: [
+    qr
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/events/{{evtQr01}}/attendance/qr
+  body: json
+  auth: bearer
+}
+
+headers {
+  Idempotency-Key: k
+}
+
+auth:bearer {
+  token: {{tokenSv001}}
+}
+
+body:json {
+  {
+    "token": "{{qrToken01Fresh}}"
+  }
+}
+
+script:post-response {
+  if (res.getStatus() === 200) {
+    bru.setVar("sv001Qr01AcceptedAt", res.getBody().acceptedAt);
+  }
+}
+
+tests {
+  test("HTTP 200 OK, status=ACCEPTED, acceptedAt ISO-8601 UTC (sv001 độc lập với sv002 và chấp nhận key 1 ký tự)", function() {
+    expect(res.getStatus()).to.equal(200);
+    const b = res.getBody();
+    expect(b.status).to.equal("ACCEPTED");
+    expect(b.acceptedAt).to.match(/Z$/);
+  });
+}
+
+docs {
+  TC-QR-05, TC-QR-22 (BVA 1-char key), TC-QR-25 (độc lập giữa sv001 và sv002).
+}

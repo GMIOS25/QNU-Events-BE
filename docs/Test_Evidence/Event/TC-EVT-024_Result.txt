@@ -1,0 +1,9 @@
+Test Case: TC-EVT-024 - Idempotent publish on PUBLISHED event
+Status: PASS
+Timestamp: 2026-11-20T09:02:43.742Z
+------------------------------------------------------------
+First publish -> HTTP 200, publishedAt=2026-11-20T09:02:43.435262900Z
+Second publish -> HTTP 200, publishedAt=2026-11-20T09:02:43.435263Z
+audit_logs EVENT_PUBLISH count: before=1, after=1
+------------------------------------------------------------
+Summary: Công bố lần 2 trả 200 OK, giữ nguyên publishedAt, không ghi trùng audit_logs.

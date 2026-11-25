@@ -1,0 +1,36 @@
+meta {
+  name: TC-AUTH-27 - Đăng nhập CLASS_REPRESENTATIVE (bruno_bcs01) -> 200 OK
+  type: http
+  seq: 7
+  tags: [
+    db-fixture
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/auth/login
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "loginId": "{{brunoBcsUser}}",
+    "password": "{{demoPassword}}"
+  }
+}
+
+script:post-response {
+  if (res.getStatus() === 200) bru.setVar("tokenBcs01", res.getBody().accessToken);
+}
+
+tests {
+  test("HTTP 200 OK với roles=[CLASS_REPRESENTATIVE]", function() {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody().user.roles).to.deep.equal(["CLASS_REPRESENTATIVE"]);
+  });
+}
+
+docs {
+  TC-AUTH-27: Đăng nhập tài khoản vai trò CLASS_REPRESENTATIVE.
+}

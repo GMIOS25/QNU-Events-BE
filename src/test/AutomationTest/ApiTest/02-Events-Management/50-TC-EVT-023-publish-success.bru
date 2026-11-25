@@ -1,0 +1,45 @@
+meta {
+  name: TC-EVT-023 - Công bố sự kiện thành công sau xem trước -> 200 PUBLISHED
+  type: http
+  seq: 50
+  tags: [
+    events
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/events/{{evtDraftMainId}}/publish
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenOwner01}}
+}
+
+body:json {
+  {
+    "confirm": true,
+    "previewVersion": 2
+  }
+}
+
+script:post-response {
+  if (res.getStatus() === 200) {
+    bru.setVar("evtMainPublishedAt", res.getBody().publishedAt);
+  }
+}
+
+tests {
+  test("HTTP 200 OK, status = PUBLISHED, có publishedAt và mở đăng ký", function() {
+    expect(res.getStatus()).to.equal(200);
+    const e = res.getBody();
+    expect(e.status).to.equal("PUBLISHED");
+    expect(e.publishedAt).to.be.a("string").and.not.be.empty;
+    expect(e.registrationOpen).to.equal(true);
+  });
+}
+
+docs {
+  TC-EVT-023: Công bố thành công chuyển trạng thái DRAFT -> PUBLISHED và ghi audit EVENT_PUBLISH.
+}

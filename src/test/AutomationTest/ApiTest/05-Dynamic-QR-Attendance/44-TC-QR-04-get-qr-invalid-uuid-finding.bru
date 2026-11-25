@@ -1,0 +1,34 @@
+meta {
+  name: TC-QR-04 & WB-12 - GET /events/not-a-uuid/qr (Finding ẩn stack trace)
+  type: http
+  seq: 44
+  tags: [
+    qr
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/events/not-a-uuid/qr
+  body: none
+  auth: bearer
+}
+
+headers {
+  X-Request-Id: trace-qr-01
+}
+
+auth:bearer {
+  token: {{tokenOwner01}}
+}
+
+tests {
+  test("Trả ApiError đúng traceId và không lộ stack trace", function() {
+    expect([400, 500]).to.include(res.getStatus());
+    expect(res.getBody().traceId).to.equal("trace-qr-01");
+    expect(["VALIDATION_FAILED", "INTERNAL_ERROR"]).to.include(res.getBody().code);
+  });
+}
+
+docs {
+  TC-QR-04, TC-QR-WB-12: Kiểm chứng UUID sai định dạng trên /qr.
+}

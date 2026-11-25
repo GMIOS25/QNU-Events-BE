@@ -1,0 +1,42 @@
+meta {
+  name: TC-EVT-022 - Công bố bản xem trước cũ sau khi sửa -> 409 PREVIEW_OUTDATED
+  type: http
+  seq: 43
+  tags: [
+    events
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/events/{{evtDraftMainId}}/publish
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenOwner01}}
+}
+
+body:json {
+  {
+    "confirm": true,
+    "previewVersion": 1
+  }
+}
+
+tests {
+  test("HTTP 409 và mã lỗi PREVIEW_OUTDATED", function() {
+    expect(res.getStatus()).to.equal(409);
+    const body = res.getBody();
+    expect(body).to.be.an("object");
+    expect(body.code).to.equal("PREVIEW_OUTDATED");
+    expect(body.message).to.be.a("string").and.not.be.empty;
+    expect(body.traceId).to.be.a("string").and.not.be.empty;
+    expect(body.timestamp).to.be.a("string").and.not.be.empty;
+    expect(body.details).to.be.an("object");
+  });
+}
+
+docs {
+  TC-EVT-022: Công bố sau khi chỉnh sửa mà chưa xem trước lại trả 409 PREVIEW_OUTDATED.
+}

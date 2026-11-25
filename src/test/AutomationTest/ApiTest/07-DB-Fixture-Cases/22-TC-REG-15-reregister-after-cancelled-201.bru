@@ -1,0 +1,30 @@
+meta {
+  name: TC-REG-15 - Đăng ký lại sau khi đã CANCELLED -> 201 Created (partial unique index)
+  type: http
+  seq: 22
+  tags: [
+    db-fixture
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/events/{{brunoReRegEventId}}/registrations
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenSvReReg}}
+}
+
+tests {
+  test("HTTP 201 Created với status=REGISTERED, alreadyRegistered=false", function() {
+    expect(res.getStatus()).to.equal(201);
+    expect(res.getBody().status).to.equal("REGISTERED");
+    expect(res.getBody().alreadyRegistered).to.equal(false);
+  });
+}
+
+docs {
+  TC-REG-15, TC-REG-WB-10: Nhờ partial unique index uq_registrations_active, cho phép đăng ký lại sau CANCELLED.
+}

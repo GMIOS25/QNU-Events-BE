@@ -1,6 +1,7 @@
 package vn.edu.qnu.events.event;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -30,6 +31,11 @@ public record EventDetail(
         Set<UUID> audienceClassIds,
         Integer version,
         Integer previewedVersion,
-        Instant publishedAt
-) {}
+        Instant publishedAt,
+        List<EventAudienceClass> audienceClasses,
+        boolean eligible
+) {
+    /** QE-37: đối tượng được phép tham gia hiển thị được (mã/tên lớp) thay vì chỉ UUID. */
+    public record EventAudienceClass(UUID id, String code, String name) {}
+}
 

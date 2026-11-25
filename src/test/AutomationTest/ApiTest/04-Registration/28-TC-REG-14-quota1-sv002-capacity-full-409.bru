@@ -1,0 +1,36 @@
+meta {
+  name: TC-REG-14 & TC-REG-04 - BVA Quota đầy: sv002 đăng ký -> 409 CAPACITY_FULL
+  type: http
+  seq: 28
+  tags: [
+    registration
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/events/{{evtRegE2}}/registrations
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenSv002}}
+}
+
+tests {
+  test("HTTP 409 và mã lỗi CAPACITY_FULL", function() {
+    expect(res.getStatus()).to.equal(409);
+    const body = res.getBody();
+    expect(body).to.be.an("object");
+    expect(body.code).to.equal("CAPACITY_FULL");
+    expect(body.message).to.be.a("string").and.not.be.empty;
+    expect(body.message).to.equal("Sự kiện đã hết suất tham gia.");
+    expect(body.traceId).to.be.a("string").and.not.be.empty;
+    expect(body.timestamp).to.be.a("string").and.not.be.empty;
+    expect(body.details).to.be.an("object");
+  });
+}
+
+docs {
+  TC-REG-14, TC-REG-04: Hết suất trả 409 CAPACITY_FULL và rollback giao dịch.
+}

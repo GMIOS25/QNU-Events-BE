@@ -1,0 +1,47 @@
+meta {
+  name: [Setup] Tạo sự kiện evtQr02
+  type: http
+  seq: 6
+  tags: [
+    qr
+    setup
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/events
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenOwner02}}
+}
+
+body:json {
+  {
+    "title": "[BRU-{{runSuffix}}] QR-02 Active Owner02",
+    "description": "Nội dung chi tiết sự kiện kiểm thử tự động Bruno.",
+    "location": "Hội trường A - Trường ĐH Quy Nhơn",
+    "startAt": "{{activeStartAt}}",
+    "endAt": "{{activeEndAt}}",
+    "registrationDeadline": "{{activeRegDeadline}}",
+    "attendanceOpenAt": "{{activeAttOpen}}",
+    "attendanceCloseAt": "{{activeAttClose}}",
+    "attendanceMethod": "DYNAMIC_QR",
+    "quotaTotal": 10,
+    "audienceClassIds": [
+      "{{classK49Cntt2}}"
+    ],
+    "activityType": "Hội thảo khoa học",
+    "activityPoints": 5
+  }
+}
+
+script:post-response {
+  if (res.getStatus() === 201) bru.setVar("evtQr02", res.getBody().id);
+}
+
+tests {
+  test("Setup tạo sự kiện evtQr02 (201)", function() { expect(res.getStatus()).to.equal(201); });
+}

@@ -1,0 +1,52 @@
+meta {
+  name: TC-QR-11 - Biên Grace Period (epoch N gửi ở giây +1 của epoch N+1) -> 200 ACCEPTED
+  type: http
+  seq: 86
+  tags: [
+    qr
+    slow
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/events/{{evtQrGrace}}/attendance/qr
+  body: json
+  auth: bearer
+}
+
+headers {
+  Idempotency-Key: {{freshIdemKey}}
+}
+
+auth:bearer {
+  token: {{tokenSv001}}
+}
+
+body:json {
+  {
+    "token": "{{qrGraceToken}}"
+  }
+}
+
+script:pre-request {
+  const epoch = Number(bru.getVar("qrGraceEpoch") || 0);
+  const offset = Number(bru.getVar("qrClockOffsetMs") || 0);
+  if (epoch > 0) {
+    const targetServerMs = ((epoch + 1) * 10 + 1) * 1000 + 300;
+    const waitMs = targetServerMs - (Date.now() + offset);
+    if (waitMs > 0 && waitMs < 15000) {
+      await new Promise((r) => setTimeout(r, waitMs));
+    }
+  }
+}
+
+tests {
+  test("HTTP 200 ACCEPTED trong khoảng ân hạn <= 3 giây của epoch trước", function() {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody().status).to.equal("ACCEPTED");
+  });
+}
+
+docs {
+  TC-QR-11 (BVA-03): Chờ sang giây +1 của epoch N+1 (trong cửa sổ ân hạn 3s) và gửi token epoch N -> 200 ACCEPTED.
+}

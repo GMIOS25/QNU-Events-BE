@@ -1,0 +1,33 @@
+meta {
+  name: TC-4.6-15 - Đăng nhập bruno_sv_hist_edge (dữ liệu PENDING/REJECTED & CANCELLED+REGISTERED)
+  type: http
+  seq: 29
+  tags: [
+    db-fixture
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/auth/login
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "loginId": "{{brunoSvHistEdge}}",
+    "password": "{{demoPassword}}"
+  }
+}
+
+script:post-response {
+  if (res.getStatus() === 200) bru.setVar("tokenSvHistEdge", res.getBody().accessToken);
+}
+
+tests {
+  test("Đăng nhập bruno_sv_hist_edge (200)", function() { expect(res.getStatus()).to.equal(200); });
+}
+
+docs {
+  TC-4.6-15: Chuẩn bị token cho sinh viên có dữ liệu cạnh bảng attendances/registrations.
+}

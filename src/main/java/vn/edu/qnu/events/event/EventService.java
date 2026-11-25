@@ -9,11 +9,16 @@ import vn.edu.qnu.events.common.ApiException;
 import vn.edu.qnu.events.common.CurrentUser;
 import vn.edu.qnu.events.common.CurrentUserProvider;
 import vn.edu.qnu.events.common.ErrorCode;
+import vn.edu.qnu.events.registration.Registration;
+import vn.edu.qnu.events.registration.RegistrationRepository;
+import vn.edu.qnu.events.student.OrgClassRepository;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class EventService {
@@ -22,17 +27,23 @@ public class EventService {
     private final EventValidator eventValidator;
     private final AuditService auditService;
     private final Clock clock;
+    private final RegistrationRepository registrationRepository;
+    private final OrgClassRepository orgClassRepository;
 
     public EventService(
             EventRepository eventRepository,
             EventValidator eventValidator,
             AuditService auditService,
-            Clock clock
+            Clock clock,
+            RegistrationRepository registrationRepository,
+            OrgClassRepository orgClassRepository
     ) {
         this.eventRepository = eventRepository;
         this.eventValidator = eventValidator;
         this.auditService = auditService;
         this.clock = clock;
+        this.registrationRepository = registrationRepository;
+        this.orgClassRepository = orgClassRepository;
     }
 
     @Transactional
@@ -78,7 +89,15 @@ public class EventService {
             throw new ApiException(ErrorCode.VERSION_CONFLICT, "Chỉ có thể chỉnh sửa sự kiện ở trạng thái bản nháp.");
         }
 
-        if (upsert.version() != null && !upsert.version().equals(event.getVersion())) {
+        if (upsert.version() == null) {
+            throw new ApiException(
+                    ErrorCode.VALIDATION_FAILED,
+                    "Cần truyền version hiện tại của sự kiện khi chỉnh sửa.",
+                    Map.of("fields", Map.of("version", "Trường version là bắt buộc khi cập nhật sự kiện."))
+            );
+        }
+
+        if (!upsert.version().equals(event.getVersion())) {
             throw new ApiException(ErrorCode.VERSION_CONFLICT);
         }
 
@@ -199,6 +218,7 @@ public class EventService {
     public EventDetail getEventDetail(UUID id) {
         CurrentUser currentUser = CurrentUserProvider.require();
         Event event;
+        String myRegistrationStatus = null;
 
         if (currentUser.roles().contains("EVENT_OWNER")) {
             event = eventRepository.findById(id)
@@ -210,32 +230,63 @@ public class EventService {
             }
             event = eventRepository.findPublishedByIdAndClass(id, currentUser.classId())
                     .orElseThrow(() -> new ApiException(ErrorCode.NOT_FOUND));
+
+            myRegistrationStatus = registrationRepository
+                    .findLatestByEventAndStudent(id, currentUser.userId())
+                    .map(r -> r.getStatus().name())
+                    .orElse(null);
         } else {
             throw new ApiException(ErrorCode.NOT_FOUND);
         }
 
-        return toDetail(event);
+        return toDetail(event, myRegistrationStatus, currentUser);
     }
 
     @Transactional(readOnly = true)
-    public Page<EventSummary> listEvents(String q, Pageable pageable) {
+    public Page<EventSummary> listEvents(String q, String activityType, Pageable pageable) {
         CurrentUser currentUser = CurrentUserProvider.require();
 
         if (currentUser.roles().contains("EVENT_OWNER")) {
-            return eventRepository.findByOwnerId(currentUser.userId(), q, pageable)
+            return eventRepository.findByOwnerId(currentUser.userId(), q, activityType, pageable)
                     .map(this::toSummary);
         } else if (currentUser.roles().contains("STUDENT")) {
             if (currentUser.classId() == null) {
                 return Page.empty(pageable);
             }
-            return eventRepository.findPublishedForClass(currentUser.classId(), q, pageable)
-                    .map(this::toSummary);
+            Page<Event> page = eventRepository.findPublishedForClass(currentUser.classId(), q, activityType, pageable);
+            if (page.isEmpty()) {
+                return Page.empty(pageable);
+            }
+
+            List<UUID> eventIds = page.getContent().stream().map(Event::getId).toList();
+            Map<UUID, String> statusMap = registrationRepository.findActiveByStudentAndEventIds(currentUser.userId(), eventIds)
+                    .stream()
+                    .collect(Collectors.toMap(
+                            Registration::getEventId,
+                            r -> r.getStatus().name(),
+                            (existing, replacement) -> existing
+                    ));
+
+            return page.map(e -> toSummary(e, statusMap.get(e.getId())));
         } else {
             return Page.empty(pageable);
         }
     }
 
+    @Transactional(readOnly = true)
+    public Page<EventSummary> listEvents(String q, Pageable pageable) {
+        return listEvents(q, null, pageable);
+    }
+
     public EventDetail toDetail(Event e) {
+        return toDetail(e, null, null);
+    }
+
+    public EventDetail toDetail(Event e, String myRegistrationStatus) {
+        return toDetail(e, myRegistrationStatus, null);
+    }
+
+    public EventDetail toDetail(Event e, String myRegistrationStatus, CurrentUser currentUser) {
         Instant now = Instant.now(clock);
         int remainingQuota = Math.max(0, e.getQuotaTotal() - e.getRegisteredCount());
         boolean registrationOpen = (e.getStatus() == EventStatus.PUBLISHED)
@@ -244,6 +295,19 @@ public class EventService {
         boolean attendanceOpen = (e.getStatus() == EventStatus.PUBLISHED)
                 && !now.isBefore(e.getAttendanceOpenAt())
                 && !now.isAfter(e.getAttendanceCloseAt());
+
+        // QE-37: eligibility do server tính (R9) — sinh viên thuộc audience mới được đăng ký
+        boolean eligible = true;
+        if (currentUser != null && currentUser.roles().contains("STUDENT")) {
+            eligible = currentUser.classId() != null && e.getAudienceClassIds().contains(currentUser.classId());
+        }
+
+        // QE-37: điều kiện tham gia hiển thị được — mã/tên lớp thay vì chỉ UUID
+        List<EventDetail.EventAudienceClass> audienceClasses = orgClassRepository
+                .findAllById(e.getAudienceClassIds())
+                .stream()
+                .map(c -> new EventDetail.EventAudienceClass(c.getId(), c.getCode(), c.getName()))
+                .toList();
 
         return new EventDetail(
                 e.getId(),
@@ -263,7 +327,7 @@ public class EventService {
                 remainingQuota,
                 registrationOpen,
                 attendanceOpen,
-                null,
+                myRegistrationStatus,
                 e.getStatus(),
                 e.getActivityType(),
                 e.getActivityPoints(),
@@ -271,11 +335,17 @@ public class EventService {
                 e.getAudienceClassIds(),
                 e.getVersion(),
                 e.getPreviewedVersion(),
-                e.getPublishedAt()
+                e.getPublishedAt(),
+                audienceClasses,
+                eligible
         );
     }
 
     public EventSummary toSummary(Event e) {
+        return toSummary(e, null);
+    }
+
+    public EventSummary toSummary(Event e, String myRegistrationStatus) {
         Instant now = Instant.now(clock);
         int remainingQuota = Math.max(0, e.getQuotaTotal() - e.getRegisteredCount());
         boolean registrationOpen = (e.getStatus() == EventStatus.PUBLISHED)
@@ -296,7 +366,7 @@ public class EventService {
                 remainingQuota,
                 registrationOpen,
                 attendanceOpen,
-                null,
+                myRegistrationStatus,
                 e.getStatus(),
                 e.getActivityType(),
                 e.getActivityPoints()

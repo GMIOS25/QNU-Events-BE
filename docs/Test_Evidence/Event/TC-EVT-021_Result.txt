@@ -1,0 +1,8 @@
+Test Case: TC-EVT-021 - Publish without preview -> PREVIEW_REQUIRED + audit_logs
+Status: PASS
+Timestamp: 2026-11-20T09:02:42.517Z
+------------------------------------------------------------
+POST /publish -> HTTP 409 {"code":"PREVIEW_REQUIRED","message":"Cần xem trước sự kiện trước khi công bố.","details":{},"traceId":"463b3cad-d18f-43f2-9c49-9971b83d640e","timestamp":"2026-11-20T09:02:42.381378700Z"}
+DB audit_logs -> EVENT_PUBLISH_DENIED|DENIED|PREVIEW_REQUIRED
+------------------------------------------------------------
+Summary: Trả 409 PREVIEW_REQUIRED và ghi audit_logs EVENT_PUBLISH_DENIED/DENIED/PREVIEW_REQUIRED.

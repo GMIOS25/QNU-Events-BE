@@ -1,0 +1,29 @@
+meta {
+  name: TC-REG-23 - Đăng ký sự kiện mời đa lớp [K49CNTT1, K49CNTT2] bằng sv003 -> 201
+  type: http
+  seq: 32
+  tags: [
+    registration
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/events/{{evtRegMulti}}/registrations
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenSv003}}
+}
+
+tests {
+  test("sv003 (K49CNTT2) đăng ký thành công sự kiện đa lớp", function() {
+    expect(res.getStatus()).to.equal(201);
+    expect(res.getBody().status).to.equal("REGISTERED");
+  });
+}
+
+docs {
+  TC-REG-23: Sinh viên lớp K49CNTT2 được phép đăng ký sự kiện mời cả K49CNTT1 & K49CNTT2.
+}

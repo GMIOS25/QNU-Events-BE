@@ -1,0 +1,36 @@
+meta {
+  name: TC-AUTH-09 - Dùng lại JWT sau logout -> 401 SESSION_REVOKED
+  type: http
+  seq: 28
+  tags: [
+    auth
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/auth/me
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenSv001Revoked}}
+}
+
+tests {
+  test("HTTP 401 và mã lỗi SESSION_REVOKED", function() {
+    expect(res.getStatus()).to.equal(401);
+    const body = res.getBody();
+    expect(body).to.be.an("object");
+    expect(body.code).to.equal("SESSION_REVOKED");
+    expect(body.message).to.be.a("string").and.not.be.empty;
+    expect(body.message).to.equal("Phiên đăng nhập đã bị thu hồi hoặc hết hạn.");
+    expect(body.traceId).to.be.a("string").and.not.be.empty;
+    expect(body.timestamp).to.be.a("string").and.not.be.empty;
+    expect(body.details).to.be.an("object");
+  });
+}
+
+docs {
+  TC-AUTH-09, TC-AUTH-WB-13, TC-AUTH-WB-20: Tái sử dụng token đã logout bị chặn 401 SESSION_REVOKED.
+}

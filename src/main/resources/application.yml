@@ -58,7 +58,7 @@ app:
     jwt-access-token-validity-seconds: ${JWT_ACCESS_TOKEN_VALIDITY_SECONDS:28800}
   qr:
     signing-secret: ${QR_SIGNING_SECRET:}
-    epoch-seconds: ${QR_EPOCH_SECONDS:15}
+    epoch-seconds: ${QR_EPOCH_SECONDS:10}
     grace-period-seconds: ${QR_GRACE_PERIOD_SECONDS:3}
   seed:
     demo-password: ${DEMO_PASSWORD:Demo@12345}

@@ -1,0 +1,43 @@
+meta {
+  name: TC-EVT-020 - Công bố với confirm = false -> 400 VALIDATION_FAILED
+  type: http
+  seq: 39
+  tags: [
+    events
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/events/{{evtDraftMainId}}/publish
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenOwner01}}
+}
+
+body:json {
+  {
+    "confirm": false,
+    "previewVersion": 1
+  }
+}
+
+tests {
+  test("HTTP 400 và mã lỗi VALIDATION_FAILED", function() {
+    expect(res.getStatus()).to.equal(400);
+    const body = res.getBody();
+    expect(body).to.be.an("object");
+    expect(body.code).to.equal("VALIDATION_FAILED");
+    expect(body.message).to.be.a("string").and.not.be.empty;
+    expect(body.message).to.equal("Cần xác nhận trước khi công bố sự kiện.");
+    expect(body.traceId).to.be.a("string").and.not.be.empty;
+    expect(body.timestamp).to.be.a("string").and.not.be.empty;
+    expect(body.details).to.be.an("object");
+  });
+}
+
+docs {
+  TC-EVT-020: Bắt buộc confirm = true khi công bố sự kiện.
+}

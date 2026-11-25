@@ -1,0 +1,135 @@
+[
+  {
+    "tcId": "TC-EVT-006",
+    "title": "Boundary title 3 & 200 chars",
+    "status": "PASS",
+    "file": "Event/TC-EVT-006_Result.txt",
+    "notes": "Cả tiêu đề 3 ký tự và 200 ký tự đều trả 201 Created, status=DRAFT."
+  },
+  {
+    "tcId": "TC-EVT-007",
+    "title": "Boundary title 201 chars",
+    "status": "PASS",
+    "file": "Event/TC-EVT-007_Result.txt",
+    "notes": "Trả 400 VALIDATION_FAILED với details.fields.title."
+  },
+  {
+    "tcId": "TC-EVT-012",
+    "title": "Boundary quotaTotal 0, -1, 1",
+    "status": "PASS",
+    "file": "Event/TC-EVT-012_Result.txt",
+    "notes": "quotaTotal 0 và -1 trả 400 VALIDATION_FAILED; quotaTotal=1 trả 201 Created."
+  },
+  {
+    "tcId": "TC-EVT-013",
+    "title": "Boundary activityPoints -1/0 & activityType empty",
+    "status": "PASS",
+    "file": "Event/TC-EVT-013_Result.txt",
+    "notes": "activityPoints=-1 và activityType rỗng trả 400 VALIDATION_FAILED; activityPoints=0 trả 201 Created."
+  },
+  {
+    "tcId": "TC-EVT-029",
+    "title": "BVA min/max location, time+1s, deadline==close, activityType 50 vs 51",
+    "status": "FAIL",
+    "file": "Event/TC-EVT-029_Result.txt",
+    "notes": "Step 1 & 2 trả 201 Created hợp lệ, nhưng Step 3 (activityType 51 ký tự) trả HTTP 500 (INTERNAL_ERROR) do EventUpsert thiếu @Size(max=50) nên chạm DB varchar(50)."
+  },
+  {
+    "tcId": "TC-EVT-030",
+    "title": "Invalid JSON/ISO/Enum, null attendanceMethod, invalid path UUID",
+    "status": "FAIL",
+    "file": "Event/TC-EVT-030_Result.txt",
+    "notes": "Step 1-3 đạt kỳ vọng (400 / 201 DYNAMIC_QR), nhưng Step 4 (PUT /events/not-a-uuid) trả HTTP 500 (INTERNAL_ERROR) do thiếu handler MethodArgumentTypeMismatchException."
+  },
+  {
+    "tcId": "TC-EVT-031",
+    "title": "Multi-class, duplicate, mixed invalid, PUT audience update",
+    "status": "PASS",
+    "file": "Event/TC-EVT-031_Result.txt",
+    "notes": "Khử trùng 2 lớp thành công, từ chối UUID không tồn tại (400), PUT cập nhật đúng 1 lớp K49CNTT2 trong DB."
+  },
+  {
+    "tcId": "TC-EVT-021",
+    "title": "Publish without preview -> PREVIEW_REQUIRED + audit_logs",
+    "status": "PASS",
+    "file": "Event/TC-EVT-021_Result.txt",
+    "notes": "Trả 409 PREVIEW_REQUIRED và ghi audit_logs EVENT_PUBLISH_DENIED/DENIED/PREVIEW_REQUIRED."
+  },
+  {
+    "tcId": "TC-EVT-022",
+    "title": "Edit after preview -> PREVIEW_OUTDATED + audit_logs",
+    "status": "PASS",
+    "file": "Event/TC-EVT-022_Result.txt",
+    "notes": "Trả 409 PREVIEW_OUTDATED và ghi audit_logs EVENT_PUBLISH_DENIED/DENIED/PREVIEW_OUTDATED."
+  },
+  {
+    "tcId": "TC-EVT-032",
+    "title": "Publish with null previewVersion & mismatched previewVersion",
+    "status": "PASS",
+    "file": "Event/TC-EVT-032_Result.txt",
+    "notes": "Thiếu previewVersion trả 400 VALIDATION_FAILED; lệch previewVersion trả 409 PREVIEW_OUTDATED + audit."
+  },
+  {
+    "tcId": "TC-EVT-020",
+    "title": "Publish with confirm=false -> 400 VALIDATION_FAILED",
+    "status": "PASS",
+    "file": "Event/TC-EVT-020_Result.txt",
+    "notes": "Trả 400 VALIDATION_FAILED khi confirm=false."
+  },
+  {
+    "tcId": "TC-EVT-025",
+    "title": "Student cannot view DRAFT event",
+    "status": "PASS",
+    "file": "Event/TC-EVT-025_Result.txt",
+    "notes": "Sự kiện DRAFT ẩn khỏi danh sách sv001 và GET chi tiết trả 404 NOT_FOUND."
+  },
+  {
+    "tcId": "TC-EVT-026",
+    "title": "RBAC block STUDENT & SYSTEM_ADMIN on all 5 endpoints + audit",
+    "status": "PASS",
+    "file": "Event/TC-EVT-026_Result.txt",
+    "notes": "Cả 10 lời gọi (sv001 & admin01) trả 403 FORBIDDEN; AccessDeniedHandler ghi nhận đủ audit EVENT_PUBLISH_DENIED."
+  },
+  {
+    "tcId": "TC-EVT-027",
+    "title": "Ownership isolation (owner02 vs owner01)",
+    "status": "PASS",
+    "file": "Event/TC-EVT-027_Result.txt",
+    "notes": "GET trả 404 NOT_FOUND; PUT/preview/publish trả 403 FORBIDDEN."
+  },
+  {
+    "tcId": "TC-EVT-028",
+    "title": "Unauthenticated requests -> 401 UNAUTHENTICATED",
+    "status": "PASS",
+    "file": "Event/TC-EVT-028_Result.txt",
+    "notes": "Cả 5 endpoint trả 401 UNAUTHENTICATED kèm traceId."
+  },
+  {
+    "tcId": "TC-EVT-033",
+    "title": "Non-existent UUID on PUT/preview/publish -> 404",
+    "status": "PASS",
+    "file": "Event/TC-EVT-033_Result.txt",
+    "notes": "Cả 3 endpoint trả 404 NOT_FOUND và không tạo bản ghi audit_logs rác."
+  },
+  {
+    "tcId": "TC-EVT-024",
+    "title": "Idempotent publish on PUBLISHED event",
+    "status": "PASS",
+    "file": "Event/TC-EVT-024_Result.txt",
+    "notes": "Công bố lần 2 trả 200 OK, giữ nguyên publishedAt, không ghi trùng audit_logs."
+  },
+  {
+    "tcId": "TC-EVT-018",
+    "title": "Block PUT on PUBLISHED event -> 409 VERSION_CONFLICT",
+    "status": "PASS",
+    "file": "Event/TC-EVT-018_Result.txt",
+    "notes": "Trả 409 VERSION_CONFLICT khi cố sửa sự kiện PUBLISHED."
+  },
+  {
+    "tcId": "TC-EVT-034",
+    "title": "Audit log details & trg_audit_logs_immutable",
+    "status": "PASS",
+    "file": "Event/TC-EVT-034_Result.txt",
+    "notes": "Bản ghi EVENT_PUBLISH đầy đủ thông tin; trigger trg_audit_logs_immutable chặn cả UPDATE và DELETE."
+  }
+]

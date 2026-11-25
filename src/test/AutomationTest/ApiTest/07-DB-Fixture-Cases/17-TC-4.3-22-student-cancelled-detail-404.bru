@@ -1,0 +1,35 @@
+meta {
+  name: TC-4.3-22 - SV gọi GET sự kiện CANCELLED đúng lớp -> 404 NOT_FOUND
+  type: http
+  seq: 17
+  tags: [
+    db-fixture
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/events/{{brunoCancelledEventId}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenSv001}}
+}
+
+tests {
+  test("HTTP 404 và mã lỗi NOT_FOUND", function() {
+    expect(res.getStatus()).to.equal(404);
+    const body = res.getBody();
+    expect(body).to.be.an("object");
+    expect(body.code).to.equal("NOT_FOUND");
+    expect(body.message).to.be.a("string").and.not.be.empty;
+    expect(body.traceId).to.be.a("string").and.not.be.empty;
+    expect(body.timestamp).to.be.a("string").and.not.be.empty;
+    expect(body.details).to.be.an("object");
+  });
+}
+
+docs {
+  TC-4.3-22: Sự kiện CANCELLED bị ẩn hoàn toàn khỏi sinh viên (404 NOT_FOUND).
+}

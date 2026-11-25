@@ -56,13 +56,13 @@ Mọi phản hồi lỗi (HTTP status ≥ 400) đều trả về cấu trúc Api
 | `PUT` | `/api/v1/events/{id}` | EVENT_OWNER | `EventUpsert + version` | 200 `EventDetail` | Chỉ sửa khi `DRAFT`; lệch version → 409 |
 | `GET` | `/api/v1/events/{id}/preview` | EVENT_OWNER | — | 200 `{event: EventDetail, previewVersion: number}` | Đánh dấu `previewed_version = version` |
 | `POST` | `/api/v1/events/{id}/publish` | EVENT_OWNER | `{confirm: true, previewVersion: number}` | 200 `EventDetail` (status: `PUBLISHED`) | Kiểm tra đã preview và version khớp |
-| `GET` | `/api/v1/events` | STUDENT / EVENT_OWNER | Query params: `q`, `page`, `size` | 200 `Page<EventSummary>` | Sinh viên: chỉ thấy `PUBLISHED` và đúng lớp; Chủ sự kiện: thấy sự kiện của mình |
+| `GET` | `/api/v1/events` | STUDENT / EVENT_OWNER | Query params: `q`, `activityType`, `page`, `size` | 200 `Page<EventSummary>` | Sinh viên: chỉ thấy `PUBLISHED` và đúng lớp; Chủ sự kiện: thấy sự kiện của mình |
 | `GET` | `/api/v1/events/{id}` | STUDENT / EVENT_OWNER | — | 200 `EventDetail` | Không đủ quyền xem → 404 |
 | `POST` | `/api/v1/events/{id}/registrations` | STUDENT | — | 201 (mới) / 200 (lặp lại) `{id, status, alreadyRegistered}` | Giữ suất nguyên tử, chống race condition |
 | `GET` | `/api/v1/events/{id}/registrations/me` | STUDENT | — | 200 `{id, status, registeredAt}` | Trả về trạng thái đăng ký của bản thân |
 | `GET` | `/api/v1/events/{id}/qr` | EVENT_OWNER | — | 200 `{token, epoch, validUntil, rotationSeconds, serverTime}` | Tạo mã QR động HMAC theo epoch |
 | `POST` | `/api/v1/events/{id}/attendance/qr` | STUDENT | `{token}` + Header: `Idempotency-Key` (bắt buộc) | 200 `{status: "ACCEPTED", acceptedAt}` | Điểm danh QR động, tối đa 3 lần thử |
-| `GET` | `/api/v1/me/history` | STUDENT | — | 200 `[HistoryItem]` | Lịch sử tham gia và điểm rèn luyện |
+| `GET` | `/api/v1/me/history` | STUDENT | Query params: `academicYear`, `semester`, `attendanceStatus`, `upcoming`, `activityType`, `page`, `size`, `sort` | 200 `Page<HistoryItem>` | Lịch sử tham gia có hỗ trợ phân trang và bộ lọc nâng cao |
 
 ---
 
@@ -150,3 +150,26 @@ interface HistoryItem {
 - `epoch = floor(nowEpochSeconds / rotationSeconds)` (mặc định rotation = 10s, grace = 3s).
 - Header `Idempotency-Key` là bắt buộc khi gọi `/attendance/qr`. Cùng key sẽ trả lại response đã lưu mà không tính thêm lượt attempt.
 - Tối đa 3 lần thử sai (`QR_*`). Lần thứ 4 sẽ bị từ chối với `ATTEMPT_LIMIT_REACHED`.
+- **Cấu trúc `details` trong `ApiError` khi điểm danh thất bại (QE-54):**
+  Khi xảy ra lỗi vi phạm mã QR (`QR_*`) hoặc vượt quá giới hạn lần thử (`ATTEMPT_LIMIT_REACHED`), trường `details` trả về metadata để Frontend hiển thị trạng thái và tiến trình:
+  ```json
+  {
+    "code": "QR_EXPIRED",
+    "message": "Mã QR đã hết hạn theo rotation window + grace period",
+    "details": {
+      "method": "DYNAMIC_QR",
+      "attemptCount": 1,
+      "maxAttempts": 3,
+      "remainingAttempts": 2,
+      "canRetry": true
+    },
+    "traceId": "0d981cef-a1e5-4062-b0c8-2d09605581b6",
+    "timestamp": "2026-11-20T02:54:44.055Z"
+  }
+  ```
+  * `method` (string): Phương thức điểm danh áp dụng (mặc định: `"DYNAMIC_QR"`).
+  * `attemptCount` (number): Số lần vi phạm mã QR đã ghi nhận của sinh viên tại sự kiện này (`1..3`). Dùng để hiển thị giao diện Figma: `Lượt gửi xác nhận: {attemptCount}/{maxAttempts}`.
+  * `maxAttempts` (number): Giới hạn số lần thử tối đa được phép (`3`).
+  * `remainingAttempts` (number): Số lượt thử còn lại (`maxAttempts - attemptCount`, từ `0..2`).
+  * `canRetry` (boolean): `true` nếu còn lượt quét lại (`remainingAttempts > 0`); `false` khi hết lượt hoặc gặp lỗi chặn cứng (`ATTEMPT_LIMIT_REACHED`, `ALREADY_CHECKED_IN`).
+  * *Lưu ý*: Với các lỗi khách quan tiền điều kiện (`EVENT_NOT_PUBLISHED`, `ATTENDANCE_NOT_OPEN`, `NOT_REGISTERED`), `details` rỗng `{}` và `counted = false` (không tính phạt trừ lượt).

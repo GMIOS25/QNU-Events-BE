@@ -1,0 +1,23 @@
+meta {
+  name: [Setup] Preview sự kiện evtQrClosed
+  type: http
+  seq: 16
+  tags: [
+    qr
+    setup
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/events/{{evtQrClosed}}/preview
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenOwner01}}
+}
+
+tests {
+  test("Setup preview evtQrClosed (200)", function() { expect(res.getStatus()).to.equal(200); });
+}

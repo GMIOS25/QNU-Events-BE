@@ -1,0 +1,12 @@
+Test Case: TC-QR-05 (Step 4 - /history verification)
+URL: http://localhost:5173/history
+Status: FAIL (App Crash on /history)
+
+Console Errors:
+1. Error handled by React Router default ErrorBoundary: TypeError: historyItems?.filter is not a function
+2. TypeError: historyItems?.filter is not a function
+   at HistoryPage (http://localhost:5173/src/features/history/index.tsx:20:38)
+
+Network Details:
+- GET http://localhost:5173/api/v1/me/history -> 200 OK
+- Response body is a paginated object {"content": [...]} instead of a flat array, causing historyItems?.filter(...) to throw TypeError.

@@ -108,6 +108,20 @@ public class AttendanceService {
             CheckInRequest request,
             String traceId
     ) {
+        return processCheckIn(eventId, "DYNAMIC_QR", idempotencyKey, request, traceId);
+    }
+
+    private CheckInResult processCheckIn(
+            UUID eventId,
+            String method,
+            String idempotencyKey,
+            CheckInRequest request,
+            String traceId
+    ) {
+        if (!"DYNAMIC_QR".equals(method)) {
+            throw new IllegalArgumentException("Phương thức điểm danh không được hỗ trợ: " + method);
+        }
+
         CurrentUser currentUser = CurrentUserProvider.require();
         if (!currentUser.hasRole("STUDENT")) {
             throw new ApiException(ErrorCode.FORBIDDEN);
@@ -137,11 +151,16 @@ public class AttendanceService {
         Instant now = Instant.now(clock);
         String rawToken = request != null ? request.token() : null;
 
-        if (event.getStatus() != EventStatus.PUBLISHED
-                || now.isBefore(event.getAttendanceOpenAt())
-                || now.isAfter(event.getAttendanceCloseAt())) {
+        if (event.getStatus() != EventStatus.PUBLISHED) {
             return reject(
-                    eventId, studentId, idempotencyKey, ErrorCode.ATTENDANCE_NOT_OPEN,
+                    eventId, studentId, method, idempotencyKey, ErrorCode.EVENT_NOT_PUBLISHED,
+                    false, "REJECTED", now, traceId, Map.of("eventId", eventId.toString())
+            );
+        }
+
+        if (now.isBefore(event.getAttendanceOpenAt()) || now.isAfter(event.getAttendanceCloseAt())) {
+            return reject(
+                    eventId, studentId, method, idempotencyKey, ErrorCode.ATTENDANCE_NOT_OPEN,
                     false, "REJECTED", now, traceId, Map.of("eventId", eventId.toString())
             );
         }
@@ -151,14 +170,14 @@ public class AttendanceService {
                 .orElse(false);
         if (!hasRegistration) {
             return reject(
-                    eventId, studentId, idempotencyKey, ErrorCode.NOT_REGISTERED,
+                    eventId, studentId, method, idempotencyKey, ErrorCode.NOT_REGISTERED,
                     false, "DENIED", now, traceId, Map.of("eventId", eventId.toString())
             );
         }
 
         if (attendanceRepository.existsByEventIdAndStudentIdAndStatus(eventId, studentId, "ACCEPTED")) {
             return reject(
-                    eventId, studentId, idempotencyKey, ErrorCode.ALREADY_CHECKED_IN,
+                    eventId, studentId, method, idempotencyKey, ErrorCode.ALREADY_CHECKED_IN,
                     false, "REJECTED", now, traceId, Map.of("eventId", eventId.toString())
             );
         }
@@ -166,7 +185,7 @@ public class AttendanceService {
         long failedAttempts = attemptRepository.countByEventIdAndStudentIdAndCountedTrue(eventId, studentId);
         if (failedAttempts >= MAX_COUNTED_ATTEMPTS) {
             return reject(
-                    eventId, studentId, idempotencyKey, ErrorCode.ATTEMPT_LIMIT_REACHED,
+                    eventId, studentId, method, idempotencyKey, ErrorCode.ATTEMPT_LIMIT_REACHED,
                     false, "DENIED", now, traceId,
                     Map.of("eventId", eventId.toString(), "failedAttempts", failedAttempts)
             );
@@ -177,7 +196,7 @@ public class AttendanceService {
         );
         if (!verification.isValid()) {
             return reject(
-                    eventId, studentId, idempotencyKey, verification.errorCode(),
+                    eventId, studentId, method, idempotencyKey, verification.errorCode(),
                     true, "REJECTED", now, traceId,
                     Map.of(
                             "eventId", eventId.toString(),
@@ -187,7 +206,7 @@ public class AttendanceService {
         }
 
         Attendance attendance = new Attendance(
-                UUID.randomUUID(), eventId, studentId, "DYNAMIC_QR", "ACCEPTED", now
+                UUID.randomUUID(), eventId, studentId, method, "ACCEPTED", now
         );
         attendance.setCreatedAt(now);
         attendanceRepository.saveAndFlush(attendance);
@@ -195,16 +214,17 @@ public class AttendanceService {
         CheckInResponse response = new CheckInResponse("ACCEPTED", now);
         String responseBody = serialize(response);
         AttendanceAttempt attempt = attemptService.recordAttempt(
-                eventId, studentId, idempotencyKey, "ACCEPTED", null, false,
+                eventId, studentId, method, idempotencyKey, "ACCEPTED", null, false,
                 HttpStatus.OK.value(), responseBody
         );
 
         CheckInResult result = persistedResult(attempt);
 
+        String auditAction = "DYNAMIC_QR".equals(method) ? "ATTENDANCE_QR_ACCEPT" : "ATTENDANCE_" + method + "_ACCEPT";
         auditService.record(
                 studentId,
                 "STUDENT",
-                "ATTENDANCE_QR_ACCEPT",
+                auditAction,
                 "ATTENDANCE",
                 attendance.getId().toString(),
                 "SUCCESS",
@@ -253,6 +273,7 @@ public class AttendanceService {
     private CheckInResult reject(
             UUID eventId,
             UUID studentId,
+            String method,
             String idempotencyKey,
             ErrorCode errorCode,
             boolean counted,
@@ -261,10 +282,28 @@ public class AttendanceService {
             String traceId,
             Map<String, Object> auditDetails
     ) {
+        long currentFailed = attemptRepository.countByEventIdAndStudentIdAndCountedTrue(eventId, studentId);
+        long totalFailedAfterThis = counted ? currentFailed + 1 : currentFailed;
+        long remainingAttempts = Math.max(0, MAX_COUNTED_ATTEMPTS - totalFailedAfterThis);
+        boolean canRetry = remainingAttempts > 0
+                && errorCode != ErrorCode.ATTEMPT_LIMIT_REACHED
+                && errorCode != ErrorCode.ALREADY_CHECKED_IN;
+
+        String resolvedMethod = (method != null && !method.isBlank()) ? method : "DYNAMIC_QR";
+
+        Map<String, Object> errorDetails = new HashMap<>();
+        if (counted || errorCode == ErrorCode.ATTEMPT_LIMIT_REACHED) {
+            errorDetails.put("method", resolvedMethod);
+            errorDetails.put("attemptCount", totalFailedAfterThis);
+            errorDetails.put("maxAttempts", MAX_COUNTED_ATTEMPTS);
+            errorDetails.put("remainingAttempts", remainingAttempts);
+            errorDetails.put("canRetry", canRetry);
+        }
+
         ApiError error = new ApiError(
                 errorCode.name(),
                 errorCode.getDefaultMessage(),
-                Map.of(),
+                errorDetails,
                 traceId,
                 now
         );
@@ -273,6 +312,7 @@ public class AttendanceService {
         AttendanceAttempt attempt = attemptService.recordAttempt(
                 eventId,
                 studentId,
+                resolvedMethod,
                 idempotencyKey,
                 "REJECTED",
                 errorCode.name(),
@@ -285,10 +325,11 @@ public class AttendanceService {
 
         Map<String, Object> safeDetails = new HashMap<>(auditDetails);
         safeDetails.put("reasonCode", errorCode.name());
+        String auditAction = "DYNAMIC_QR".equals(resolvedMethod) ? "ATTENDANCE_QR_REJECT" : "ATTENDANCE_" + resolvedMethod + "_REJECT";
         auditService.record(
                 studentId,
                 "STUDENT",
-                "ATTENDANCE_QR_REJECT",
+                auditAction,
                 "EVENT",
                 eventId.toString(),
                 auditOutcome,

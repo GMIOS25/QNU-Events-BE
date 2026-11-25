@@ -1,0 +1,29 @@
+meta {
+  name: TC-4.3-WB-02 - SV class_id=NULL gọi GET /events -> 200 Page rỗng []
+  type: http
+  seq: 11
+  tags: [
+    db-fixture
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/events
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenSvNoClass}}
+}
+
+tests {
+  test("HTTP 200 OK với content=[] (không NPE)", function() {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody().content).to.deep.equal([]);
+  });
+}
+
+docs {
+  TC-4.3-WB-02: Nhánh classId == null trong EventService.listEvents trả Page.empty().
+}

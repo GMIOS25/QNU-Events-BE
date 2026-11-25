@@ -1,0 +1,23 @@
+meta {
+  name: [Setup] Xem trước sự kiện evtRegMulti
+  type: http
+  seq: 12
+  tags: [
+    registration
+    setup
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/events/{{evtRegMulti}}/preview
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenOwner01}}
+}
+
+tests {
+  test("Setup preview evtRegMulti thành công (200)", function() { expect(res.getStatus()).to.equal(200); });
+}

@@ -1,0 +1,35 @@
+meta {
+  name: TC-4.3-13 - Anti-IDOR: SV truy cập trực tiếp sự kiện DRAFT -> 404 NOT_FOUND
+  type: http
+  seq: 36
+  tags: [
+    event-list
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/events/{{evtListDraftK49}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenSv001}}
+}
+
+tests {
+  test("HTTP 404 và mã lỗi NOT_FOUND", function() {
+    expect(res.getStatus()).to.equal(404);
+    const body = res.getBody();
+    expect(body).to.be.an("object");
+    expect(body.code).to.equal("NOT_FOUND");
+    expect(body.message).to.be.a("string").and.not.be.empty;
+    expect(body.traceId).to.be.a("string").and.not.be.empty;
+    expect(body.timestamp).to.be.a("string").and.not.be.empty;
+    expect(body.details).to.be.an("object");
+  });
+}
+
+docs {
+  TC-4.3-13: Sinh viên gọi trực tiếp GET /events/draftId nhận 404 (không trả 403 để chống lộ tồn tại).
+}

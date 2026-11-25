@@ -1,0 +1,23 @@
+meta {
+  name: [Setup] Xem trước sự kiện evtListExpired
+  type: http
+  seq: 12
+  tags: [
+    event-list
+    setup
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/events/{{evtListExpired}}/preview
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenOwner01}}
+}
+
+tests {
+  test("Setup preview evtListExpired thành công (200)", function() { expect(res.getStatus()).to.equal(200); });
+}

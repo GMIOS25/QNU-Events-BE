@@ -1,0 +1,43 @@
+meta {
+  name: TC-QR-23 & TC-QR-22 - (evtQr03, sv001) Thành công ở lần 3 với Idempotency-Key đúng 100 ký tự -> 200 ACCEPTED
+  type: http
+  seq: 83
+  tags: [
+    qr
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/events/{{evtQr03}}/attendance/qr
+  body: json
+  auth: bearer
+}
+
+headers {
+  Idempotency-Key: {{idemKey100}}
+}
+
+auth:bearer {
+  token: {{tokenSv001}}
+}
+
+body:json {
+  {
+    "token": "{{qrToken03Fresh}}"
+  }
+}
+
+script:pre-request {
+  bru.setVar("idemKey100", "k".repeat(100));
+}
+
+tests {
+  test("HTTP 200 ACCEPTED ở lần thử thứ 3 với key đúng biên 100 ký tự", function() {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody().status).to.equal("ACCEPTED");
+  });
+}
+
+docs {
+  TC-QR-23 (sau 2 lần sai vẫn điểm danh thành công ở lần 3), TC-QR-22 (biên Idempotency-Key 100 ký tự).
+}

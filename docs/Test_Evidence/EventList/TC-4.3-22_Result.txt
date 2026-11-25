@@ -1,0 +1,1 @@
+DB hiện tại chưa có sự kiện CANCELLED hay sự kiện đa lớp [K49CNTT1, K49CNTT2] được seed sẵn để kiểm chứng trên UI.

@@ -1,0 +1,25 @@
+meta {
+  name: TC-AUTH-28 - Public GET /actuator/health không cần token -> 200 UP
+  type: http
+  seq: 49
+  tags: [
+    auth
+  ]
+}
+
+get {
+  url: {{baseUrl}}/actuator/health
+  body: none
+  auth: none
+}
+
+tests {
+  test("GET /actuator/health trả 200 UP công khai", function() {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody().status).to.equal("UP");
+  });
+}
+
+docs {
+  TC-AUTH-28: Endpoint công khai /actuator/health không yêu cầu Authorization.
+}

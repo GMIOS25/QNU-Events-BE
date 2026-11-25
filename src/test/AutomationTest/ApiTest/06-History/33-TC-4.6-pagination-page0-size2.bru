@@ -1,0 +1,39 @@
+meta {
+  name: TC-4.6 (QE-72 HistoryIT #7) - Phân trang lịch sử page=0&size=2
+  type: http
+  seq: 33
+  tags: [
+    history
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/me/history?page=0&size=2
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenSv001}}
+}
+
+script:post-response {
+  if (res.getStatus() === 200) {
+    bru.setVar("histPage0Ids", JSON.stringify(res.getBody().content.map((i) => i.eventId)));
+  }
+}
+
+tests {
+  test("HTTP 200 OK, number=0, size=2, content.length=2, totalElements>=5", function() {
+    expect(res.getStatus()).to.equal(200);
+    const p = res.getBody();
+    expect(p.number).to.equal(0);
+    expect(p.size).to.equal(2);
+    expect(p.content).to.have.lengthOf(2);
+    expect(p.totalElements).to.be.at.least(5);
+  });
+}
+
+docs {
+  QE-72 / HistoryIT #7: Kiểm tra phân trang lịch sử trang 0.
+}

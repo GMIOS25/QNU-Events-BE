@@ -1,0 +1,34 @@
+meta {
+  name: TC-REG-13 & WB-11 - POST /events/invalid-uuid/registrations (Finding ẩn stack trace)
+  type: http
+  seq: 25
+  tags: [
+    registration
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/events/invalid-uuid/registrations
+  body: none
+  auth: bearer
+}
+
+headers {
+  X-Request-Id: trace-reg-01
+}
+
+auth:bearer {
+  token: {{tokenSv001}}
+}
+
+tests {
+  test("Trả ApiError đúng traceId và không lộ stack trace", function() {
+    expect([400, 500]).to.include(res.getStatus());
+    expect(res.getBody().traceId).to.equal("trace-reg-01");
+    expect(["VALIDATION_FAILED", "INTERNAL_ERROR"]).to.include(res.getBody().code);
+  });
+}
+
+docs {
+  TC-REG-13, TC-REG-WB-11: Kiểm chứng đường dẫn invalid-uuid trả ApiError ẩn stack trace.
+}

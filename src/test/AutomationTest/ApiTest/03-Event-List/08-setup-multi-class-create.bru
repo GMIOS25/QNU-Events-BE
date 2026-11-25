@@ -1,0 +1,48 @@
+meta {
+  name: [Setup] Tạo sự kiện evtListMultiClass
+  type: http
+  seq: 8
+  tags: [
+    event-list
+    setup
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/events
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenOwner01}}
+}
+
+body:json {
+  {
+    "title": "[BRU-{{runSuffix}}] Sự kiện Đa Lớp K49",
+    "description": "Nội dung chi tiết sự kiện kiểm thử tự động Bruno.",
+    "location": "Hội trường A - Trường ĐH Quy Nhơn",
+    "startAt": "{{laterStartAt}}",
+    "endAt": "{{laterEndAt}}",
+    "registrationDeadline": "{{laterRegDeadline}}",
+    "attendanceOpenAt": "{{laterAttOpen}}",
+    "attendanceCloseAt": "{{laterAttClose}}",
+    "attendanceMethod": "DYNAMIC_QR",
+    "quotaTotal": 30,
+    "audienceClassIds": [
+      "{{classK49Cntt1}}",
+      "{{classK49Cntt2}}"
+    ],
+    "activityType": "Hoạt động tình nguyện",
+    "activityPoints": 8
+  }
+}
+
+script:post-response {
+  if (res.getStatus() === 201) bru.setVar("evtListMultiClass", res.getBody().id);
+}
+
+tests {
+  test("Setup tạo sự kiện evtListMultiClass thành công (201)", function() { expect(res.getStatus()).to.equal(201); });
+}

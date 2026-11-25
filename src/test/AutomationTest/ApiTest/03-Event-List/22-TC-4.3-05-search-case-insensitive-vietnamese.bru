@@ -1,0 +1,30 @@
+meta {
+  name: TC-4.3-05 - Tìm kiếm từ khóa tiếng Việt không phân biệt hoa/thường (?q=ứng dụng ai)
+  type: http
+  seq: 22
+  tags: [
+    event-list
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/events?q=%E1%BB%A9ng%20d%E1%BB%A5ng%20ai&size=50
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenSv001}}
+}
+
+tests {
+  test("HTTP 200 OK và tìm thấy sự kiện Hội thảo Ứng dụng AI", function() {
+    expect(res.getStatus()).to.equal(200);
+    const ids = res.getBody().content.map((i) => i.id);
+    expect(ids).to.include(bru.getVar("evtListPubK49"));
+  });
+}
+
+docs {
+  TC-4.3-05: Tìm kiếm theo từ khóa q (LOWER LIKE) hỗ trợ tiếng Việt không phân biệt hoa/thường.
+}

@@ -1,0 +1,54 @@
+meta {
+  name: TC-EVT-006 - BVA title đúng 200 ký tự -> 201 Created
+  type: http
+  seq: 7
+  tags: [
+    events
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/events
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenOwner01}}
+}
+
+body:json {
+  {
+    "title": "{{title200}}",
+    "description": "Nội dung chi tiết sự kiện kiểm thử tự động Bruno.",
+    "location": "Hội trường A - Trường ĐH Quy Nhơn",
+    "startAt": "{{futureStartAt}}",
+    "endAt": "{{futureEndAt}}",
+    "registrationDeadline": "{{futureRegDeadline}}",
+    "attendanceOpenAt": "{{futureAttOpen}}",
+    "attendanceCloseAt": "{{futureAttClose}}",
+    "attendanceMethod": "DYNAMIC_QR",
+    "quotaTotal": 50,
+    "audienceClassIds": [
+      "{{classK49Cntt1}}"
+    ],
+    "activityType": "Hội thảo khoa học",
+    "activityPoints": 5
+  }
+}
+
+script:pre-request {
+  const prefix = "[BRU-" + bru.getVar("runSuffix") + "] ";
+  bru.setVar("title200", prefix + "A".repeat(200 - prefix.length));
+}
+
+tests {
+  test("HTTP 201 Created tại biên trên title = 200 ký tự", function() {
+    expect(res.getStatus()).to.equal(201);
+    expect(res.getBody().title.length).to.equal(200);
+  });
+}
+
+docs {
+  TC-EVT-006 (BVA-01): Biên hợp lệ tối đa 200 ký tự cho title.
+}

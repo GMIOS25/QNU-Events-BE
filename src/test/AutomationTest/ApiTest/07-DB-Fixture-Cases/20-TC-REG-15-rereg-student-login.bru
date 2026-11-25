@@ -1,0 +1,33 @@
+meta {
+  name: TC-REG-15 - Đăng nhập bruno_sv_rereg (có bản ghi CANCELLED cũ)
+  type: http
+  seq: 20
+  tags: [
+    db-fixture
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/auth/login
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "loginId": "{{brunoSvReReg}}",
+    "password": "{{demoPassword}}"
+  }
+}
+
+script:post-response {
+  if (res.getStatus() === 200) bru.setVar("tokenSvReReg", res.getBody().accessToken);
+}
+
+tests {
+  test("Đăng nhập bruno_sv_rereg (200)", function() { expect(res.getStatus()).to.equal(200); });
+}
+
+docs {
+  TC-REG-15: Chuẩn bị token cho sinh viên chỉ có bản ghi đăng ký CANCELLED.
+}

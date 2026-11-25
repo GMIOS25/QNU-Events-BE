@@ -1,0 +1,9 @@
+Default: size=20, page=0
+size=1: len=1
+page=99: len=0
+page=-1&size=0: size=20, page=0
+q="   ": total=0
+q="%": total=32
+sort=nonExistentField: 500 {"code":"INTERNAL_ERROR","message":"Đã xảy ra lỗi hệ thống.","details":{},"traceId":"c4232afd-dfef-4867-98ae-ba07effdd8be","timestamp":"2026-11-20T09:19:26.668422100Z"}
+id=not-a-uuid: 500 {"code":"INTERNAL_ERROR","message":"Đã xảy ra lỗi hệ thống.","details":{},"traceId":"8745477a-4198-407f-8e1b-0a18af13dc87","timestamp":"2026-11-20T09:19:26.680125400Z"}
+UI owner01 total=106, rendered cards=20

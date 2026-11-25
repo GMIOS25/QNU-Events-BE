@@ -1,0 +1,53 @@
+meta {
+  name: TC-QR-17 - Lần thứ 4 (sv002) gửi token ĐÚNG vẫn bị chặn -> 409 ATTEMPT_LIMIT_REACHED
+  type: http
+  seq: 76
+  tags: [
+    qr
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/events/{{evtQr01}}/attendance/qr
+  body: json
+  auth: bearer
+}
+
+headers {
+  Idempotency-Key: {{freshIdemKey}}
+}
+
+auth:bearer {
+  token: {{tokenSv002}}
+}
+
+body:json {
+  {
+    "token": "{{qrToken01Fresh}}"
+  }
+}
+
+tests {
+  test("HTTP 409 và mã lỗi ATTEMPT_LIMIT_REACHED", function() {
+    expect(res.getStatus()).to.equal(409);
+    const body = res.getBody();
+    expect(body).to.be.an("object");
+    expect(body.code).to.equal("ATTEMPT_LIMIT_REACHED");
+    expect(body.message).to.be.a("string").and.not.be.empty;
+    expect(body.message).to.equal("Bạn đã vượt quá số lần thử điểm danh cho phép.");
+    expect(body.traceId).to.be.a("string").and.not.be.empty;
+    expect(body.timestamp).to.be.a("string").and.not.be.empty;
+    expect(body.details).to.be.an("object");
+  });
+
+  test("details xác nhận attemptCount=3, remainingAttempts=0, canRetry=false", function() {
+    const d = res.getBody().details;
+    expect(d.attemptCount).to.equal(3);
+    expect(d.remainingAttempts).to.equal(0);
+    expect(d.canRetry).to.equal(false);
+  });
+}
+
+docs {
+  TC-QR-17 (BVA-04): Sau 3 lần thử sai, lần thứ 4 bị chặn 409 ATTEMPT_LIMIT_REACHED ngay cả khi gửi token hợp lệ.
+}

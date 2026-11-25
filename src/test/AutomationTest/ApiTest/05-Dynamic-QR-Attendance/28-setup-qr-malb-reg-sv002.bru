@@ -1,0 +1,23 @@
+meta {
+  name: [Setup] sv002 đăng ký evtQrMalB
+  type: http
+  seq: 28
+  tags: [
+    qr
+    setup
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/events/{{evtQrMalB}}/registrations
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenSv002}}
+}
+
+tests {
+  test("Setup đăng ký sv002 thành công (200/201)", function() { expect([200, 201]).to.include(res.getStatus()); });
+}

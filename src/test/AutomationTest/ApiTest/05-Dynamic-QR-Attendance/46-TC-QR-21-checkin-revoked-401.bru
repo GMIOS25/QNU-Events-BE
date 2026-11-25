@@ -1,0 +1,45 @@
+meta {
+  name: TC-QR-21 - Token đã logout POST /attendance/qr -> 401 SESSION_REVOKED
+  type: http
+  seq: 46
+  tags: [
+    qr
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/events/{{evtQr01}}/attendance/qr
+  body: json
+  auth: bearer
+}
+
+headers {
+  Idempotency-Key: {{freshIdemKey}}
+}
+
+auth:bearer {
+  token: {{tokenSv001Revoked}}
+}
+
+body:json {
+  {
+    "token": "{{qrToken01}}"
+  }
+}
+
+tests {
+  test("HTTP 401 và mã lỗi SESSION_REVOKED", function() {
+    expect(res.getStatus()).to.equal(401);
+    const body = res.getBody();
+    expect(body).to.be.an("object");
+    expect(body.code).to.equal("SESSION_REVOKED");
+    expect(body.message).to.be.a("string").and.not.be.empty;
+    expect(body.traceId).to.be.a("string").and.not.be.empty;
+    expect(body.timestamp).to.be.a("string").and.not.be.empty;
+    expect(body.details).to.be.an("object");
+  });
+}
+
+docs {
+  TC-QR-21: Token đã thu hồi bị từ chối 401 SESSION_REVOKED.
+}

@@ -1,0 +1,45 @@
+meta {
+  name: TC-QR-21 - POST /attendance/qr cho UUID sự kiện không tồn tại -> 404 NOT_FOUND
+  type: http
+  seq: 49
+  tags: [
+    qr
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/events/{{nonExistentUuid}}/attendance/qr
+  body: json
+  auth: bearer
+}
+
+headers {
+  Idempotency-Key: {{freshIdemKey}}
+}
+
+auth:bearer {
+  token: {{tokenSv001}}
+}
+
+body:json {
+  {
+    "token": "{{qrToken01}}"
+  }
+}
+
+tests {
+  test("HTTP 404 và mã lỗi NOT_FOUND", function() {
+    expect(res.getStatus()).to.equal(404);
+    const body = res.getBody();
+    expect(body).to.be.an("object");
+    expect(body.code).to.equal("NOT_FOUND");
+    expect(body.message).to.be.a("string").and.not.be.empty;
+    expect(body.traceId).to.be.a("string").and.not.be.empty;
+    expect(body.timestamp).to.be.a("string").and.not.be.empty;
+    expect(body.details).to.be.an("object");
+  });
+}
+
+docs {
+  TC-QR-21: Sự kiện không tồn tại trả 404 NOT_FOUND.
+}

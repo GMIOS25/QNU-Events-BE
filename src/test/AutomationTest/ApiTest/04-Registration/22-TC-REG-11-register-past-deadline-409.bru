@@ -1,0 +1,36 @@
+meta {
+  name: TC-REG-11 - Đăng ký sau hạn registrationDeadline -> 409 REGISTRATION_CLOSED
+  type: http
+  seq: 22
+  tags: [
+    registration
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/events/{{evtRegE4}}/registrations
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenSv001}}
+}
+
+tests {
+  test("HTTP 409 và mã lỗi REGISTRATION_CLOSED", function() {
+    expect(res.getStatus()).to.equal(409);
+    const body = res.getBody();
+    expect(body).to.be.an("object");
+    expect(body.code).to.equal("REGISTRATION_CLOSED");
+    expect(body.message).to.be.a("string").and.not.be.empty;
+    expect(body.message).to.equal("Thời gian đăng ký sự kiện đã kết thúc.");
+    expect(body.traceId).to.be.a("string").and.not.be.empty;
+    expect(body.timestamp).to.be.a("string").and.not.be.empty;
+    expect(body.details).to.be.an("object");
+  });
+}
+
+docs {
+  TC-REG-11: Từ chối đăng ký khi thời gian máy chủ vượt quá registrationDeadline.
+}

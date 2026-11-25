@@ -1,0 +1,44 @@
+meta {
+  name: TC-AUTH-03 & TC-AUTH-12 - Login chuỗi rỗng "" -> 400 VALIDATION_FAILED
+  type: http
+  seq: 10
+  tags: [
+    auth
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/auth/login
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "loginId": "",
+    "password": ""
+  }
+}
+
+tests {
+  test("HTTP 400 và mã lỗi VALIDATION_FAILED", function() {
+    expect(res.getStatus()).to.equal(400);
+    const body = res.getBody();
+    expect(body).to.be.an("object");
+    expect(body.code).to.equal("VALIDATION_FAILED");
+    expect(body.message).to.be.a("string").and.not.be.empty;
+    expect(body.message).to.equal("Dữ liệu không hợp lệ.");
+    expect(body.traceId).to.be.a("string").and.not.be.empty;
+    expect(body.timestamp).to.be.a("string").and.not.be.empty;
+    expect(body.details).to.be.an("object");
+  });
+
+  test("details.fields báo lỗi cả loginId và password", function() {
+    expect(res.getBody().details.fields).to.have.property("loginId");
+    expect(res.getBody().details.fields).to.have.property("password");
+  });
+}
+
+docs {
+  TC-AUTH-03, TC-AUTH-12: Bỏ trống loginId và password trả 400 VALIDATION_FAILED.
+}

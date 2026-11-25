@@ -1,0 +1,39 @@
+meta {
+  name: TC-4.6-16 & WB-06 - Sai HTTP method POST /me/history -> 403 denyAll
+  type: http
+  seq: 41
+  tags: [
+    history
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/me/history
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenSv001}}
+}
+
+body:json {
+  {}
+}
+
+tests {
+  test("HTTP 403 và mã lỗi FORBIDDEN", function() {
+    expect(res.getStatus()).to.equal(403);
+    const body = res.getBody();
+    expect(body).to.be.an("object");
+    expect(body.code).to.equal("FORBIDDEN");
+    expect(body.message).to.be.a("string").and.not.be.empty;
+    expect(body.traceId).to.be.a("string").and.not.be.empty;
+    expect(body.timestamp).to.be.a("string").and.not.be.empty;
+    expect(body.details).to.be.an("object");
+  });
+}
+
+docs {
+  TC-4.6-16, TC-4.6-WB-06: anyRequest().denyAll() chặn POST /api/v1/me/history bằng 403.
+}

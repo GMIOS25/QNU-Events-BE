@@ -1,0 +1,43 @@
+meta {
+  name: TC-AUTH-15 - Token JWT bị sửa chữ ký HMAC -> 401 UNAUTHENTICATED
+  type: http
+  seq: 33
+  tags: [
+    auth
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/auth/me
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tamperedJwt}}
+}
+
+script:pre-request {
+  const tok = bru.getVar("tokenSv001") || "a.b.c";
+  const lastChar = tok.slice(-1);
+  const flipped = lastChar === "A" ? "B" : "A";
+  bru.setVar("tamperedJwt", tok.slice(0, -1) + flipped);
+}
+
+tests {
+  test("HTTP 401 và mã lỗi UNAUTHENTICATED", function() {
+    expect(res.getStatus()).to.equal(401);
+    const body = res.getBody();
+    expect(body).to.be.an("object");
+    expect(body.code).to.equal("UNAUTHENTICATED");
+    expect(body.message).to.be.a("string").and.not.be.empty;
+    expect(body.message).to.equal("Yêu cầu đăng nhập để thực hiện.");
+    expect(body.traceId).to.be.a("string").and.not.be.empty;
+    expect(body.timestamp).to.be.a("string").and.not.be.empty;
+    expect(body.details).to.be.an("object");
+  });
+}
+
+docs {
+  TC-AUTH-15: Chỉnh sửa 1 ký tự cuối ở chữ ký JWT khiến HS256 decoder từ chối 401 UNAUTHENTICATED.
+}

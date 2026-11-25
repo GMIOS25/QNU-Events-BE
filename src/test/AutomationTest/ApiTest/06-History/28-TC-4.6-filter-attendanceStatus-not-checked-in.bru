@@ -1,0 +1,34 @@
+meta {
+  name: TC-4.6 (QE-72 HistoryIT #8) - Lọc attendanceStatus=NOT_CHECKED_IN
+  type: http
+  seq: 28
+  tags: [
+    history
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/me/history?attendanceStatus=NOT_CHECKED_IN&size=100
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenSv001}}
+}
+
+tests {
+  test("Tất cả phần tử trả về đều có attendanceStatus=NOT_CHECKED_IN", function() {
+    expect(res.getStatus()).to.equal(200);
+    const items = res.getBody().content;
+    expect(items.length).to.be.at.least(1);
+    items.forEach((i) => expect(i.attendanceStatus).to.equal("NOT_CHECKED_IN"));
+    const ids = items.map((i) => i.eventId);
+    expect(ids).to.include(bru.getVar("evtHistNotChecked"));
+    expect(ids).to.not.include(bru.getVar("evtHistAccepted"));
+  });
+}
+
+docs {
+  QE-72 / HistoryIT #8: Lọc lịch sử theo attendanceStatus=NOT_CHECKED_IN.
+}

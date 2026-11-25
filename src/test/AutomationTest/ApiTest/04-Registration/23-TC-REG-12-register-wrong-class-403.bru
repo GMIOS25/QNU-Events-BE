@@ -1,0 +1,36 @@
+meta {
+  name: TC-REG-12 - SV ngoài lớp đối tượng (sv003 K49CNTT2 -> E1 K49CNTT1) -> 403 NOT_IN_AUDIENCE
+  type: http
+  seq: 23
+  tags: [
+    registration
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/events/{{evtRegE1}}/registrations
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenSv003}}
+}
+
+tests {
+  test("HTTP 403 và mã lỗi NOT_IN_AUDIENCE", function() {
+    expect(res.getStatus()).to.equal(403);
+    const body = res.getBody();
+    expect(body).to.be.an("object");
+    expect(body.code).to.equal("NOT_IN_AUDIENCE");
+    expect(body.message).to.be.a("string").and.not.be.empty;
+    expect(body.message).to.equal("Sự kiện không dành cho lớp của bạn.");
+    expect(body.traceId).to.be.a("string").and.not.be.empty;
+    expect(body.timestamp).to.be.a("string").and.not.be.empty;
+    expect(body.details).to.be.an("object");
+  });
+}
+
+docs {
+  TC-REG-12: Từ chối đăng ký khi lớp sinh viên không nằm trong event_audience.
+}

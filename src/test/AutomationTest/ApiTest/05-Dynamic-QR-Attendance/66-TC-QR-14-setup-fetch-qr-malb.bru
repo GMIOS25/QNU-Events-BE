@@ -1,0 +1,35 @@
+meta {
+  name: [Setup] Lấy mã QR hợp lệ cho evtQrMalB để tạo mẫu giả mạo TC-QR-14
+  type: http
+  seq: 66
+  tags: [
+    qr
+    setup
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/events/{{evtQrMalB}}/qr
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenOwner01}}
+}
+
+script:post-response {
+  if (res.getStatus() === 200) {
+    const tok = res.getBody().token;
+    const parts = tok.split(".");
+    const last = parts[3].slice(-1);
+    const flipped = last === "A" ? "B" : "A";
+    bru.setVar("qrBadSigTampered", parts[0] + "." + parts[1] + "." + parts[2] + "." + parts[3].slice(0, -1) + flipped);
+    bru.setVar("qrBadSigEpochTampered", parts[0] + "." + parts[1] + "." + (Number(parts[2]) + 1) + "." + parts[3]);
+    bru.setVar("qrBadSigForgedOtherEvt", "qr1." + bru.getVar("evtQr02") + "." + parts[2] + ".forged-signature-xyz");
+  }
+}
+
+tests {
+  test("Lấy QR evtQrMalB thành công (200)", function() { expect(res.getStatus()).to.equal(200); });
+}

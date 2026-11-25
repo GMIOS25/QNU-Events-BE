@@ -1,0 +1,33 @@
+meta {
+  name: TC-4.6 (QE-72 HistoryIT #7) - Phân trang lịch sử page=1&size=2 không trùng trang 0
+  type: http
+  seq: 34
+  tags: [
+    history
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/me/history?page=1&size=2
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenSv001}}
+}
+
+tests {
+  test("HTTP 200 OK, number=1 và không trùng eventId với trang 0", function() {
+    expect(res.getStatus()).to.equal(200);
+    const p = res.getBody();
+    expect(p.number).to.equal(1);
+    expect(p.content).to.have.lengthOf(2);
+    const p0 = JSON.parse(bru.getVar("histPage0Ids") || "[]");
+    p.content.forEach((i) => expect(p0).to.not.include(i.eventId));
+  });
+}
+
+docs {
+  QE-72 / HistoryIT #7: Trang 1 lịch sử không trùng lặp dữ liệu với trang 0.
+}

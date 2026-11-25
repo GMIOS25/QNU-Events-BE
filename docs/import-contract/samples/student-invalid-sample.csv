@@ -1,0 +1,13 @@
+StudentID,StudentName,LastName,FirstName,Genders,BirthDay,DepartmentCode,DepartmentName,SpecializationCode,SpecializationName,IntakeNo,ClassId,ClassStudentName,Email,IDCard,StudyStatusID,StudyStatusName
+4651050001,Võ Hoài An,Võ Hoài,An,Nữ,01/03/2005,105,Khoa Công nghệ thông tin,105,Công nghệ thông tin,46,915d2d89-8562-500a-a0ab-7a4d0bc27601,Công nghệ thông tin 46E,anhoaivo101@gmail.com,052305001122,1,Còn học
+465105009A,Lê Văn Sai Mã,Lê Văn,Sai Mã,Nam,10/05/2005,105,Khoa Công nghệ thông tin,105,Công nghệ thông tin,46,915d2d89-8562-500a-a0ab-7a4d0bc27601,Công nghệ thông tin 46E,saima@gmail.com,052205001111,1,Còn học
+4651050347,,,,Nữ,,105,Khoa Công nghệ thông tin,105,Công nghệ thông tin,46,915d2d89-8562-500a-a0ab-7a4d0bc27601,Công nghệ thông tin 46E,,,1,Còn học
+4651050001,Võ Hoài An Bản Sao,Võ Hoài An,Bản Sao,Nữ,01/03/2005,105,Khoa Công nghệ thông tin,105,Công nghệ thông tin,46,915d2d89-8562-500a-a0ab-7a4d0bc27601,Công nghệ thông tin 46E,duplicate@gmail.com,052305001122,1,Còn học
+4651050160,Phạm Văn Minh,Phạm Văn,Minh,Nam,12/08/2005,105,Khoa Công nghệ thông tin,105,Công nghệ thông tin,46,,,phamvanminh@gmail.com,052205004455,1,Còn học
+4651050099,Nguyễn Thị Lớp Ảo,Nguyễn Thị,Lớp Ảo,Nữ,20/09/2005,105,Khoa Công nghệ thông tin,105,Công nghệ thông tin,46,,Công nghệ thông tin 46Z,lopao@gmail.com,052305005566,1,Còn học
+4651050100,Trần Văn Lệch Khoa,Trần Văn,Lệch Khoa,Nam,11/11/2005,201,Khoa Sư phạm,105,Công nghệ thông tin,46,915d2d89-8562-500a-a0ab-7a4d0bc27601,Công nghệ thông tin 46E,lechkhoa@gmail.com,052205006677,1,Còn học
+4651160033,Đặng Quốc Email Không,Đặng Quốc,Email Không,Nam,05/04/2005,105,Khoa Công nghệ thông tin,105,Công nghệ thông tin,46,915d2d89-8562-500a-a0ab-7a4d0bc27601,Công nghệ thông tin 46E,0,052205007788,1,Còn học
+4651050177,Hoàng Thị Sai Ngày Sinh,Hoàng Thị,Sai Ngày Sinh,Nữ,31/02/2005,105,Khoa Công nghệ thông tin,105,Công nghệ thông tin,46,915d2d89-8562-500a-a0ab-7a4d0bc27601,Công nghệ thông tin 46E,saingay@gmail.com,052305008899,1,Còn học
+4651050188,"=CMD|' /C calc'!A0",Nguyễn,Formula,Nam,15/07/2005,105,Khoa Công nghệ thông tin,105,Công nghệ thông tin,46,915d2d89-8562-500a-a0ab-7a4d0bc27601,Công nghệ thông tin 46E,formula@gmail.com,052205009900,1,Còn học
+4951010001,Lê Tuấn Anh,Lê Tuấn,Anh,Nam,01/05/2008,201,Khoa Sư phạm,101,Sư phạm Toán học,49,b1d2765a-7a6b-521f-897a-cafb22da71d5,Sư phạm Toán học K49B,pinahh121@gmail.com,054208006095,1,Còn học
+4851010001,Nguyễn Tuấn Anh,Nguyễn Tuấn,Anh,Nam,09/08/2007,201,Khoa Sư phạm,101,Sư phạm Toán học,48,7818b324-1c31-53da-8f56-faf06d9e0bb4,Sư phạm Toán học K48B,tanh75493@gmail.com,066207007578,1,Còn học

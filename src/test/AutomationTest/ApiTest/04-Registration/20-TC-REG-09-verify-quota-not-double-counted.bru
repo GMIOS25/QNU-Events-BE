@@ -1,0 +1,30 @@
+meta {
+  name: TC-REG-09 - Kiểm tra registeredCount không bị tăng đúp sau đăng ký lặp
+  type: http
+  seq: 20
+  tags: [
+    registration
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/events/{{evtRegE1}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenSv001}}
+}
+
+tests {
+  test("registeredCount vẫn bằng 1 và remainingQuota bằng 9", function() {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody().registeredCount).to.equal(1);
+    expect(res.getBody().remainingQuota).to.equal(9);
+  });
+}
+
+docs {
+  TC-REG-09: Xác minh đăng ký lặp không trừ thêm chỉ tiêu chỗ.
+}

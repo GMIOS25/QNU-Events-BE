@@ -1,0 +1,33 @@
+meta {
+  name: TC-EVT-019 - Xem trước sự kiện GET /preview -> 200 & lưu previewedVersion=1
+  type: http
+  seq: 38
+  tags: [
+    events
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/events/{{evtDraftMainId}}/preview
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenOwner01}}
+}
+
+tests {
+  test("HTTP 200 OK, previewVersion = 1, không tăng version và giữ DRAFT", function() {
+    expect(res.getStatus()).to.equal(200);
+    const b = res.getBody();
+    expect(b.previewVersion).to.equal(1);
+    expect(b.event.version).to.equal(1);
+    expect(b.event.previewedVersion).to.equal(1);
+    expect(b.event.status).to.equal("DRAFT");
+  });
+}
+
+docs {
+  TC-EVT-019: Gọi GET /preview ghi nhận previewed_version = 1 mà không công bố.
+}

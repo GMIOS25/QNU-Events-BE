@@ -1,0 +1,63 @@
+meta {
+  name: TC-QR-12 - Biên QR hết hạn (epoch N gửi ở giây >= +4 của epoch N+1) -> 422 QR_EXPIRED
+  type: http
+  seq: 87
+  tags: [
+    qr
+    slow
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/events/{{evtQrGrace}}/attendance/qr
+  body: json
+  auth: bearer
+}
+
+headers {
+  Idempotency-Key: {{freshIdemKey}}
+}
+
+auth:bearer {
+  token: {{tokenSv002}}
+}
+
+body:json {
+  {
+    "token": "{{qrGraceToken}}"
+  }
+}
+
+script:pre-request {
+  const epoch = Number(bru.getVar("qrGraceEpoch") || 0);
+  const offset = Number(bru.getVar("qrClockOffsetMs") || 0);
+  if (epoch > 0) {
+    const targetServerMs = ((epoch + 1) * 10 + 4) * 1000 + 400;
+    const waitMs = targetServerMs - (Date.now() + offset);
+    if (waitMs > 0 && waitMs < 18000) {
+      await new Promise((r) => setTimeout(r, waitMs));
+    }
+  }
+}
+
+tests {
+  test("HTTP 422 và mã lỗi QR_EXPIRED", function() {
+    expect(res.getStatus()).to.equal(422);
+    const body = res.getBody();
+    expect(body).to.be.an("object");
+    expect(body.code).to.equal("QR_EXPIRED");
+    expect(body.message).to.be.a("string").and.not.be.empty;
+    expect(body.message).to.equal("Mã QR đã hết hạn.");
+    expect(body.traceId).to.be.a("string").and.not.be.empty;
+    expect(body.timestamp).to.be.a("string").and.not.be.empty;
+    expect(body.details).to.be.an("object");
+  });
+
+  test("attemptCount=1 khi gửi mã QR đã vượt quá ân hạn 3s", function() {
+    expect(res.getBody().details.attemptCount).to.equal(1);
+  });
+}
+
+docs {
+  TC-QR-12 (BVA-03): Chờ vượt quá ân hạn 3s (secondsIntoCurrentEpoch >= 4) và gửi lại token epoch N -> 422 QR_EXPIRED.
+}

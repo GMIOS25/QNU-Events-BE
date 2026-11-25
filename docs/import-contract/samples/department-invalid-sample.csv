@@ -1,0 +1,10 @@
+DepartmentCode,DepartmentId,DepartmentName,Parent,ParentID
+105,24d2865f-ad8b-4c86-8a70-745045a98fbc,[105] Khoa Công nghệ thông tin,,
+,3db44414-823b-4cc9-a194-ed8a56fa492b,Khoa Thiếu Mã,,
+105,24d2865f-ad8b-4c86-8a70-745045a98fbc,[105] Khoa CNTT Bản Sao,,
+108,not-a-valid-uuid,[108] Khoa Địa lý - Địa chính,,
+109,9808f56b-ff6f-4d64-b55c-e0b9f8f0ed84,,000,
+110,,[110] Khoa Tâm lý - Giáo dục & CTXH,999,
+112,6deba5e5-ce50-42e0-9383-2eca37da9686,[112] Khoa Giáo dục thể chất,112,
+114,4c666978-2e9f-4dea-b7d9-f1709b0ca011,"=HYPERLINK(""http://evil.example"",""Khoa Độc Hại"")",,
+201,d0f597d3-f893-4967-b2da-70be84945ea7,[201] Khoa Sư phạm,,

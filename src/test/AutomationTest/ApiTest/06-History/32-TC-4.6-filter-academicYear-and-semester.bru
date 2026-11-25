@@ -1,0 +1,30 @@
+meta {
+  name: TC-4.6 (QE-72 HistoryIT #11) - Lọc theo academicYear & semester hiện tại
+  type: http
+  seq: 32
+  tags: [
+    history
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/me/history?academicYear={{currentAcademicYear}}&semester={{currentSemester}}&size=100
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenSv001}}
+}
+
+tests {
+  test("HTTP 200 OK và tìm thấy evtHistAccepted thuộc năm học/học kỳ hiện tại", function() {
+    expect(res.getStatus()).to.equal(200);
+    const ids = res.getBody().content.map((i) => i.eventId);
+    expect(ids).to.include(bru.getVar("evtHistAccepted"));
+  });
+}
+
+docs {
+  QE-72 / HistoryIT #11: Lọc lịch sử theo năm học và học kỳ.
+}

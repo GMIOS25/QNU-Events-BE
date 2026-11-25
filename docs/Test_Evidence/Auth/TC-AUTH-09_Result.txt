@@ -1,0 +1,26 @@
+{
+  "login_status": 200,
+  "me_before_logout": 200,
+  "logout_status": 204,
+  "db_revoked_at_not_null": "t",
+  "me_after_logout": {
+    "status": 401,
+    "body": {
+      "code": "SESSION_REVOKED",
+      "message": "Phiên đăng nhập đã bị thu hồi hoặc hết hạn.",
+      "details": {},
+      "traceId": "374390ae-1496-4e3c-9956-64112456e426",
+      "timestamp": 1795165222.1243117
+    }
+  },
+  "events_after_logout": {
+    "status": 401,
+    "body": {
+      "code": "SESSION_REVOKED",
+      "message": "Phiên đăng nhập đã bị thu hồi hoặc hết hạn.",
+      "details": {},
+      "traceId": "3d9f9ee5-e8ff-4a72-9c65-5be72876c0af",
+      "timestamp": 1795165222.1422856
+    }
+  }
+}

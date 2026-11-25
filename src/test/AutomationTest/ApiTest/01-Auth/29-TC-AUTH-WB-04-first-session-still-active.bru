@@ -1,0 +1,29 @@
+meta {
+  name: TC-AUTH-WB-04 - Phiên 1 của sv001 vẫn hoạt động khi phiên 2 đã logout
+  type: http
+  seq: 29
+  tags: [
+    auth
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/auth/me
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenSv001}}
+}
+
+tests {
+  test("Phiên 1 không bị ảnh hưởng bởi logout của phiên 2", function() {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody().loginId).to.equal("sv001");
+  });
+}
+
+docs {
+  TC-AUTH-WB-04: Xác nhận thu hồi phiên 2 không làm mất hiệu lực phiên 1 độc lập.
+}

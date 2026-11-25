@@ -1,0 +1,70 @@
+meta {
+  name: TC-AUTH-02 - Login STUDENT (sv001) & kiểm tra JWT classId
+  type: http
+  seq: 2
+  tags: [
+    auth
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/auth/login
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "loginId": "{{sv001}}",
+    "password": "{{demoPassword}}"
+  }
+}
+
+script:post-response {
+  if (res.getStatus() === 200) {
+    const b = res.getBody();
+    bru.setVar("tokenSv001", b.accessToken);
+    bru.setVar("sv001Id", b.user.id);
+    const parts = b.accessToken.split(".");
+    const CryptoJS = require("crypto-js");
+    const b64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const pad = b64.length % 4 === 0 ? "" : "=".repeat(4 - (b64.length % 4));
+    const payload = JSON.parse(CryptoJS.enc.Base64.parse(b64 + pad).toString(CryptoJS.enc.Utf8));
+    bru.setVar("sv001Sid1", payload.sid);
+  }
+}
+
+tests {
+  function decodeJwtPart(part) {
+    const b64 = part.replace(/-/g, "+").replace(/_/g, "/");
+    const pad = b64.length % 4 === 0 ? "" : "=".repeat(4 - (b64.length % 4));
+    const CryptoJS = require("crypto-js");
+    return JSON.parse(CryptoJS.enc.Base64.parse(b64 + pad).toString(CryptoJS.enc.Utf8));
+  }
+
+  test("HTTP 200 OK và đầy đủ thông tin sinh viên sv001 (K49CNTT1)", function() {
+    expect(res.getStatus()).to.equal(200);
+    const b = res.getBody();
+    expect(b.user.loginId).to.equal("sv001");
+    expect(b.user.fullName).to.equal("Trần Sinh Viên 1");
+    expect(b.user.studentCode).to.equal("4901040001");
+    expect(b.user.roles).to.deep.equal(["STUDENT"]);
+    expect(b.user.classId).to.equal(bru.getEnvVar("classK49Cntt1"));
+  });
+  test("TC-AUTH-14 - JWT HS256 của sv001 chứa claim classId K49CNTT1 và TTL 28800s", function() {
+    const parts = res.getBody().accessToken.split(".");
+    const header = decodeJwtPart(parts[0]);
+    const payload = decodeJwtPart(parts[1]);
+    expect(header.alg).to.equal("HS256");
+    expect(payload.sub).to.equal(res.getBody().user.id);
+    expect(payload.sid).to.match(/^[0-9a-f-]{36}$/i);
+    expect(payload.roles).to.deep.equal(["STUDENT"]);
+    expect(payload.classId).to.equal(bru.getEnvVar("classK49Cntt1"));
+    expect(payload.exp - payload.iat).to.equal(28800);
+  });
+}
+
+docs {
+  TC-AUTH-02, TC-AUTH-14: Đăng nhập STUDENT (sv001), kiểm tra studentCode, classId K49CNTT1 và JWT claims.
+  Nguồn: docs/test/testcase/4.1-xac-thuc-quan-ly-phien-dang-nhap.md
+}

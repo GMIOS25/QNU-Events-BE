@@ -1,0 +1,47 @@
+meta {
+  name: TC-QR-23 - (evtQr03, sv001) Lần thử sai 1/3 -> 422
+  type: http
+  seq: 80
+  tags: [
+    qr
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/events/{{evtQr03}}/attendance/qr
+  body: json
+  auth: bearer
+}
+
+headers {
+  Idempotency-Key: {{freshIdemKey}}
+}
+
+auth:bearer {
+  token: {{tokenSv001}}
+}
+
+body:json {
+  {
+    "token": "bad.token"
+  }
+}
+
+tests {
+  test("HTTP 422 và mã lỗi QR_MALFORMED", function() {
+    expect(res.getStatus()).to.equal(422);
+    const body = res.getBody();
+    expect(body).to.be.an("object");
+    expect(body.code).to.equal("QR_MALFORMED");
+    expect(body.message).to.be.a("string").and.not.be.empty;
+    expect(body.traceId).to.be.a("string").and.not.be.empty;
+    expect(body.timestamp).to.be.a("string").and.not.be.empty;
+    expect(body.details).to.be.an("object");
+  });
+
+  test("attemptCount=1", function() { expect(res.getBody().details.attemptCount).to.equal(1); });
+}
+
+docs {
+  TC-QR-23: Thử sai lần 1 trên evtQr03.
+}

@@ -1,0 +1,14 @@
+Test Case: TC-AUTH-24
+URL: http://localhost:5173/history (after deep-link redirect from /login with sv001)
+API: GET http://localhost:5173/api/v1/me/history -> HTTP 200
+
+Console Errors:
+1. Error handled by React Router default ErrorBoundary: TypeError: historyItems?.filter is not a function (react-router-dom.js:4130)
+2. TypeError: historyItems?.filter is not a function
+   The above error occurred in the <HistoryPage> component at http://localhost:5173/src/features/history/index.tsx:20:38
+3. React Router caught the following error during render TypeError: historyItems?.filter is not a function (react-router-dom.js:4161)
+
+Rendered ErrorBoundary UI:
+"Unexpected Application Error!
+historyItems?.filter is not a function
+TypeError: historyItems?.filter is not a function at HistoryPage (http://localhost:5173/src/features/history/index.tsx:20:38)"
