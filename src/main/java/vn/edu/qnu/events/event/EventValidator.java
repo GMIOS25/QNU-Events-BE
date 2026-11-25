@@ -39,14 +39,26 @@ public class EventValidator {
             }
         }
 
-        if (upsert.quotaTotal() < 1) {
+        if (upsert.quotaTotal() == null || upsert.quotaTotal() < 1) {
             fieldErrors.put("quotaTotal", "Số lượng chỗ tối thiểu là 1.");
+        }
+
+        if (upsert.activityPoints() == null || upsert.activityPoints() < 0) {
+            fieldErrors.put("activityPoints", "Điểm rèn luyện phải lớn hơn hoặc bằng 0.");
+        }
+
+        if (upsert.activityType() != null && upsert.activityType().length() > 50) {
+            fieldErrors.put("activityType", "Loại hoạt động không vượt quá 50 ký tự.");
         }
 
         if (upsert.audienceClassIds() == null || upsert.audienceClassIds().isEmpty()) {
             fieldErrors.put("audienceClassIds", "Phải chọn ít nhất một lớp đối tượng tham gia.");
         } else {
             for (UUID classId : upsert.audienceClassIds()) {
+                if (classId == null) {
+                    fieldErrors.put("audienceClassIds", "Danh sách lớp đối tượng chứa giá trị rỗng không hợp lệ.");
+                    break;
+                }
                 if (!orgClassRepository.existsById(classId)) {
                     fieldErrors.put("audienceClassIds", "Lớp học có ID " + classId + " không tồn tại.");
                     break;

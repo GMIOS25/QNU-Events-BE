@@ -1,7 +1,9 @@
 package vn.edu.qnu.events.registration;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import vn.edu.qnu.events.audit.AuditService;
 import vn.edu.qnu.events.auth.AppUser;
 import vn.edu.qnu.events.auth.AppUserRepository;
@@ -26,22 +28,24 @@ public class RegistrationService {
     private final AppUserRepository appUserRepository;
     private final AuditService auditService;
     private final Clock clock;
+    private final TransactionTemplate transactionTemplate;
 
     public RegistrationService(
             RegistrationRepository registrationRepository,
             EventRepository eventRepository,
             AppUserRepository appUserRepository,
             AuditService auditService,
-            Clock clock
+            Clock clock,
+            PlatformTransactionManager transactionManager
     ) {
         this.registrationRepository = registrationRepository;
         this.eventRepository = eventRepository;
         this.appUserRepository = appUserRepository;
         this.auditService = auditService;
         this.clock = clock;
+        this.transactionTemplate = new TransactionTemplate(transactionManager);
     }
 
-    @Transactional(rollbackFor = Exception.class)
     public RegistrationResponse register(UUID eventId) {
         CurrentUser currentUser = CurrentUserProvider.require();
         if (!currentUser.hasRole("STUDENT")) {
@@ -49,100 +53,151 @@ public class RegistrationService {
         }
 
         UUID studentId = currentUser.userId();
-        AppUser student = appUserRepository.findById(studentId)
-                .orElseThrow(() -> new ApiException(ErrorCode.UNAUTHENTICATED));
 
-        Event event = eventRepository.findById(eventId)
-                .orElseThrow(() -> new ApiException(ErrorCode.NOT_FOUND));
+        // Chạy phần thao tác DB trong TransactionTemplate riêng để giải phóng connection #1
+        // TRƯỚC khi gọi auditService.record (REQUIRES_NEW), tránh nghẽn HikariCP pool khi
+        // nhiều sinh viên đăng ký đồng thời (TC-REG-20).
+        RegisterOutcome outcome = transactionTemplate.execute(status -> {
+            AppUser student = appUserRepository.findById(studentId)
+                    .orElseThrow(() -> new ApiException(ErrorCode.UNAUTHENTICATED));
 
-        if (event.getStatus() != EventStatus.PUBLISHED) {
+            Event event = eventRepository.findById(eventId)
+                    .orElseThrow(() -> new ApiException(ErrorCode.NOT_FOUND));
+
+            if (event.getStatus() != EventStatus.PUBLISHED) {
+                return RegisterOutcome.rejected(
+                        new ApiException(ErrorCode.EVENT_NOT_PUBLISHED),
+                        new AuditPayload(
+                                "REGISTRATION_CREATE",
+                                "EVENT",
+                                eventId.toString(),
+                                "REJECTED",
+                                "EVENT_NOT_PUBLISHED",
+                                Map.of()
+                        )
+                );
+            }
+
+            Instant now = Instant.now(clock);
+            if (now.isAfter(event.getRegistrationDeadline())) {
+                return RegisterOutcome.rejected(
+                        new ApiException(ErrorCode.REGISTRATION_CLOSED),
+                        new AuditPayload(
+                                "REGISTRATION_CREATE",
+                                "EVENT",
+                                eventId.toString(),
+                                "REJECTED",
+                                "REGISTRATION_CLOSED",
+                                Map.of()
+                        )
+                );
+            }
+
+            if (student.getClassId() == null || !event.getAudienceClassIds().contains(student.getClassId())) {
+                return RegisterOutcome.rejected(
+                        new ApiException(ErrorCode.NOT_IN_AUDIENCE),
+                        new AuditPayload(
+                                "REGISTRATION_CREATE",
+                                "EVENT",
+                                eventId.toString(),
+                                "DENIED",
+                                "NOT_IN_AUDIENCE",
+                                Map.of()
+                        )
+                );
+            }
+
+            UUID newRegistrationId = UUID.randomUUID();
+            int rowsInserted = registrationRepository.tryInsertRegistration(newRegistrationId, eventId, studentId, now);
+
+            if (rowsInserted == 0) {
+                // Already registered - return existing registration idempotently
+                Registration existing = registrationRepository.findActiveByEventAndStudent(eventId, studentId)
+                        .orElseThrow(() -> new ApiException(ErrorCode.INTERNAL_ERROR));
+                return RegisterOutcome.succeeded(
+                        new RegistrationResponse(existing.getId(), existing.getStatus().name(), true),
+                        null
+                );
+            }
+
+            // Try to atomically reserve quota seat
+            int seatsReserved = registrationRepository.reserveSeat(eventId);
+            if (seatsReserved == 0) {
+                // Capacity full! Roll back the inserted registration row cleanly, then record audit outside tx
+                status.setRollbackOnly();
+                return RegisterOutcome.rejected(
+                        new ApiException(ErrorCode.CAPACITY_FULL),
+                        new AuditPayload(
+                                "REGISTRATION_CREATE",
+                                "EVENT",
+                                eventId.toString(),
+                                "REJECTED",
+                                "CAPACITY_FULL",
+                                Map.of()
+                        )
+                );
+            }
+
+            return RegisterOutcome.succeeded(
+                    new RegistrationResponse(newRegistrationId, "REGISTERED", false),
+                    new AuditPayload(
+                            "REGISTRATION_CREATE",
+                            "REGISTRATION",
+                            newRegistrationId.toString(),
+                            "SUCCESS",
+                            null,
+                            Map.of("eventId", eventId.toString())
+                    )
+            );
+        });
+
+        if (outcome == null) {
+            throw new ApiException(ErrorCode.INTERNAL_ERROR);
+        }
+
+        if (outcome.audit() != null) {
+            AuditPayload audit = outcome.audit();
             auditService.record(
                     studentId,
                     "STUDENT",
-                    "REGISTRATION_CREATE",
-                    "EVENT",
-                    eventId.toString(),
-                    "REJECTED",
-                    "EVENT_NOT_PUBLISHED",
-                    Map.of(),
+                    audit.action(),
+                    audit.targetType(),
+                    audit.targetId(),
+                    audit.outcome(),
+                    audit.reasonCode(),
+                    audit.details(),
                     null
             );
-            throw new ApiException(ErrorCode.EVENT_NOT_PUBLISHED);
         }
 
-        Instant now = Instant.now(clock);
-        if (now.isAfter(event.getRegistrationDeadline())) {
-            auditService.record(
-                    studentId,
-                    "STUDENT",
-                    "REGISTRATION_CREATE",
-                    "EVENT",
-                    eventId.toString(),
-                    "REJECTED",
-                    "REGISTRATION_CLOSED",
-                    Map.of(),
-                    null
-            );
-            throw new ApiException(ErrorCode.REGISTRATION_CLOSED);
+        if (outcome.error() != null) {
+            throw outcome.error();
         }
 
-        if (student.getClassId() == null || !event.getAudienceClassIds().contains(student.getClassId())) {
-            auditService.record(
-                    studentId,
-                    "STUDENT",
-                    "REGISTRATION_CREATE",
-                    "EVENT",
-                    eventId.toString(),
-                    "DENIED",
-                    "NOT_IN_AUDIENCE",
-                    Map.of(),
-                    null
-            );
-            throw new ApiException(ErrorCode.NOT_IN_AUDIENCE);
+        return outcome.response();
+    }
+
+    private record AuditPayload(
+            String action,
+            String targetType,
+            String targetId,
+            String outcome,
+            String reasonCode,
+            Map<String, Object> details
+    ) {}
+
+    private record RegisterOutcome(
+            RegistrationResponse response,
+            ApiException error,
+            AuditPayload audit
+    ) {
+        static RegisterOutcome succeeded(RegistrationResponse response, AuditPayload audit) {
+            return new RegisterOutcome(response, null, audit);
         }
 
-        UUID newRegistrationId = UUID.randomUUID();
-        int rowsInserted = registrationRepository.tryInsertRegistration(newRegistrationId, eventId, studentId, now);
-
-        if (rowsInserted == 0) {
-            // Already registered - return existing registration idempotently
-            Registration existing = registrationRepository.findActiveByEventAndStudent(eventId, studentId)
-                    .orElseThrow(() -> new ApiException(ErrorCode.INTERNAL_ERROR));
-            return new RegistrationResponse(existing.getId(), existing.getStatus().name(), true);
+        static RegisterOutcome rejected(ApiException error, AuditPayload audit) {
+            return new RegisterOutcome(null, error, audit);
         }
-
-        // Try to atomically reserve quota seat
-        int seatsReserved = registrationRepository.reserveSeat(eventId);
-        if (seatsReserved == 0) {
-            // Capacity full! Record audit rejection and throw to rollback the insert
-            auditService.record(
-                    studentId,
-                    "STUDENT",
-                    "REGISTRATION_CREATE",
-                    "EVENT",
-                    eventId.toString(),
-                    "REJECTED",
-                    "CAPACITY_FULL",
-                    Map.of(),
-                    null
-            );
-            throw new ApiException(ErrorCode.CAPACITY_FULL);
-        }
-
-        // Registration successful
-        auditService.record(
-                studentId,
-                "STUDENT",
-                "REGISTRATION_CREATE",
-                "REGISTRATION",
-                newRegistrationId.toString(),
-                "SUCCESS",
-                null,
-                Map.of("eventId", eventId.toString()),
-                null
-        );
-
-        return new RegistrationResponse(newRegistrationId, "REGISTERED", false);
     }
 
     @Transactional(readOnly = true)

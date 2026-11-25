@@ -137,6 +137,10 @@ public class EventService {
             throw new ApiException(ErrorCode.FORBIDDEN);
         }
 
+        if (event.getStatus() != EventStatus.DRAFT) {
+            throw new ApiException(ErrorCode.VERSION_CONFLICT, "Chỉ có thể xem trước sự kiện ở trạng thái bản nháp.");
+        }
+
         eventRepository.updatePreviewedVersion(id);
         Event reloaded = eventRepository.findById(id).orElseThrow();
 
@@ -156,6 +160,10 @@ public class EventService {
         // Idempotent: already published -> return current state without re-auditing
         if (event.getStatus() == EventStatus.PUBLISHED) {
             return toDetail(event);
+        }
+
+        if (event.getStatus() != EventStatus.DRAFT) {
+            throw new ApiException(ErrorCode.VERSION_CONFLICT, "Chỉ có thể công bố sự kiện ở trạng thái bản nháp.");
         }
 
         if (!request.confirm()) {
@@ -245,15 +253,16 @@ public class EventService {
     @Transactional(readOnly = true)
     public Page<EventSummary> listEvents(String q, String activityType, Pageable pageable) {
         CurrentUser currentUser = CurrentUserProvider.require();
+        String escapedQuery = escapeLikePattern(q);
 
         if (currentUser.roles().contains("EVENT_OWNER")) {
-            return eventRepository.findByOwnerId(currentUser.userId(), q, activityType, pageable)
+            return eventRepository.findByOwnerId(currentUser.userId(), escapedQuery, activityType, pageable)
                     .map(this::toSummary);
         } else if (currentUser.roles().contains("STUDENT")) {
             if (currentUser.classId() == null) {
                 return Page.empty(pageable);
             }
-            Page<Event> page = eventRepository.findPublishedForClass(currentUser.classId(), q, activityType, pageable);
+            Page<Event> page = eventRepository.findPublishedForClass(currentUser.classId(), escapedQuery, activityType, pageable);
             if (page.isEmpty()) {
                 return Page.empty(pageable);
             }
@@ -271,6 +280,16 @@ public class EventService {
         } else {
             return Page.empty(pageable);
         }
+    }
+
+    static String escapeLikePattern(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        return raw.trim()
+                .replace("!", "!!")
+                .replace("%", "!%")
+                .replace("_", "!_");
     }
 
     @Transactional(readOnly = true)

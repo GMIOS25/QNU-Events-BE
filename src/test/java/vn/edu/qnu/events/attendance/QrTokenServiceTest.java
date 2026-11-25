@@ -159,5 +159,30 @@ class QrTokenServiceTest {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("32 byte");
     }
+
+    @Test
+    @DisplayName("12. Token có dấu chấm thừa ở cuối -> QR_MALFORMED (BUG-08)")
+    void tokenWithTrailingDotIsMalformed() {
+        Instant now = Instant.ofEpochSecond(1005);
+        String validToken = qrTokenService.issue(eventId, now, rotationSeconds);
+
+        var result = qrTokenService.verify(validToken + ".", eventId, now, rotationSeconds, graceSeconds);
+        assertThat(result.isValid()).isFalse();
+        assertThat(result.errorCode()).isEqualTo(ErrorCode.QR_MALFORMED);
+    }
+
+    @Test
+    @DisplayName("13. Khi graceSeconds = 0, token epoch trước bị từ chối ngay tại giây đầu tiên của epoch mới (BUG-08)")
+    void zeroGraceRejectsPreviousEpochImmediately() {
+        Instant tokenTime = Instant.ofEpochSecond(1009); // epoch = 100
+        String token = qrTokenService.issue(eventId, tokenTime, rotationSeconds);
+
+        // Giây 1010 là giây thứ 0 của epoch 101; grace = 0 phải từ chối
+        Instant verifyTime = Instant.ofEpochSecond(1010);
+        var result = qrTokenService.verify(token, eventId, verifyTime, rotationSeconds, 0);
+
+        assertThat(result.isValid()).isFalse();
+        assertThat(result.errorCode()).isEqualTo(ErrorCode.QR_EXPIRED);
+    }
 }
 

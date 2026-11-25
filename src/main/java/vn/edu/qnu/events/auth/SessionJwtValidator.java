@@ -61,11 +61,22 @@ public class SessionJwtValidator implements OAuth2TokenValidator<Jwt> {
             return OAuth2TokenValidatorResult.failure(error);
         }
 
+        String subject = jwt.getSubject();
+        if (subject == null || subject.isBlank()) {
+            OAuth2Error error = new OAuth2Error("invalid_token", "Missing user ID in token", null);
+            return OAuth2TokenValidatorResult.failure(error);
+        }
+
         UUID userId;
         try {
-            userId = UUID.fromString(jwt.getSubject());
+            userId = UUID.fromString(subject);
         } catch (IllegalArgumentException e) {
             OAuth2Error error = new OAuth2Error("invalid_token", "Invalid user ID format", null);
+            return OAuth2TokenValidatorResult.failure(error);
+        }
+
+        if (!session.getUserId().equals(userId)) {
+            OAuth2Error error = new OAuth2Error("invalid_token", "Session owner mismatch", null);
             return OAuth2TokenValidatorResult.failure(error);
         }
 

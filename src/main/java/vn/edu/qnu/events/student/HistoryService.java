@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.Timestamp;
 import java.time.Clock;
+import java.time.DateTimeException;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
@@ -111,7 +112,7 @@ public class HistoryService {
                 r.created_at AS registered_at,
                 COALESCE(a.status, 'NOT_CHECKED_IN') AS attendance_status,
                 a.recorded_at AS attendance_at,
-                COALESCE(a.method, 'DYNAMIC_QR') AS method,
+                COALESCE(a.method, e.attendance_method) AS method,
                 e.activity_type AS activity_type,
                 e.activity_points AS activity_points
         """);
@@ -148,7 +149,10 @@ public class HistoryService {
         return new PageImpl<>(items, pageable, totalElements);
     }
 
-    private DateRange resolveDateRange(String academicYear, Integer semester) {
+    static final int MIN_ACADEMIC_YEAR = 1900;
+    static final int MAX_ACADEMIC_YEAR = 2200;
+
+    DateRange resolveDateRange(String academicYear, Integer semester) {
         if (academicYear == null || academicYear.isBlank()) {
             return null;
         }
@@ -156,7 +160,10 @@ public class HistoryService {
         int startYear;
         int endYear;
         if (trimmed.contains("-")) {
-            String[] parts = trimmed.split("-");
+            String[] parts = trimmed.split("-", -1);
+            if (parts.length != 2) {
+                return null;
+            }
             try {
                 startYear = Integer.parseInt(parts[0].trim());
                 endYear = Integer.parseInt(parts[1].trim());
@@ -172,29 +179,39 @@ public class HistoryService {
             }
         }
 
-        ZoneOffset offset = ZoneOffset.UTC;
-        if (semester != null) {
-            if (semester == 1) {
-                // Học kỳ 1: từ 01/09/startYear đến 31/01/endYear
-                Instant from = LocalDate.of(startYear, 9, 1).atStartOfDay().toInstant(offset);
-                Instant to = LocalDate.of(endYear, 1, 31).atTime(23, 59, 59, 999_999_999).toInstant(offset);
-                return new DateRange(from, to);
-            } else if (semester == 2) {
-                // Học kỳ 2: từ 01/02/endYear đến 30/06/endYear
-                Instant from = LocalDate.of(endYear, 2, 1).atStartOfDay().toInstant(offset);
-                Instant to = LocalDate.of(endYear, 6, 30).atTime(23, 59, 59, 999_999_999).toInstant(offset);
-                return new DateRange(from, to);
-            } else if (semester == 3) {
-                // Học kỳ 3 (Hè): từ 01/07/endYear đến 31/08/endYear
-                Instant from = LocalDate.of(endYear, 7, 1).atStartOfDay().toInstant(offset);
-                Instant to = LocalDate.of(endYear, 8, 31).atTime(23, 59, 59, 999_999_999).toInstant(offset);
-                return new DateRange(from, to);
-            }
+        if (startYear < MIN_ACADEMIC_YEAR || startYear > MAX_ACADEMIC_YEAR
+                || endYear < MIN_ACADEMIC_YEAR || endYear > MAX_ACADEMIC_YEAR
+                || endYear < startYear) {
+            return null;
         }
-        // Toàn bộ năm học: từ 01/09/startYear đến 31/08/endYear
-        Instant from = LocalDate.of(startYear, 9, 1).atStartOfDay().toInstant(offset);
-        Instant to = LocalDate.of(endYear, 8, 31).atTime(23, 59, 59, 999_999_999).toInstant(offset);
-        return new DateRange(from, to);
+
+        ZoneOffset offset = ZoneOffset.UTC;
+        try {
+            if (semester != null) {
+                if (semester == 1) {
+                    // Học kỳ 1: từ 01/09/startYear đến 31/01/endYear
+                    Instant from = LocalDate.of(startYear, 9, 1).atStartOfDay().toInstant(offset);
+                    Instant to = LocalDate.of(endYear, 1, 31).atTime(23, 59, 59, 999_999_999).toInstant(offset);
+                    return new DateRange(from, to);
+                } else if (semester == 2) {
+                    // Học kỳ 2: từ 01/02/endYear đến 30/06/endYear
+                    Instant from = LocalDate.of(endYear, 2, 1).atStartOfDay().toInstant(offset);
+                    Instant to = LocalDate.of(endYear, 6, 30).atTime(23, 59, 59, 999_999_999).toInstant(offset);
+                    return new DateRange(from, to);
+                } else if (semester == 3) {
+                    // Học kỳ 3 (Hè): từ 01/07/endYear đến 31/08/endYear
+                    Instant from = LocalDate.of(endYear, 7, 1).atStartOfDay().toInstant(offset);
+                    Instant to = LocalDate.of(endYear, 8, 31).atTime(23, 59, 59, 999_999_999).toInstant(offset);
+                    return new DateRange(from, to);
+                }
+            }
+            // Toàn bộ năm học: từ 01/09/startYear đến 31/08/endYear
+            Instant from = LocalDate.of(startYear, 9, 1).atStartOfDay().toInstant(offset);
+            Instant to = LocalDate.of(endYear, 8, 31).atTime(23, 59, 59, 999_999_999).toInstant(offset);
+            return new DateRange(from, to);
+        } catch (DateTimeException e) {
+            return null;
+        }
     }
 
     private String buildOrderBy(Sort sort) {
@@ -223,6 +240,6 @@ public class HistoryService {
         return " ORDER BY " + String.join(", ", orders) + ", e.id ASC";
     }
 
-    private record DateRange(Instant from, Instant to) {
+    record DateRange(Instant from, Instant to) {
     }
 }

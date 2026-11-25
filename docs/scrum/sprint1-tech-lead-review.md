@@ -1,5 +1,8 @@
 # Tech Lead & Scrum Master Review — Sprint 1 (`Sprint 41`) & Open PR Audit
 
+> [!NOTE]
+> **Bản chụp lịch sử (18/11/2026):** Tài liệu này lưu lại biên bản rà soát giữa kỳ Sprint 1 ngày 18/11/2026. Toàn bộ các đầu mục tồn đọng lớn tại thời điểm đó (PR `#4` đồng bộ vào `develop`, PR `#13–#15`, `#20–#27`, `#48`, FE PR `#1–#4`, đổi tên `docs/import-contract/`, đồng bộ `Page<HistoryItem>`, và 15 Jira Bugs `QE-86`–`QE-100`) đã được cập nhật trong bản tổng kết ngày **24/11/2026** tại [sprint1-scrum-ceremonies-and-dod.md](sprint1-scrum-ceremonies-and-dod.md) và [sprint1-test-execution-report.md](../test/sprint1-test-execution-report.md#5-cập-nhật-đối-chiếu-kiểm-thử--theo-dõi-bug-24112026).
+
 > **Ngày rà soát:** 18/11/2026 · **Phạm vi kiểm tra:** `QNU-Events BE` (`origin/develop @ 4ac5da1`, `origin/main @ 667a54e`, các remote branch/PR mở), `QNU-Events FE` (`develop @ 0fe4a3c`), Jira project `QE` (`Sprint 41`, 27 items).  
 > **Nguyên tắc R1 (`AGENTS.md`):** Toàn bộ số liệu bên dưới được đối chiếu trực tiếp từ git, mã nguồn, Jira và log chạy lệnh kiểm chứng thực tế; không suy đoán hay hợp thức hóa số liệu chưa kiểm chứng.
 

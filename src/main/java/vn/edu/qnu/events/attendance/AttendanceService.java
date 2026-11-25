@@ -13,6 +13,7 @@ import vn.edu.qnu.events.common.ApiException;
 import vn.edu.qnu.events.common.CurrentUser;
 import vn.edu.qnu.events.common.CurrentUserProvider;
 import vn.edu.qnu.events.common.ErrorCode;
+import vn.edu.qnu.events.event.AttendanceMethod;
 import vn.edu.qnu.events.event.Event;
 import vn.edu.qnu.events.event.EventRepository;
 import vn.edu.qnu.events.event.EventStatus;
@@ -85,6 +86,10 @@ public class AttendanceService {
             throw new ApiException(ErrorCode.EVENT_NOT_PUBLISHED);
         }
 
+        if (event.getAttendanceMethod() != AttendanceMethod.DYNAMIC_QR) {
+            throw new ApiException(ErrorCode.VALIDATION_FAILED, "Sự kiện không sử dụng phương thức điểm danh QR động.");
+        }
+
         Instant now = Instant.now(clock);
         if (now.isBefore(event.getAttendanceOpenAt()) || now.isAfter(event.getAttendanceCloseAt())) {
             throw new ApiException(ErrorCode.ATTENDANCE_NOT_OPEN);
@@ -154,6 +159,13 @@ public class AttendanceService {
         if (event.getStatus() != EventStatus.PUBLISHED) {
             return reject(
                     eventId, studentId, method, idempotencyKey, ErrorCode.EVENT_NOT_PUBLISHED,
+                    false, "REJECTED", now, traceId, Map.of("eventId", eventId.toString())
+            );
+        }
+
+        if (event.getAttendanceMethod() != AttendanceMethod.DYNAMIC_QR) {
+            return reject(
+                    eventId, studentId, method, idempotencyKey, ErrorCode.VALIDATION_FAILED,
                     false, "REJECTED", now, traceId, Map.of("eventId", eventId.toString())
             );
         }
