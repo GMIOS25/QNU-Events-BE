@@ -31,6 +31,11 @@ public class AttendanceController {
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping("/attendance/me")
+    public ResponseEntity<MyAttendanceResponse> getMyAttendance(@PathVariable("id") UUID id) {
+        return ResponseEntity.ok(attendanceService.getMyAttendance(id));
+    }
+
     @PostMapping("/attendance/qr")
     public ResponseEntity<String> checkInWithQr(
             @PathVariable("id") UUID id,
