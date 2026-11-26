@@ -106,6 +106,45 @@ public class AttendanceService {
         return new EventQrResponse(token, epoch, validUntil, rotationSeconds, now);
     }
 
+    @Transactional(readOnly = true)
+    public MyAttendanceResponse getMyAttendance(UUID eventId) {
+        CurrentUser currentUser = CurrentUserProvider.require();
+        if (!currentUser.hasRole("STUDENT")) {
+            throw new ApiException(ErrorCode.FORBIDDEN);
+        }
+        if (currentUser.classId() == null) {
+            throw new ApiException(ErrorCode.NOT_FOUND);
+        }
+        eventRepository.findPublishedByIdAndClass(eventId, currentUser.classId())
+                .orElseThrow(() -> new ApiException(ErrorCode.NOT_FOUND));
+
+        UUID studentId = currentUser.userId();
+        long attemptCount = attemptRepository.countByEventIdAndStudentIdAndCountedTrue(eventId, studentId);
+        long remainingAttempts = Math.max(0, MAX_COUNTED_ATTEMPTS - attemptCount);
+
+        Optional<Attendance> accepted = attendanceRepository
+                .findByEventIdAndStudentIdAndStatus(eventId, studentId, "ACCEPTED");
+        if (accepted.isPresent()) {
+            return new MyAttendanceResponse(
+                    "ACCEPTED",
+                    accepted.get().getRecordedAt(),
+                    attemptCount,
+                    MAX_COUNTED_ATTEMPTS,
+                    remainingAttempts,
+                    false
+            );
+        }
+
+        return new MyAttendanceResponse(
+                "NOT_CHECKED_IN",
+                null,
+                attemptCount,
+                MAX_COUNTED_ATTEMPTS,
+                remainingAttempts,
+                remainingAttempts > 0
+        );
+    }
+
     @Transactional(rollbackFor = Exception.class)
     public CheckInResult checkInWithQr(
             UUID eventId,

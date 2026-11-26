@@ -117,6 +117,7 @@ public class SecurityConfiguration {
                     requests.requestMatchers(HttpMethod.POST, "/api/v1/events/{id}/registrations").hasRole("STUDENT");
                     requests.requestMatchers(HttpMethod.GET, "/api/v1/events/{id}/registrations/me").hasRole("STUDENT");
                     requests.requestMatchers(HttpMethod.POST, "/api/v1/events/{id}/attendance/qr").hasRole("STUDENT");
+                    requests.requestMatchers(HttpMethod.GET, "/api/v1/events/{id}/attendance/me").hasRole("STUDENT");
                     requests.requestMatchers(HttpMethod.GET, "/api/v1/me/history").hasRole("STUDENT");
 
                     // Deny all other requests

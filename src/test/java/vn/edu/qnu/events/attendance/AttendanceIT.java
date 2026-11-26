@@ -1005,5 +1005,63 @@ class AttendanceIT {
         // Không có bản ghi ACCEPTED nào
         assertThat(attendanceRepository.existsByEventIdAndStudentIdAndStatus(event.getId(), student1Id, "ACCEPTED")).isFalse();
     }
+
+    @Test
+    @DisplayName("25. GET /attendance/me khôi phục đúng số lần thử sai và trạng thái ACCEPTED từ server (BUG-09 / QE-98)")
+    void getMyAttendanceReflectsAttemptsAndAcceptedState() throws Exception {
+        Instant now = Instant.now();
+        Event event = createEventWithAttendanceWindow(
+                now.minus(10, ChronoUnit.MINUTES), now.plus(1, ChronoUnit.HOURS)
+        );
+        registerStudent(event.getId(), student1Id);
+
+        // 1. Trạng thái ban đầu: 0/3, NOT_CHECKED_IN, canRetry=true
+        mockMvc.perform(get("/api/v1/events/" + event.getId() + "/attendance/me")
+                        .header("Authorization", "Bearer " + student1Token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("NOT_CHECKED_IN"))
+                .andExpect(jsonPath("$.attemptCount").value(0))
+                .andExpect(jsonPath("$.maxAttempts").value(3))
+                .andExpect(jsonPath("$.remainingAttempts").value(3))
+                .andExpect(jsonPath("$.canRetry").value(true));
+
+        // 2. Sau 1 lần thử sai -> attemptCount=1, remainingAttempts=2
+        mockMvc.perform(post("/api/v1/events/" + event.getId() + "/attendance/qr")
+                        .header("Authorization", "Bearer " + student1Token)
+                        .header("Idempotency-Key", "me-fail-1-" + UUID.randomUUID())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"token\":\"invalid.token\"}"))
+                .andExpect(status().isUnprocessableEntity());
+
+        mockMvc.perform(get("/api/v1/events/" + event.getId() + "/attendance/me")
+                        .header("Authorization", "Bearer " + student1Token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("NOT_CHECKED_IN"))
+                .andExpect(jsonPath("$.attemptCount").value(1))
+                .andExpect(jsonPath("$.remainingAttempts").value(2))
+                .andExpect(jsonPath("$.canRetry").value(true));
+
+        // 3. Điểm danh hợp lệ -> status=ACCEPTED, acceptedAt khác rỗng, canRetry=false
+        String validToken = qrTokenService.issue(event.getId(), Instant.now(), event.getQrRotationSeconds());
+        mockMvc.perform(post("/api/v1/events/" + event.getId() + "/attendance/qr")
+                        .header("Authorization", "Bearer " + student1Token)
+                        .header("Idempotency-Key", "me-ok-" + UUID.randomUUID())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"token\":\"" + validToken + "\"}"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/v1/events/" + event.getId() + "/attendance/me")
+                        .header("Authorization", "Bearer " + student1Token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("ACCEPTED"))
+                .andExpect(jsonPath("$.acceptedAt").isNotEmpty())
+                .andExpect(jsonPath("$.attemptCount").value(1))
+                .andExpect(jsonPath("$.canRetry").value(false));
+
+        // 4. EVENT_OWNER bị chặn 403
+        mockMvc.perform(get("/api/v1/events/" + event.getId() + "/attendance/me")
+                        .header("Authorization", "Bearer " + ownerToken))
+                .andExpect(status().isForbidden());
+    }
 }
 
