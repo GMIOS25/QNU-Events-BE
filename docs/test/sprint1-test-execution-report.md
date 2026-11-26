@@ -174,4 +174,39 @@
 | **BUG-05** *(ngoài phạm vi A2 — FE `events/`)* | FE `src/features/events/EventFormPage.tsx` (L47-51) | Khi chỉnh sửa sự kiện, FE cắt trực tiếp chuỗi ISO UTC (`data.startAt.slice(0, 16)`) đưa vào `<input type="datetime-local">` thay vì chuyển sang `Asia/Ho_Chi_Minh`, làm sai lệch `-7 giờ` mỗi lần lưu chỉnh sửa. | *(Chưa tạo — cần duyệt R8 + TWG)* | Chưa sửa / Chưa retest |
 | **BUG-06** *(ngoài phạm vi A2 — `event/`)* | BE `src/main/java/vn/edu/qnu/events/event/EventService.java` (L234-237, L261-270) | Trước đây trên nhánh `main`, `myRegistrationStatus` bị gán cứng `null`. Trên `origin/develop` (`488d32a`, PR #8 `fb127c6`), BE đã truy vấn `myRegistrationStatus` từ `RegistrationRepository` trong cả `getEventDetail` và `listEvents`. | *(Đã xử lý trên `develop` — không mở issue mới)* | **Đã fix trên `origin/develop`** · Retest Pass qua `EventIT` #17 (`eventDetailDisplaysAllRequiredFieldsAndServerSideRegistrationStatus`) |
 | **BUG-07** *(ngoài phạm vi A2 — `student/` & FE `history/`)* | BE `HistoryService.java` (L45-50) & FE `src/features/history/index.tsx` (L72-75, L80) | `HistoryService` không lọc `r.status` nên sinh viên đăng ký lại sau `CANCELLED` bị trả 2 dòng trùng `eventId` và cộng sai KPI; `HistoryPage` thiếu nút **"Thử lại"** khi API lỗi theo `TEST PLAN SPRINT 1.md` §4.6. | *(Chưa tạo — cần duyệt R8 + TWG)* | Chưa sửa / Chưa retest |
-| **BUG-08** *(lệch hợp đồng BE ↔ FE — `student/` & FE `history/`)* | BE `HistoryController.java` (L27) ↔ FE `src/api/events.ts` (L86-88) & `src/features/history/index.tsx` (L17-22, L76-79) | Sau PR #5 (`QE-72`) trên BE `origin/develop`, `GET /api/v1/me/history` trả `Page<HistoryItem>` (`{ content: [...], totalElements, ... }`), trong khi FE `develop` (`b24ad2f`) vẫn gọi và giả lập trong test dạng mảng `HistoryItem[]` (`historyItems?.length`, `historyItems?.filter(...)`). | *(Chưa tạo — cần duyệt R8 + TWG)* | Chưa sửa / Chưa retest |
+| **BUG-08** *(lệch hợp đồng BE ↔ FE — `student/` & FE `history/`)* | BE `HistoryController.java` (L27) ↔ FE `src/api/events.ts` (L86-88) & `src/features/history/index.tsx` (L17-22, L76-79) | Sau PR #5 (`QE-72`) trên BE `origin/develop`, `GET /api/v1/me/history` trả `Page<HistoryItem>` (`{ content: [...], totalElements, ... }`), trong khi FE `develop` (`b24ad2f`) vẫn gọi và giả lập trong test dạng mảng `HistoryItem[]` (`historyItems?.length`, `historyItems?.filter(...)`). | *(Đã xử lý trên FE PR #4 — xem §5)* | **Đã fix trên `origin/develop`** |
+
+---
+
+## 5. Cập nhật Đối chiếu Kiểm thử & Theo dõi Bug (24/11/2026)
+
+> [!NOTE]
+> Phần §1–§4 phía trên giữ nguyên làm bản chụp lịch sử ngày 21/11/2026 (`111/111` BE pass trên PostgreSQL 17.11 thật). Phần §5 dưới đây phản ánh trạng thái thực tế tại ngày **24/11/2026** sau khi merge BE PR #48 (`a1b98a9`), FE PR #4 (`2673298`) và áp dụng các bản vá trên 2 nhánh `fix/QE-70-sprint1-bugfixes-and-docs` (BE) và `fix/QE-70-sprint1-fe-bugfixes` (FE).
+
+### 5.1 Số lượng kiểm thử tự động hiện tại (24/11/2026)
+| Hạng mục | Số lượng | Trạng thái xác minh cục bộ 24/11/2026 | Ghi chú môi trường |
+|---|---:|---|---|
+| **BE Unit Tests** (`*Test.java`) | **35** | **35/35 PASS** (`.\mvnw.cmd -B -ntp clean test-compile test`) | Tăng từ 16 → 35 unit tests phủ toàn bộ bản vá BUG-03..16 & TC-REG-20 |
+| **BE Integration Tests** (`*IT.java`) | **110** | **Biên dịch sạch (`test-compile` PASS); chờ chạy trên PostgreSQL 17 CI** | Gồm `HistoryIT` (+4 test dedupe từ PR #48) & `BusinessStateTransitionIT` (11 test từ QE-20). Máy rà soát không chạy PostgreSQL 17 cục bộ nên không tự báo pass IT (tuân thủ R1). |
+| **FE Unit/Component Tests** (Vitest) | **33** | **33/33 PASS** (`10/10` files, `0` cảnh báo `act`) | `npm run lint` (`0` warnings, `0` errors), `npm run typecheck` PASS, `npm run build` PASS |
+| **FE Playwright E2E** (`e2e/*.spec.ts`) | **7** | Mock API qua `page.route()` | Chưa chạy lại bản nối trực tiếp BE+PG |
+| **QA Manual / Bruno / Selenium / JMeter** | **259** TC / **263** Bruno tests (350 `.bru`) / **35** Selenium / **4** JMeter | Đã đối chiếu tồn tại trong `docs/test/` & `src/test/AutomationTest/` | Lưu ý Bruno `30-TC-4.6-15-history-pending-rejected-and-cancelled-rows.bru` cần cập nhật kỳ vọng từ 2 dòng sang 1 dòng sau PR #48 (`DISTINCT ON`) |
+
+### 5.2 Ánh xạ 15 Bug Jira (`QE-86`–`QE-100`) ↔ GitHub Issues & Trạng thái Vá lỗi
+| Jira Bug | GitHub Issue / Nguồn QA | Tóm tắt lỗi | Owner | Trạng thái 24/11/2026 |
+|---|---|---|---|---|
+| **QE-86** | BE `#36` (`BUG-03`) | `preview()`/`publish()` không chặn sự kiện `CANCELLED` | Hoàng | Đã fix trên BE `fix/QE-70-sprint1-bugfixes-and-docs` (chờ merge & QA retest) |
+| **QE-87** | BE `#37` (`BUG-04`) | Thiếu handler `TypeMismatch`, `PropertyReference`, `OptimisticLock` (500) | Cường | Đã fix trên BE `fix/QE-70-sprint1-bugfixes-and-docs` |
+| **QE-88** | BE `#38`, `#46` (`BUG-05/16`) | `activityType > 50`, phần tử `null` trong `audienceClassIds`, primitive `int` | Hoàng | Đã fix trên BE `fix/QE-70-sprint1-bugfixes-and-docs` |
+| **QE-89** | BE `#39` (`BUG-06`) | Trùng dòng History (PR #48), crash 500 `academicYear`, hardcode `DYNAMIC_QR` | Khánh | Dedupe đã merge PR #48; phần còn lại đã fix trên `fix/QE-70-sprint1-bugfixes-and-docs` |
+| **QE-90** | BE `#40` (`BUG-07`) | Hardcode TTL 8h, null `sub`/session owner, fallback JWT secret ngoài dev | Cường | Đã fix trên `fix/QE-70-sprint1-bugfixes-and-docs` (`LOCKED` check order giữ theo `AuthIT` & ghi `A-AUTH-03` Sprint 2) |
+| **QE-91** | BE `#41` (`BUG-08`) | Trailing dot QR, lỗi biên `graceSeconds=0`, không check `attendanceMethod` | Đan | Đã fix trên BE `fix/QE-70-sprint1-bugfixes-and-docs` |
+| **QE-92** | BE `#42` (`BUG-15`) | Security filter 401/403 trả `timestamp` dạng số Unix epoch | Cường | Đã fix trên BE `fix/QE-70-sprint1-bugfixes-and-docs` |
+| **QE-93** | BE `#47` (`BUG-12`) | Tìm kiếm `q` không escape wildcard LIKE (`%`, `_`) | Hoàng | Đã fix trên BE `fix/QE-70-sprint1-bugfixes-and-docs` |
+| **QE-94** | `TEST_REPORT.md` (`TC-REG-20`) | Nghẽn HikariCP Pool Starvation khi 30 SV đăng ký đồng thời | Dương | Đã fix bằng `TransactionTemplate` trên BE `fix/QE-70-sprint1-bugfixes-and-docs` |
+| **QE-95** | FE `#11` (`BUG-01`) | HistoryPage lặp sự kiện & thiếu đồng bộ cache | Khánh | **Done** — Đã merge BE PR #48 (`a1b98a9`) & FE PR #4 (`2673298`) |
+| **QE-96** | FE `#6` (`BUG-02`) | `EventFormPage` lệch múi giờ +07:00 & `setState` trong `queryFn` | Hoàng | Đã fix trên FE `fix/QE-70-sprint1-fe-bugfixes` |
+| **QE-97** | FE `#7` (`BUG-18`) | `AuthContext` race condition 401 ngay sau `login()` | Cường | Đã fix trên FE `fix/QE-70-sprint1-fe-bugfixes` |
+| **QE-98** | FE `#8` (`BUG-09`) | `EventQrPage` hardcode 9.5s/10s, không dừng poll khi 409, lỗi clipboard | Đan | Đã fix trên FE `fix/QE-70-sprint1-fe-bugfixes` |
+| **QE-99** | FE `#9` (`BUG-10`) | Lệch DTO `cached`/`faculty` & `RegistrationSlot` mặc định mở khi loading | Dương | Đã fix trên FE `fix/QE-70-sprint1-fe-bugfixes` |
+| **QE-100** | FE `#10` (trùng `#12`, `#13`, `BUG-13`) | UUID `classId` ở sidebar, mất query/hash login, validate deadline, `/unauthorized` | Cường | Đã fix trên FE `fix/QE-70-sprint1-fe-bugfixes` (cần đóng 2 issue trùng FE `#12`, `#13`) |

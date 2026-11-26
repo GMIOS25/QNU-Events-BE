@@ -54,14 +54,15 @@ Mọi phản hồi lỗi (HTTP status ≥ 400) đều trả về cấu trúc Api
 | `GET` | `/api/v1/classes` | EVENT_OWNER | — | 200 `[{id, code, name, facultyName}]` | Lấy danh sách lớp để chọn audience |
 | `POST` | `/api/v1/events` | EVENT_OWNER | `EventUpsert` | 201 `EventDetail` (status: `DRAFT`) | Tạo sự kiện nháp |
 | `PUT` | `/api/v1/events/{id}` | EVENT_OWNER | `EventUpsert + version` | 200 `EventDetail` | Chỉ sửa khi `DRAFT`; lệch version → 409 |
-| `GET` | `/api/v1/events/{id}/preview` | EVENT_OWNER | — | 200 `{event: EventDetail, previewVersion: number}` | Đánh dấu `previewed_version = version` |
-| `POST` | `/api/v1/events/{id}/publish` | EVENT_OWNER | `{confirm: true, previewVersion: number}` | 200 `EventDetail` (status: `PUBLISHED`) | Kiểm tra đã preview và version khớp |
+| `GET` | `/api/v1/events/{id}/preview` | EVENT_OWNER | — | 200 `{event: EventDetail, previewVersion: number}` | Chỉ cho phép khi `DRAFT` (khác `DRAFT` → `409 VERSION_CONFLICT`); đánh dấu `previewed_version = version` |
+| `POST` | `/api/v1/events/{id}/publish` | EVENT_OWNER | `{confirm: true, previewVersion: number}` | 200 `EventDetail` (status: `PUBLISHED`) | Kiểm tra `DRAFT` (`CANCELLED` → `409 VERSION_CONFLICT`; `PUBLISHED` idempotent 200), đã preview và version khớp |
 | `GET` | `/api/v1/events` | STUDENT / EVENT_OWNER | Query params: `q`, `activityType`, `page`, `size` | 200 `Page<EventSummary>` | Sinh viên: chỉ thấy `PUBLISHED` và đúng lớp; Chủ sự kiện: thấy sự kiện của mình |
 | `GET` | `/api/v1/events/{id}` | STUDENT / EVENT_OWNER | — | 200 `EventDetail` | Không đủ quyền xem → 404 |
 | `POST` | `/api/v1/events/{id}/registrations` | STUDENT | — | 201 (mới) / 200 (lặp lại) `{id, status, alreadyRegistered}` | Giữ suất nguyên tử, chống race condition |
 | `GET` | `/api/v1/events/{id}/registrations/me` | STUDENT | — | 200 `{id, status, registeredAt}` | Trả về trạng thái đăng ký của bản thân |
 | `GET` | `/api/v1/events/{id}/qr` | EVENT_OWNER | — | 200 `{token, epoch, validUntil, rotationSeconds, serverTime}` | Tạo mã QR động HMAC theo epoch |
 | `POST` | `/api/v1/events/{id}/attendance/qr` | STUDENT | `{token}` + Header: `Idempotency-Key` (bắt buộc) | 200 `{status: "ACCEPTED", acceptedAt}` | Điểm danh QR động, tối đa 3 lần thử |
+| `GET` | `/api/v1/events/{id}/attendance/me` | STUDENT | — | 200 `{status, acceptedAt, attemptCount, maxAttempts, remainingAttempts, canRetry}` | Khôi phục trạng thái điểm danh & đếm lượt thử từ server khi tải lại trang (BUG-09 / QE-98) |
 | `GET` | `/api/v1/me/history` | STUDENT | Query params: `academicYear`, `semester`, `attendanceStatus`, `upcoming`, `activityType`, `page`, `size`, `sort` | 200 `Page<HistoryItem>` | Lịch sử tham gia có hỗ trợ phân trang và bộ lọc nâng cao |
 
 ---
@@ -82,7 +83,7 @@ interface EventUpsert {
   attendanceMethod: "DYNAMIC_QR";
   quotaTotal: number;            // >= 1
   audienceClassIds: string[];    // >= 1 uuid lớp hợp lệ
-  activityType: string;
+  activityType: string;          // tối đa 50 ký tự
   activityPoints: number;        // >= 0
   version?: number;
 }
@@ -110,6 +111,12 @@ interface EventSummary {
 
 ### EventDetail (kế thừa EventSummary và bổ sung)
 ```typescript
+interface EventAudienceClass {
+  id: string;
+  code: string;
+  name: string;
+}
+
 interface EventDetail extends EventSummary {
   description?: string;
   registrationDeadline: string;
@@ -120,6 +127,8 @@ interface EventDetail extends EventSummary {
   qrGraceSeconds: number;
   ownerId: string;
   audienceClassIds: string[];
+  audienceClasses: EventAudienceClass[]; // mã/tên lớp hiển thị trên UI (QE-37)
+  eligible: boolean;                     // server tính quyền tham gia theo lớp sinh viên (QE-37)
   version: number;
   previewedVersion?: number;
   publishedAt?: string;

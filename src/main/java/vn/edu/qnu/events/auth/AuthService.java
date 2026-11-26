@@ -1,5 +1,7 @@
 package vn.edu.qnu.events.auth;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -10,7 +12,6 @@ import vn.edu.qnu.events.common.ErrorCode;
 
 import java.time.Clock;
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -18,12 +19,33 @@ import java.util.UUID;
 public class AuthService {
 
     private static final String DUMMY_HASH = "$2a$12$e8x1KqIkn.wQnU4Bqg4K9.z9vA9oK5iQ8g5k7mZ4x1p2q3r4s5t6u";
+    private static final long DEFAULT_TOKEN_VALIDITY_SECONDS = 28800L;
 
     private final AppUserRepository appUserRepository;
     private final AuthSessionRepository authSessionRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final Clock clock;
+    private final long accessTokenValiditySeconds;
+
+    @Autowired
+    public AuthService(
+            AppUserRepository appUserRepository,
+            AuthSessionRepository authSessionRepository,
+            PasswordEncoder passwordEncoder,
+            JwtService jwtService,
+            Clock clock,
+            @Value("${app.security.jwt-access-token-validity-seconds:28800}") long accessTokenValiditySeconds
+    ) {
+        this.appUserRepository = appUserRepository;
+        this.authSessionRepository = authSessionRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.jwtService = jwtService;
+        this.clock = clock;
+        this.accessTokenValiditySeconds = accessTokenValiditySeconds > 0
+                ? accessTokenValiditySeconds
+                : DEFAULT_TOKEN_VALIDITY_SECONDS;
+    }
 
     public AuthService(
             AppUserRepository appUserRepository,
@@ -32,11 +54,7 @@ public class AuthService {
             JwtService jwtService,
             Clock clock
     ) {
-        this.appUserRepository = appUserRepository;
-        this.authSessionRepository = authSessionRepository;
-        this.passwordEncoder = passwordEncoder;
-        this.jwtService = jwtService;
-        this.clock = clock;
+        this(appUserRepository, authSessionRepository, passwordEncoder, jwtService, clock, DEFAULT_TOKEN_VALIDITY_SECONDS);
     }
 
     @Transactional
@@ -57,7 +75,7 @@ public class AuthService {
         }
 
         Instant now = Instant.now(clock);
-        Instant expiresAt = now.plus(8, ChronoUnit.HOURS);
+        Instant expiresAt = now.plusSeconds(accessTokenValiditySeconds);
         AuthSession session = new AuthSession(UUID.randomUUID(), user.getId(), now, expiresAt);
         authSessionRepository.save(session);
 

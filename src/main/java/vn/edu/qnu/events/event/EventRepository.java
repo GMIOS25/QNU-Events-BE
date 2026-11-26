@@ -19,7 +19,7 @@ public interface EventRepository extends JpaRepository<Event, UUID> {
     @Query("""
         SELECT e FROM Event e
         WHERE e.ownerId = :ownerId
-        AND (:q IS NULL OR LOWER(e.title) LIKE LOWER(CONCAT('%', CAST(:q AS string), '%')))
+        AND (:q IS NULL OR LOWER(e.title) LIKE LOWER(CONCAT('%', CAST(:q AS string), '%')) ESCAPE '!')
         AND (:activityType IS NULL OR e.activityType = :activityType)
     """)
     Page<Event> findByOwnerId(
@@ -38,7 +38,7 @@ public interface EventRepository extends JpaRepository<Event, UUID> {
         JOIN e.audienceClassIds c
         WHERE e.status = 'PUBLISHED'
         AND c = :classId
-        AND (:q IS NULL OR LOWER(e.title) LIKE LOWER(CONCAT('%', CAST(:q AS string), '%')))
+        AND (:q IS NULL OR LOWER(e.title) LIKE LOWER(CONCAT('%', CAST(:q AS string), '%')) ESCAPE '!')
         AND (:activityType IS NULL OR e.activityType = :activityType)
     """)
     Page<Event> findPublishedForClass(

@@ -13,6 +13,7 @@ import vn.edu.qnu.events.common.ApiException;
 import vn.edu.qnu.events.common.CurrentUser;
 import vn.edu.qnu.events.common.CurrentUserProvider;
 import vn.edu.qnu.events.common.ErrorCode;
+import vn.edu.qnu.events.event.AttendanceMethod;
 import vn.edu.qnu.events.event.Event;
 import vn.edu.qnu.events.event.EventRepository;
 import vn.edu.qnu.events.event.EventStatus;
@@ -85,6 +86,10 @@ public class AttendanceService {
             throw new ApiException(ErrorCode.EVENT_NOT_PUBLISHED);
         }
 
+        if (event.getAttendanceMethod() != AttendanceMethod.DYNAMIC_QR) {
+            throw new ApiException(ErrorCode.VALIDATION_FAILED, "Sự kiện không sử dụng phương thức điểm danh QR động.");
+        }
+
         Instant now = Instant.now(clock);
         if (now.isBefore(event.getAttendanceOpenAt()) || now.isAfter(event.getAttendanceCloseAt())) {
             throw new ApiException(ErrorCode.ATTENDANCE_NOT_OPEN);
@@ -99,6 +104,45 @@ public class AttendanceService {
         String token = qrTokenService.issue(eventId, now, rotationSeconds);
 
         return new EventQrResponse(token, epoch, validUntil, rotationSeconds, now);
+    }
+
+    @Transactional(readOnly = true)
+    public MyAttendanceResponse getMyAttendance(UUID eventId) {
+        CurrentUser currentUser = CurrentUserProvider.require();
+        if (!currentUser.hasRole("STUDENT")) {
+            throw new ApiException(ErrorCode.FORBIDDEN);
+        }
+        if (currentUser.classId() == null) {
+            throw new ApiException(ErrorCode.NOT_FOUND);
+        }
+        eventRepository.findPublishedByIdAndClass(eventId, currentUser.classId())
+                .orElseThrow(() -> new ApiException(ErrorCode.NOT_FOUND));
+
+        UUID studentId = currentUser.userId();
+        long attemptCount = attemptRepository.countByEventIdAndStudentIdAndCountedTrue(eventId, studentId);
+        long remainingAttempts = Math.max(0, MAX_COUNTED_ATTEMPTS - attemptCount);
+
+        Optional<Attendance> accepted = attendanceRepository
+                .findByEventIdAndStudentIdAndStatus(eventId, studentId, "ACCEPTED");
+        if (accepted.isPresent()) {
+            return new MyAttendanceResponse(
+                    "ACCEPTED",
+                    accepted.get().getRecordedAt(),
+                    attemptCount,
+                    MAX_COUNTED_ATTEMPTS,
+                    remainingAttempts,
+                    false
+            );
+        }
+
+        return new MyAttendanceResponse(
+                "NOT_CHECKED_IN",
+                null,
+                attemptCount,
+                MAX_COUNTED_ATTEMPTS,
+                remainingAttempts,
+                remainingAttempts > 0
+        );
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -154,6 +198,13 @@ public class AttendanceService {
         if (event.getStatus() != EventStatus.PUBLISHED) {
             return reject(
                     eventId, studentId, method, idempotencyKey, ErrorCode.EVENT_NOT_PUBLISHED,
+                    false, "REJECTED", now, traceId, Map.of("eventId", eventId.toString())
+            );
+        }
+
+        if (event.getAttendanceMethod() != AttendanceMethod.DYNAMIC_QR) {
+            return reject(
+                    eventId, studentId, method, idempotencyKey, ErrorCode.VALIDATION_FAILED,
                     false, "REJECTED", now, traceId, Map.of("eventId", eventId.toString())
             );
         }

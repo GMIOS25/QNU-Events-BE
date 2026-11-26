@@ -59,7 +59,7 @@ public class QrTokenService {
             return VerificationResult.invalid(ErrorCode.QR_MALFORMED);
         }
 
-        String[] parts = token.split("\\.");
+        String[] parts = token.split("\\.", -1);
         if (parts.length != 4 || !"qr1".equals(parts[0])) {
             return VerificationResult.invalid(ErrorCode.QR_MALFORMED);
         }
@@ -99,7 +99,7 @@ public class QrTokenService {
 
         if (epoch == currentEpoch - 1) {
             long secondsIntoCurrentEpoch = now.getEpochSecond() - (currentEpoch * rotationSeconds);
-            if (secondsIntoCurrentEpoch <= graceSeconds) {
+            if (graceSeconds > 0 && secondsIntoCurrentEpoch <= graceSeconds) {
                 return VerificationResult.valid(epoch);
             }
             return VerificationResult.invalid(ErrorCode.QR_EXPIRED);

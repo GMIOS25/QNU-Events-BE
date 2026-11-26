@@ -26,15 +26,14 @@ tests {
     expect(pendingItems[0].attendanceStatus).to.equal("NOT_CHECKED_IN");
     expect(Object.prototype.hasOwnProperty.call(pendingItems[0], "attendanceAt")).to.equal(false);
   });
-  test("White-box Finding WB-05: sự kiện có cả CANCELLED và REGISTERED trả 2 dòng (REGISTERED trước CANCELLED)", function() {
+  test("Sau PR #48 (QE-72 / BUG-06): sự kiện có cả CANCELLED và REGISTERED chỉ trả 1 dòng mới nhất (REGISTERED)", function() {
     const items = res.getBody().content;
     const dupItems = items.filter((i) => i.eventId === bru.getEnvVar("brunoHistDupEventId"));
-    expect(dupItems).to.have.lengthOf(2);
+    expect(dupItems).to.have.lengthOf(1);
     expect(dupItems[0].registrationStatus).to.equal("REGISTERED");
-    expect(dupItems[1].registrationStatus).to.equal("CANCELLED");
   });
 }
 
 docs {
-  TC-4.6-15, TC-4.6-WB-04, TC-4.6-WB-05: Xác minh LEFT JOIN status=ACCEPTED loại trừ PENDING/REJECTED và ghi nhận hành vi không lọc r.status.
+  TC-4.6-15, TC-4.6-WB-04, TC-4.6-WB-05: Xác minh LEFT JOIN status=ACCEPTED loại trừ PENDING/REJECTED và DISTINCT ON (event_id) sau PR #48 khử trùng bản ghi CANCELLED cũ.
 }

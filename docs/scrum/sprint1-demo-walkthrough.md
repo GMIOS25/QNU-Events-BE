@@ -1,7 +1,7 @@
 # Kịch bản Demo Sprint 1 — QNU-Events
 
 > **Thời lượng dự kiến:** 8 – 10 phút  
-> **Ngày báo cáo:** 11/11/2026  
+> **Cập nhật xác minh:** 24/11/2026 (đồng bộ với `DemoDataSeeder`, `compose.yaml` và FE Figma shell)  
 > **Người thực hiện:** Nhóm phát triển QNU-Events (Cường @GMIOS25, Hoàng @hoangkq157, Dương @YangKlee, Đan @Dan28-05, Khánh @KHANHSKY0808)
 
 ---
@@ -10,12 +10,13 @@
 
 ### 1.1 Khởi động hệ thống
 ```bash
-# 1. Khởi động PostgreSQL 17 (Docker WSL2)
-docker start postgres
-
-# 2. Khởi động Backend (Spring Boot 4.1.2 - Java 21)
+# 1. Khởi động PostgreSQL 17 qua Docker Compose
 cd "d:\Work\QNU-Events BE"
-./mvnw spring-boot:run
+docker compose up -d --wait postgres
+
+# 2. Khởi động Backend (Spring Boot 4.1.2 - Java 21, profile dev)
+./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
+# (Windows PowerShell: .\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=dev")
 
 # 3. Khởi động Frontend (React 19 + Vite)
 cd "d:\Work\QNU-Events FE"
@@ -28,7 +29,7 @@ npm run dev
 | **Ban tổ chức (Owner)** | `owner01` | `Demo@12345` | Ban Chấp hành Đoàn | Tạo, xem trước, công bố sự kiện và chiếu mã QR động |
 | **Sinh viên 1** | `sv001` | `Demo@12345` | `K49CNTT1` (K49) | Đăng ký thành công, quét QR hợp lệ, kiểm tra lịch sử |
 | **Sinh viên 2** | `sv002` | `Demo@12345` | `K49CNTT1` (K49) | Đăng ký tranh suất cuối, quét QR |
-| **Sinh viên 3** | `sv003` | `Demo@12345` | `K49CNTT1` (K49) | Thử đăng ký khi hết suất (nhận lỗi `CAPACITY_FULL`) |
+| **Sinh viên 3** | `sv003` | `Demo@12345` | `K49CNTT2` (K49) | Demo cô lập lớp (`404 NOT_FOUND` / `403 NOT_IN_AUDIENCE` nếu chỉ mời `K49CNTT1`), hoặc demo hết suất `409 CAPACITY_FULL` nếu sự kiện mời cả `K49CNTT1` & `K49CNTT2` với chỉ tiêu `2` suất |
 
 ---
 
@@ -36,7 +37,7 @@ npm run dev
 
 ### Bước 1: Đăng nhập & Tạo sự kiện (Tài khoản Owner)
 1. Truy cập `http://localhost:5173/login`.
-2. Bấm nút nạp nhanh **"Nạp mẫu: owner01"** hoặc nhập `owner01` / `Demo@12345`.
+2. Bấm nút nạp nhanh **"Chủ sự kiện"** (cho `owner01`; hoặc **"Sinh viên (K49)"** cho `sv001` ở bước sau) hoặc nhập `owner01` / `Demo@12345`.
 3. Bấm **"Tạo sự kiện mới"** (`/events/new`):
    - **Tiêu đề:** `Hội thảo Ứng dụng AI & Khởi nghiệp Công nghệ 2026`
    - **Địa điểm:** `Hội trường A - Đại học Quy Nhơn`
@@ -44,7 +45,7 @@ npm run dev
    - **Thời gian diễn ra:** Hôm nay đến ngày mai.
    - **Cửa sổ điểm danh:** Đang mở (bắt đầu từ 15 phút trước đến 2 giờ sau).
    - **Điểm rèn luyện:** `+10` điểm (Hoạt động học thuật).
-   - **Lớp đối tượng:** Chọn `K49CNTT1`.
+   - **Lớp đối tượng:** Chọn `K49CNTT1` và `K49CNTT2` (nếu muốn demo hết chỗ với `sv003`), hoặc chỉ chọn `K49CNTT1` (để demo cô lập lớp đối với `sv003`).
 4. Bấm **"Tạo bản nháp sự kiện"** -> Sự kiện ở trạng thái `DRAFT`.
 
 ### Bước 2: Quy trình Xem trước & Công bố (Preview-then-Publish Wizard)

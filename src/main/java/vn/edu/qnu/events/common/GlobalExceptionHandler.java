@@ -1,18 +1,24 @@
 package vn.edu.qnu.events.common;
 
+import jakarta.persistence.OptimisticLockException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.InvalidDataAccessApiUsageException;
+import org.springframework.data.core.PropertyReferenceException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingRequestHeaderException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.time.Clock;
@@ -85,6 +91,59 @@ public class GlobalExceptionHandler {
                 Instant.now(clock)
         );
         return ResponseEntity.status(ErrorCode.VALIDATION_FAILED.getHttpStatus()).body(error);
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiError> handleTypeMismatch(MethodArgumentTypeMismatchException ex, HttpServletRequest request) {
+        String traceId = resolveTraceId(request);
+        String paramName = ex.getName() != null ? ex.getName() : "parameter";
+        ApiError error = new ApiError(
+                ErrorCode.VALIDATION_FAILED.name(),
+                "Tham số '" + paramName + "' không đúng định dạng.",
+                Map.of("fields", Map.of(paramName, "Giá trị không đúng định dạng yêu cầu.")),
+                traceId,
+                Instant.now(clock)
+        );
+        return ResponseEntity.status(ErrorCode.VALIDATION_FAILED.getHttpStatus()).body(error);
+    }
+
+    @ExceptionHandler({MissingServletRequestParameterException.class, MissingRequestHeaderException.class})
+    public ResponseEntity<ApiError> handleMissingParameter(Exception ex, HttpServletRequest request) {
+        String traceId = resolveTraceId(request);
+        ApiError error = new ApiError(
+                ErrorCode.VALIDATION_FAILED.name(),
+                "Thiếu tham số hoặc header bắt buộc trong yêu cầu.",
+                Map.of(),
+                traceId,
+                Instant.now(clock)
+        );
+        return ResponseEntity.status(ErrorCode.VALIDATION_FAILED.getHttpStatus()).body(error);
+    }
+
+    @ExceptionHandler({PropertyReferenceException.class, InvalidDataAccessApiUsageException.class})
+    public ResponseEntity<ApiError> handleInvalidQueryUsage(Exception ex, HttpServletRequest request) {
+        String traceId = resolveTraceId(request);
+        ApiError error = new ApiError(
+                ErrorCode.VALIDATION_FAILED.name(),
+                "Tham số sắp xếp hoặc truy vấn không hợp lệ.",
+                Map.of(),
+                traceId,
+                Instant.now(clock)
+        );
+        return ResponseEntity.status(ErrorCode.VALIDATION_FAILED.getHttpStatus()).body(error);
+    }
+
+    @ExceptionHandler({ObjectOptimisticLockingFailureException.class, OptimisticLockException.class})
+    public ResponseEntity<ApiError> handleOptimisticLockingFailure(Exception ex, HttpServletRequest request) {
+        String traceId = resolveTraceId(request);
+        ApiError error = new ApiError(
+                ErrorCode.VERSION_CONFLICT.name(),
+                ErrorCode.VERSION_CONFLICT.getDefaultMessage(),
+                Map.of(),
+                traceId,
+                Instant.now(clock)
+        );
+        return ResponseEntity.status(ErrorCode.VERSION_CONFLICT.getHttpStatus()).body(error);
     }
 
     @ExceptionHandler(AccessDeniedException.class)

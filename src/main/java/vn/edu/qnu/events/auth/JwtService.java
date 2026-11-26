@@ -5,8 +5,11 @@ import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.crypto.MACSigner;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
+import vn.edu.qnu.events.config.SecurityConfiguration;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
@@ -21,13 +24,21 @@ public class JwtService {
     private final String secret;
     private final Clock clock;
 
+    @Autowired
     public JwtService(
             @Value("${app.security.jwt-secret:}") String jwtSecret,
+            Environment environment,
             Clock clock
     ) {
-        this.secret = (jwtSecret != null && jwtSecret.length() >= 32)
-                ? jwtSecret
-                : "qnu-events-dev-secret-key-must-be-at-least-256-bits-long-for-hmac-sha256!";
+        this.secret = SecurityConfiguration.resolveJwtSecret(jwtSecret, environment);
+        this.clock = clock;
+    }
+
+    public JwtService(String jwtSecret, Clock clock) {
+        if (jwtSecret == null || jwtSecret.isBlank() || jwtSecret.getBytes(StandardCharsets.UTF_8).length < 32) {
+            throw new IllegalArgumentException("JWT secret phải có ít nhất 32 byte.");
+        }
+        this.secret = jwtSecret;
         this.clock = clock;
     }
 
