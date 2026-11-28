@@ -1,7 +1,7 @@
 # Hướng dẫn & Quy tắc dành cho AI-Agent — QNU-Events
 
-> Tài liệu này là nguồn sự thật (Single Source of Truth) ràng buộc mọi AI-Agent khi tham gia phát triển dự án QNU-Events (Sprint 1 và các Sprint tiếp theo).
-> Chi tiết toàn bộ kế hoạch, hợp đồng API và task card xem tại: [`docs/agent/sprint1-rescue-plan.md`](docs/agent/sprint1-rescue-plan.md).
+> Tài liệu này là nguồn sự thật (Single Source of Truth) ràng buộc mọi AI-Agent khi tham gia phát triển dự án QNU-Events (Sprint 1, Sprint 2 và các Sprint tiếp theo).
+> Chi tiết kế hoạch Sprint 1: [`docs/agent/sprint1-rescue-plan.md`](docs/agent/sprint1-rescue-plan.md) · Lược đồ `V2` đóng băng cho Sprint 2: [`docs/Design/v2-schema-blueprint.md`](docs/Design/v2-schema-blueprint.md) · Nhật ký quyết định: [`docs/decisions.md`](docs/decisions.md).
 
 ---
 
@@ -24,15 +24,15 @@
 
 ---
 
-## 2. Bảng Phân công & Phạm vi Thư mục / File (Scope Table)
+## 2. Bảng Phân công & Phạm vi Thư mục / File (Scope Table — Cập nhật Sprint 2)
 
-| Agent | Thành viên (Owner) | Nhiệm vụ chính | Phạm vi file được phép sửa đổi |
+| Agent | Thành viên (Owner) | Nhiệm vụ chính (Sprint 1 → Sprint 2+) | Phạm vi file được phép sửa đổi |
 |---|---|---|---|
-| **A0** | **Trần Thanh Cường** (`@GMIOS25`) | Nền tảng hạ tầng, Auth, Session, Flyway core, FE scaffold, CI/CD | `config/`, `auth/`, `common/`, `db/migration/V1*`, root FE scaffold, `.github/`, `docs/agent/` |
-| **A1** | **Hoàng** (`@hoangkq157`) | Quản lý Sự kiện (QE-65, QE-66) | `event/`, `FE src/features/events/` |
-| **A2** | **Dương** (`@YangKlee`) | Giữ suất & QA (QE-71, QE-28) | `registration/`, `FE src/features/registration/`, `src/test/**/e2e/`, `docs/test/` |
-| **A3** | **Đan** (`@Dan28-05`) | Dynamic QR & Điểm danh (QE-56, QE-57) | `attendance/`, `FE src/features/attendance/` |
-| **A4** | **Khánh** (`@KHANHSKY0808`) | Lịch sử, Audit log & Tài liệu (QE-72, QE-61, QE-80) | `audit/`, `student/` (history), `FE src/features/history/`, `docs/design/` |
+| **A0** | **Trần Thanh Cường** (`@GMIOS25`) | Duy nhất tạo migration `V2__sprint2_core_extensions.sql` (`R6`), `Auth` hardening & Google OAuth (`QE-30`, `QE-74`), `Outbox`, hạ tầng `EvidenceStoragePort`, CI/CD | `config/`, `auth/` (`QE-30`, `QE-74`), `common/`, `outbox/`, `db/migration/`, root FE scaffold & `src/features/auth/`, `.github/`, `docs/agent/` |
+| **A1** | **Nguyễn Huy Hoàng** (`@hoangkq157`) | Quản lý Sự kiện (`QE-65`, `QE-66`, `QE-12`, `QE-32`), quản trị tài khoản & cấp TK SV (`QE-35`, `QE-73` phối hợp A0), phối hợp A2 (`QE-39`, `QE-40`) | `event/`, phối hợp `auth/`/`admin/` & `registration/`, `FE src/features/events/` |
+| **A2** | **Khánh Dương Nguyễn** (`@YangKlee`) | Giữ suất, Waiting List & Hủy (`QE-71`, `QE-39`, `QE-40`), Chế tài No-show (`QE-14`), CSV/Excel Import (`QE-26`, `QE-62`) & QA (`QE-28`) | `registration/`, `importer/`, `FE src/features/registration/` & FE import, `src/test/**/e2e/`, `docs/test/` |
+| **A3** | **Huỳnh Hữu Đan** (`@Dan28-05`) | Dynamic QR & Điểm danh (`QE-56`, `QE-57`, `QE-54`), GPS (`QE-55`), Offline Sync (`QE-33`, `QE-76..78`), Upload/Proxy Evidence & BCS duyệt (`QE-19`, `QE-42`, `QE-43`) | `attendance/`, `evidence/` *(đồng sở hữu với A4)*, `FE src/features/attendance/`, `FE src/features/evidence/` |
+| **A4** | **Nguyễn Nhật Khánh** (`@KHANHSKY0808`) | Lịch sử (`QE-72`, `QE-58`), Audit log (`QE-61`), Khiếu nại 2 vòng (`QE-59`, `QE-60`), Evidence visibility/retention (`QE-24`, `QE-47`) & Tài liệu (`QE-80`) | `audit/`, `student/` (history), `appeal/`, `evidence/` *(đồng sở hữu với A3)*, `FE src/features/history/`, `FE src/features/appeal/`, `docs/` |
 
 ---
 

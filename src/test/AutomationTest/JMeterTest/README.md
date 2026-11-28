@@ -1,6 +1,6 @@
 # Kiểm thử Hiệu năng QNU-Events với Apache JMeter 5.6.3
 
-Bộ kịch bản kiểm thử hiệu năng (Performance / Load / Burst / Stress Testing) cho Backend **QNU-Events** xây dựng bằng **Apache JMeter 5.6.3**, đối chiếu trực tiếp với đặc tả **Mục 4.1 — Performance Requirements** trong `docs/QNU_Event_SRS.docx` (`NFR-PERF-001` → `NFR-PERF-010`, `NFR-QUAL-001`).
+Bộ kịch bản kiểm thử hiệu năng (Performance / Load / Burst / Stress Testing) cho Backend **QNU-Events** xây dựng bằng **Apache JMeter 5.6.3**, đối chiếu trực tiếp với đặc tả **Mục 4.1 — Performance Requirements** trong `docs/spec/QNU_Event_SRS.docx` (`NFR-PERF-001` → `NFR-PERF-010`, `NFR-QUAL-001`).
 
 ---
 

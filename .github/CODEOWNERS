@@ -1,10 +1,14 @@
-# Toan bo repository do Cường (@GMIOS25) quan ly mac dinh
+# Toan bo repository do Cuong (@GMIOS25) quan ly mac dinh
 * @GMIOS25
 
-# Phan quyen review theo tung module cua thanh vien
+# Phan quyen review theo tung module cua thanh vien (Sprint 2+)
 /src/main/java/vn/edu/qnu/events/event/ @hoangkq157
-/src/main/java/vn/edu/qnu/events/registration/ @YangKlee
+/src/main/java/vn/edu/qnu/events/registration/ @YangKlee @hoangkq157
+/src/main/java/vn/edu/qnu/events/importer/ @YangKlee
 /src/main/java/vn/edu/qnu/events/attendance/ @Dan28-05
+/src/main/java/vn/edu/qnu/events/evidence/ @Dan28-05 @KHANHSKY0808
+/src/main/java/vn/edu/qnu/events/appeal/ @KHANHSKY0808
 /src/main/java/vn/edu/qnu/events/audit/ @KHANHSKY0808
 /src/main/java/vn/edu/qnu/events/student/ @KHANHSKY0808
+/src/main/java/vn/edu/qnu/events/outbox/ @GMIOS25
 /docs/ @KHANHSKY0808 @GMIOS25

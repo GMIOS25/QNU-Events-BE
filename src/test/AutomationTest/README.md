@@ -1,6 +1,6 @@
 # QNU-Events Automation Test Suite (Bruno API + Java Selenium 4 + Apache JMeter 5.6.3)
 
-Bộ kiểm thử tự động toàn diện ánh xạ trực tiếp từ 6 tài liệu Test Cases trong `docs/test/testcase/` (mục `4.1` → `4.6`) và các yêu cầu phi chức năng trong `docs/QNU_Event_SRS.docx`.
+Bộ kiểm thử tự động toàn diện ánh xạ trực tiếp từ 6 tài liệu Test Cases trong `docs/test/testcase/` (mục `4.1` → `4.6`) và các yêu cầu phi chức năng trong `docs/spec/QNU_Event_SRS.docx`.
 
 ## 1. Cấu trúc thư mục
 

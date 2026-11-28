@@ -1,8 +1,8 @@
 # QNU Events Backend
 
-Backend Spring Boot cho hệ thống quản lý đăng ký và xác thực tham gia hoạt động sinh viên Đại học Quy Nhơn, xây dựng theo [proposal v2](docs/QNU_Event_Participation_Management_Project_Proposal_v2.docx) và [đặc tả SRS](docs/QNU_Event_SRS.docx).
+Backend Spring Boot cho hệ thống quản lý đăng ký và xác thực tham gia hoạt động sinh viên Đại học Quy Nhơn, xây dựng theo [proposal v2](docs/spec/QNU_Event_Participation_Management_Project_Proposal_v2.docx) và [đặc tả SRS v1.1](docs/spec/QNU_Event_SRS.docx).
 
-Trên nhánh `develop` hiện tại đã triển khai hoàn chỉnh lát cắt dọc Sprint 1 (`V1__sprint1_core_schema.sql`, xác thực JWT HS256 + thu hồi phiên `auth_session`, phân quyền `SecurityConfiguration`, CRUD/preview/publish/lọc sự kiện, giữ suất nguyên tử, Dynamic QR HMAC-SHA256 + `Idempotency-Key` + giới hạn 3 lần thử, lịch sử tham gia phân trang và `audit_logs` bất biến). Các tính năng mở rộng (Google OAuth2/OIDC, khóa đăng nhập 5 lần sai, quota nhiều tầng & waiting list, GPS, minh chứng, đồng bộ offline, khiếu nại, import/export CSV/Excel và API quản trị `SYSTEM_ADMIN`) thuộc phạm vi Sprint 2+.
+Trên nhánh `main` và `develop` hiện tại đã triển khai hoàn chỉnh lát cắt dọc Sprint 1 (`V1__sprint1_core_schema.sql`, xác thực JWT HS256 + thu hồi phiên `auth_session`, phân quyền `SecurityConfiguration`, CRUD/preview/publish/lọc sự kiện, giữ suất nguyên tử, Dynamic QR HMAC-SHA256 + `Idempotency-Key` + giới hạn 3 lần thử + khôi phục `/attendance/me`, lịch sử tham gia phân trang và `audit_logs` bất biến). Các tính năng mở rộng Sprint 2–3 (vai trò `CVHT`, Google OAuth2/OIDC, khóa đăng nhập 5 lần sai & Refresh Cookie `HttpOnly`, quota nhiều tầng `event_pools` & waiting list, GPS, minh chứng & retention 150 ngày, đồng bộ offline Store-and-Forward 24h, khiếu nại 2 vòng, import/export CSV/Excel và API quản trị `SYSTEM_ADMIN`) đã đóng băng thiết kế tại [docs/Design/v2-schema-blueprint.md](docs/Design/v2-schema-blueprint.md) và [docs/decisions.md](docs/decisions.md).
 
 ## Stack và dependency
 
@@ -19,7 +19,7 @@ Trên nhánh `develop` hiện tại đã triển khai hoàn chỉnh lát cắt d
 | Actuator, DevTools | Health check và hỗ trợ phát triển |
 | Spring Boot Test, Spring Security Test | JUnit 5, MockMvc và integration test trên PostgreSQL 17 |
 
-JWT/JOSE dùng Spring Security Resource Server (`NimbusJwtEncoder`/`NimbusJwtDecoder`), không thêm JJWT. PostgreSQL 17 là nguồn dữ liệu chính; chưa dùng Redis, Kafka hay microservices cho MVP 3.000 sinh viên. Nhà cung cấp lưu trữ file minh chứng (`evidence/`) chưa chốt nên chưa thêm SDK object storage.
+JWT/JOSE dùng Spring Security Resource Server (`NimbusJwtEncoder`/`NimbusJwtDecoder`), không thêm JJWT. PostgreSQL 17 là nguồn dữ liệu chính; chưa dùng Redis, Kafka hay microservices cho MVP 3.000 sinh viên. Lưu trữ minh chứng (`evidence/`) chuẩn hóa qua cổng `EvidenceStoragePort` với adapter mặc định **Local Private Filesystem** ngoài web root (pluggable MinIO/S3 cho staging/prod, retention 150 ngày).
 
 Các phiên bản Spring, PostgreSQL JDBC, Hibernate, Flyway và thư viện test do Spring Boot BOM quản lý. Tham khảo: [Spring Boot](https://docs.spring.io/spring-boot/system-requirements.html), [springdoc](https://springdoc.org/faq.html).
 
@@ -38,7 +38,7 @@ Mọi response lỗi trả về `ApiError` JSON chuẩn (`code`, `message`, `det
 | `EVENT_OWNER` | `GET /api/v1/events/{id}/qr` | Phát hành mã QR động `qr1.<eventId>.<epoch>.<sig>` trong cửa sổ điểm danh |
 | `STUDENT` / `EVENT_OWNER` | `GET /api/v1/events`, `GET /api/v1/events/{id}` | Tìm kiếm/lọc (`q`, `activityType`, `page`, `size`) và xem chi tiết (ẩn nháp/ngoài lớp thành `404`) |
 | `STUDENT` | `POST /api/v1/events/{id}/registrations`, `GET /api/v1/events/{id}/registrations/me` | Đăng ký giữ suất nguyên tử theo `quota_total` và xem trạng thái đăng ký |
-| `STUDENT` | `POST /api/v1/events/{id}/attendance/qr` | Điểm danh QR động (header `Idempotency-Key`, grace 3s, tối đa 3 lần thử sai, chống trùng `ACCEPTED`) |
+| `STUDENT` | `POST /api/v1/events/{id}/attendance/qr`, `GET /api/v1/events/{id}/attendance/me` | Điểm danh QR động (header `Idempotency-Key`, grace 3s, tối đa 3 lần thử sai, chống trùng `ACCEPTED`) và khôi phục trạng thái/số lượt thử sau reload (`QE-98`) |
 | `STUDENT` | `GET /api/v1/me/history` | Lịch sử tham gia phân trang `Page<HistoryItem>` (hỗ trợ lọc `academicYear`, `semester`, `attendanceStatus`, `upcoming`, `activityType`) |
 
 Các request không nằm trong danh sách trên bị từ chối bởi `anyRequest().denyAll()` trong `SecurityConfiguration`.
@@ -108,15 +108,15 @@ Dev container cũng dùng được qua VS Code → **Dev Containers: Reopen in C
 
 ## Kiểm tra
 
-Trên nhánh `develop` hiện có tổng cộng **94 phương thức `@Test`** trong `src/test/java` gồm **13 unit `@Test`** (2 file `*Test.java`) và **81 integration `@Test`** (9 file `*IT.java`):
+Trên nhánh `main` và `develop` hiện có tổng cộng **151 phương thức `@Test`** trong `src/test/java` gồm **40 unit `@Test`** (8 file `*Test.java`) và **111 integration `@Test`** (10 file `*IT.java`):
 
-- **Unit test (13/13 pass, không cần PostgreSQL):** `QrTokenServiceTest` (8) và `SecurityConfigurationTest` (5).
+- **Unit test (40/40 pass, không cần PostgreSQL):** `QrTokenServiceTest` (13), `SecurityConfigurationTest` (8), `AttendanceServiceTest` (5), `EventServiceAndValidatorTest` (4), `GlobalExceptionHandlerTest` (3), `SessionJwtValidatorTest` (3), `RegistrationServiceTest` (2), `HistoryServiceTest` (2).
 
   ```powershell
   .\mvnw.cmd -B -ntp test
   ```
 
-- **Unit + Integration test (94 tests, yêu cầu PostgreSQL 17 đang chạy):** `ApplicationIT` (4), `MigrationIT` (7), `SharedKernelSecurityIT` (5), `AuthIT` (8), `EventIT` (20), `RegistrationIT` (12), `AttendanceIT` (11), `HistoryIT` (11), `AuditIT` (3) cùng 13 unit tests.
+- **Unit + Integration test (151 tests, yêu cầu PostgreSQL 17 đang chạy):** `AttendanceIT` (25), `EventIT` (21), `HistoryIT` (15), `RegistrationIT` (12), `BusinessStateTransitionIT` (11), `AuthIT` (8), `MigrationIT` (7), `SharedKernelSecurityIT` (5), `ApplicationIT` (4), `AuditIT` (3) cùng 40 unit tests.
 
   ```powershell
   docker compose up -d --wait postgres
@@ -131,28 +131,30 @@ Trên Linux/macOS/Codespaces thay `.\mvnw.cmd` bằng `bash ./mvnw`. CI (`.githu
 src/main/java/vn/edu/qnu/events/
   config/         SecurityConfiguration, ClockConfiguration, OpenApiConfiguration
   common/         ApiError, ApiException, ErrorCode, CurrentUser, GlobalExceptionHandler
-  auth/           Login/logout/me, JwtService, SessionJwtValidator, DemoDataSeeder
-  student/        OrgClass, ClassController, HistoryController/HistoryService (import CSV ở Sprint 2+)
-  event/          Event CRUD, preview/publish workflow, lọc theo audience/search
-  registration/   Đăng ký giữ suất nguyên tử (waiting list/hủy ở Sprint 2+)
-  attendance/     QrTokenService, phát hành/check-in QR động, 3 attempts, idempotency
+  auth/           Login/logout/me, JwtService, SessionJwtValidator, DemoDataSeeder (Google OAuth2 S3)
+  student/        OrgClass, ClassController, HistoryController/HistoryService (lịch sử đầy đủ S2)
+  importer/       Dự kiến Sprint 2 (QE-26/62): Import CSV/Excel Khoa/Ngành/Lớp/SV (SYSTEM_ADMIN)
+  event/          Event CRUD, preview/publish workflow, lọc theo audience/search (event_pools S2)
+  registration/   Đăng ký giữ suất nguyên tử (waiting list/hủy/no-show S2+)
+  attendance/     QrTokenService, phát hành/check-in QR động, 3 attempts, idempotency (GPS/Offline S2+)
   audit/          AuditLog, AuditService (append-only cùng trigger DB)
-  evidence/       Khung chờ Sprint 2+ (chỉ có package-info.java)
-  appeal/         Khung chờ Sprint 2+ (chỉ có package-info.java)
+  evidence/       Khung chờ Sprint 2+ (EvidenceStoragePort Local/S3, Proxy, BCS review)
+  appeal/         Khung chờ Sprint 2+ (Khiếu nại 2 vòng: CVHT Vòng 1 -> EVENT_OWNER Vòng 2)
+  outbox/         Dự kiến Sprint 2+ (Transactional Outbox poller & schedulers)
 src/main/resources/db/migration/
   V1__sprint1_core_schema.sql
 ```
 
 Tài liệu thiết kế & quy chuẩn quan trọng:
 - [AGENTS.md](AGENTS.md) và [CONTRIBUTING.md](CONTRIBUTING.md)
-- [docs/api/sprint1-contract.md](docs/api/sprint1-contract.md)
-- [docs/Design/erd.md](docs/Design/erd.md)
-- [docs/decisions.md](docs/decisions.md)
-- [docs/backend-foundation.md](docs/backend-foundation.md)
+- [docs/spec/QNU_Event_SRS.docx](docs/spec/QNU_Event_SRS.docx) (`v1.1`) và [docs/spec/QNU_Event_Participation_Management_Project_Proposal_v2.docx](docs/spec/QNU_Event_Participation_Management_Project_Proposal_v2.docx)
+- [docs/api/sprint1-contract.md](docs/api/sprint1-contract.md) và [docs/api/error-codes.md](docs/api/error-codes.md)
+- [docs/Design/erd.md](docs/Design/erd.md) (`V1`) và [docs/Design/v2-schema-blueprint.md](docs/Design/v2-schema-blueprint.md) (`V2` đóng băng)
+- [docs/decisions.md](docs/decisions.md) và [docs/backend-foundation.md](docs/backend-foundation.md)
 
 ## Cấu hình triển khai
 
 - Ngoài profile `dev`, ứng dụng yêu cầu `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`; Swagger (`/v3/api-docs`, `/swagger-ui/**`) mặc định tắt và `SEED_DEMO_DATA` mặc định `false`.
 - `DemoDataSeeder` chỉ chạy với profile `dev` hoặc `demo`.
-- **Lưu ý bảo mật Sprint 1 (`docs/decisions.md`):** Hiện tại `JwtService`, `SecurityConfiguration.jwtDecoder` và `QrTokenService` vẫn giữ chuỗi fallback cho dev khi biến môi trường `JWT_SECRET`/`QR_SIGNING_SECRET` trống để phục vụ test unit/CI hiện hành. Khi triển khai staging/production **bắt buộc** truyền `JWT_SECRET` và `QR_SIGNING_SECRET` độc lập (≥ 32 byte) qua biến môi trường; việc ép fail-fast ngoài `dev`/`test` sẽ thực hiện ở Sprint 2.
-- Giới hạn upload mặc định `10MB`/`12MB` (`UPLOAD_MAX_FILE_SIZE`, `UPLOAD_MAX_REQUEST_SIZE`). File minh chứng khi triển khai không được lưu công khai hay trả URL static.
+- **Bảo mật Secret ngoài `dev`/`demo`/`test` (`R7`):** `JwtService`, `SecurityConfiguration` (`resolveJwtSecret`) và `QrTokenService` đã áp dụng kiểm tra **fail-fast** từ chối khởi động nếu thiếu hoặc yếu `JWT_SECRET` / `QR_SIGNING_SECRET` (`< 32` byte) khi chạy ở môi trường ngoài `dev`/`demo`/`test`; khi triển khai staging/production bắt buộc cấu hình hai khóa độc lập qua biến môi trường.
+- Giới hạn upload mặc định `10MB`/`12MB` (`UPLOAD_MAX_FILE_SIZE`, `UPLOAD_MAX_REQUEST_SIZE`). File minh chứng được lưu qua `EvidenceStoragePort` (Local Private Filesystem ngoài public web root hoặc MinIO/S3 riêng tư), tuyệt đối không trả URL static công khai.
