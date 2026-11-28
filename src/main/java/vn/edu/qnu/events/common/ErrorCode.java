@@ -29,6 +29,7 @@ public enum ErrorCode {
     ATTENDANCE_NOT_OPEN(HttpStatus.CONFLICT, "Chưa đến hoặc đã hết thời gian điểm danh."),
     ALREADY_CHECKED_IN(HttpStatus.CONFLICT, "Bạn đã điểm danh sự kiện này rồi."),
     ATTEMPT_LIMIT_REACHED(HttpStatus.CONFLICT, "Bạn đã vượt quá số lần thử điểm danh cho phép."),
+    GPS_NOT_CONFIGURED(HttpStatus.CONFLICT, "Sự kiện chưa được cấu hình tọa độ điểm danh GPS."),
 
     // 422 Unprocessable Entity
     QR_MALFORMED(HttpStatus.UNPROCESSABLE_ENTITY, "Mã QR không đúng định dạng."),
@@ -36,6 +37,7 @@ public enum ErrorCode {
     QR_WRONG_EVENT(HttpStatus.UNPROCESSABLE_ENTITY, "Mã QR không thuộc về sự kiện này."),
     QR_EXPIRED(HttpStatus.UNPROCESSABLE_ENTITY, "Mã QR đã hết hạn."),
     QR_FROM_FUTURE(HttpStatus.UNPROCESSABLE_ENTITY, "Mã QR không hợp lệ (thời gian tương lai)."),
+    GPS_OUT_OF_RANGE(HttpStatus.UNPROCESSABLE_ENTITY, "Vị trí hiện tại của bạn nằm ngoài bán kính điểm danh của sự kiện."),
 
     // 500 Internal Server Error
     INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "Đã xảy ra lỗi hệ thống.");

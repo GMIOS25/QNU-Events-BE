@@ -50,5 +50,19 @@ public class AttendanceController {
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(result.responseBody());
     }
-}
 
+    @PostMapping("/attendance/gps")
+    public ResponseEntity<String> checkInWithGps(
+            @PathVariable("id") UUID id,
+            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
+            @RequestBody(required = false) GpsCheckInRequest request,
+            HttpServletRequest httpRequest
+    ) {
+        CheckInResult result = attendanceService.checkInWithGps(
+                id, idempotencyKey, request, resolveTraceId(httpRequest)
+        );
+        return ResponseEntity.status(result.httpStatus())
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(result.responseBody());
+    }
+}

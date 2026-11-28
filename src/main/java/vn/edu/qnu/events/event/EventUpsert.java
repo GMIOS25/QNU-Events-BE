@@ -53,6 +53,39 @@ public record EventUpsert(
         @Min(value = 0, message = "Điểm rèn luyện phải lớn hơn hoặc bằng 0")
         Integer activityPoints,
 
-        Integer version
-) {}
+        Integer version,
 
+        Double gpsLat,
+
+        Double gpsLng,
+
+        Integer allowedRadiusMeters
+) {
+    @com.fasterxml.jackson.annotation.JsonCreator
+    public EventUpsert {
+    }
+
+    public EventUpsert(
+            String title,
+            String description,
+            String location,
+            Instant startAt,
+            Instant endAt,
+            Instant registrationDeadline,
+            Instant attendanceOpenAt,
+            Instant attendanceCloseAt,
+            AttendanceMethod attendanceMethod,
+            Integer quotaTotal,
+            Set<UUID> audienceClassIds,
+            String activityType,
+            Integer activityPoints,
+            Integer version
+    ) {
+        this(
+                title, description, location, startAt, endAt, registrationDeadline,
+                attendanceOpenAt, attendanceCloseAt, attendanceMethod, quotaTotal,
+                audienceClassIds, activityType, activityPoints, version,
+                null, null, null
+        );
+    }
+}

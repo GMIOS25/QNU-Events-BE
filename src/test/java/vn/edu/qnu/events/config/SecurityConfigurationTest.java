@@ -13,6 +13,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.hamcrest.Matchers.matchesPattern;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -26,7 +27,11 @@ import org.springframework.web.bind.annotation.RestController;
         "app.security.jwt-secret=test-jwt-secret-key-must-be-at-least-32-bytes-long!",
         "springdoc.api-docs.enabled=false"
 })
-@Import({SecurityConfiguration.class, ClockConfiguration.class})
+@Import({
+        SecurityConfiguration.class,
+        ClockConfiguration.class,
+        SecurityConfigurationTest.SecurityTestController.class
+})
 class SecurityConfigurationTest {
 
     @RestController
@@ -39,6 +44,11 @@ class SecurityConfigurationTest {
         @PostMapping("/api/v1/events")
         public String postEvents() {
             return "created";
+        }
+
+        @PostMapping("/api/v1/events/{id}/attendance/gps")
+        public String postGpsAttendance() {
+            return "gps-ok";
         }
     }
 
@@ -111,5 +121,27 @@ class SecurityConfigurationTest {
         devEnv.setActiveProfiles("dev");
         assertThat(SecurityConfiguration.resolveJwtSecret("", devEnv))
                 .isEqualTo(SecurityConfiguration.DEV_FALLBACK_JWT_SECRET);
+    }
+
+    @Test
+    void gpsAttendanceEndpointRejectsAnonymousWith401() throws Exception {
+        mockMvc.perform(post("/api/v1/events/00000000-0000-0000-0000-000000000001/attendance/gps"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"));
+    }
+
+    @Test
+    @WithMockUser(roles = "EVENT_OWNER")
+    void gpsAttendanceEndpointRejectsEventOwnerWith403() throws Exception {
+        mockMvc.perform(post("/api/v1/events/00000000-0000-0000-0000-000000000001/attendance/gps"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"));
+    }
+
+    @Test
+    @WithMockUser(roles = "STUDENT")
+    void gpsAttendanceEndpointAllowsStudentRole() throws Exception {
+        mockMvc.perform(post("/api/v1/events/00000000-0000-0000-0000-000000000001/attendance/gps"))
+                .andExpect(status().isOk());
     }
 }
