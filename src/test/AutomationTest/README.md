@@ -6,7 +6,7 @@ Bộ kiểm thử tự động toàn diện ánh xạ trực tiếp từ 6 tài 
 
 ```text
 src/test/AutomationTest/
-├── ApiTest/                                # Bruno API Automation Collection (350 requests, 7 thư mục)
+├── ApiTest/                                # Bruno API Automation Collection (350 requests / 359 tệp .bru gồm collection, folder & env)
 │   ├── bruno.json                          # Khai báo Bruno Collection
 │   ├── collection.bru                      # Pre-request động (ISO-8601 UTC, academicYear, freshIdemKey, runSuffix)
 │   ├── environments/local.bru              # Biến môi trường dev & vars:secret (jwtSecret, qrSigningSecret)

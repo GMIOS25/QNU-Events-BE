@@ -177,7 +177,7 @@ Theo yêu cầu `OTH-DATA-002` và `Proposal §15.1–§15.2` (`#9` §1.B), ki�
 
 ### 3.1 Ngoài phạm vi toàn bộ MVP (Strictly Out-of-Scope)
 
-Căn cứ Proposal v2 (`§0`, `§3.2`, `§11.2`, `§17`), SRS v1.0 (`#9` §1.D) và `docs/backend-foundation.md`, các hạng mục sau **không xây dựng trong MVP**:
+Căn cứ Proposal v2 (`§0`, `§3.2`, `§11.2`, `§17`), `SRS v1.1` (`#9` §1.D) và `docs/backend-foundation.md` (baseline Sprint 0), các hạng mục sau **không xây dựng trong MVP**:
 
 1. **Tính tổng điểm rèn luyện (ĐRL) & quy trình xét duyệt ĐRL cuối kỳ:** MVP chỉ lưu metadata `activity_type` và `activity_points` cho từng sự kiện để phục vụ đối chiếu/xuất dữ liệu sau này; không xây dựng bộ máy tính công thức ĐRL toàn trường hay luồng chốt điểm cuối kỳ của CVHT / Phòng CTSV.
 2. **Tích hợp API 2 chiều trực tiếp với Hệ thống Quản lý Đào tạo / CTSV của trường:** Đẩy sang Phase 2+. MVP chỉ dùng nhập liệu CSV/Excel một chiều (`UC025`, `UC026`) và xuất file có cấu trúc (`UC027`).
@@ -189,7 +189,7 @@ Căn cứ Proposal v2 (`§0`, `§3.2`, `§11.2`, `§17`), SRS v1.0 (`#9` §1.D) 
 ### 3.2 Ngoài phạm vi Sprint 1 (Đã có trong MVP Sprint 2–3, chưa hiện diện ở baseline Sprint 1)
 
 - **Đăng ký nâng cao:** Quota nhiều tầng (`QE-12`, `QE-38`), Waiting List FIFO (`QE-39`), hủy đăng ký trước 12 giờ & auto-promote (`QE-40`), phạt No-show 7 ngày (`QE-14`).
-- **Điểm danh nâng cao:** Chuẩn hóa sâu `QE-54` (hiện đang ở open PR `#9`), GPS & gắn cờ đáng ngờ (`QE-55`), nộp & duyệt Evidence (`QE-42`, `QE-43`), điểm danh hộ theo lô `PROXY_EVIDENCE` (`QE-19`), hàng đợi & đồng bộ Offline (`QE-33`, `QE-76`, `QE-77`, `QE-78`).
+- **Điểm danh nâng cao:** Chuẩn hóa đồng thời `QE-54` (đã hợp nhất advisory lock & `CheckInResult` trên `main`; còn hoàn thiện test đồng thời & bỏ `REQUIRES_NEW` audit trong TX), GPS & gắn cờ đáng ngờ (`QE-55`), nộp & duyệt Evidence (`QE-42`, `QE-43`), điểm danh hộ theo lô `PROXY_EVIDENCE` (`QE-19`), hàng đợi & đồng bộ Offline (`QE-33`, `QE-76`, `QE-77`, `QE-78`).
 - **Khiếu nại & Kiểm toán UI:** Nộp/xử lý khiếu nại 2 vòng (`QE-59`, `QE-60`), giao diện tra cứu `audit_logs` (`UC028` / `REQ-DATA-017`).
 - **Tài khoản & Dữ liệu nền:** Google OAuth2 (`QE-74`), khóa 5 lần nhập sai/15 phút (`REQ-AUTH-015`), cấp/khóa/thu hồi quyền `System Admin` (`QE-35`), import CSV/Excel Khoa-Ngành-Lớp-SV (`QE-26`, `QE-45`, `QE-62`, `QE-73`), export báo cáo (`QE-63`), sao lưu & dọn dẹp Evidence theo học kỳ (`QE-47`, `QE-48`).
 
@@ -197,7 +197,7 @@ Căn cứ Proposal v2 (`§0`, `§3.2`, `§11.2`, `§17`), SRS v1.0 (`#9` §1.D) 
 
 Đối chiếu kiểm chứng Figma trong brief `#3` và `#8`:
 - **Mục điều hướng không có frame thiết kế:** `Hồ sơ của tôi`, `Xuất dữ liệu` (tương ứng nghiệp vụ `UC027` / `QE-63` trong SRS), và `Cấu hình hệ thống` (tương ứng cấu hình tham số hệ thống đề xuất ở `docs/backlog_solutions.md §3.1`) xuất hiện ở thanh điều hướng Figma nhưng chưa có màn hình chi tiết.
-- **Thiếu luồng Auth trên màn hình `01 · login`:** Figma chỉ thiết kế `Tài khoản`, `Mật khẩu`, `Lưu đăng nhập`, nút `Đăng nhập` — **thiếu** nút Google SSO (`QE-74`), Quên/Đặt lại mật khẩu (`TBD-AUTH-01`), màn hình Logout / Session Timeout (`UC003`), và giao diện chuyển vai trò (`Role Switching`) cho user có nhiều hơn 1 role trong `user_role`.
+- **Thiếu luồng Auth trên màn hình `01 · login`:** Figma chỉ thiết kế `Tài khoản`, `Mật khẩu`, `Lưu đăng nhập`, nút `Đăng nhập` — **thiếu** nút Google SSO (`QE-74`), Quên/Đặt lại mật khẩu (`A-AUTH-08` / `QE-30`), màn hình Logout / Session Timeout (`UC003`), và giao diện chuyển vai trò (`Role Switching`) cho user có nhiều hơn 1 role trong `user_role`.
 
 ---
 
@@ -214,12 +214,12 @@ Căn cứ Proposal v2 (`§0`, `§3.2`, `§11.2`, `§17`), SRS v1.0 (`#9` §1.D) 
 - **Hiện trạng Sprint 1:**
   - `SecurityConfiguration` cấu hình `SessionCreationPolicy.STATELESS`, tắt `csrf`/`httpBasic`/`formLogin`/`logout` mặc định, bật `oauth2ResourceServer().jwt(...)`, và kết thúc chuỗi rule bằng **`requests.anyRequest().denyAll()`** (fail-closed).
   - Mật khẩu băm bằng `BCryptPasswordEncoder(12)`. Khi không tìm thấy `loginId`, `AuthService` vẫn chạy `passwordEncoder.matches(request.password(), DUMMY_HASH)` để chống timing attack / user enumeration, trả đồng nhất `401 INVALID_CREDENTIALS` (`REQ-AUTH-004`).
-  - Mỗi lần đăng nhập thành công tạo bản ghi trong `auth_session` (hiện tại TTL cố định 8 giờ trong `AuthService`, *(Assumption A-01)*) và phát JWT HS256 (`JwtService` via Nimbus JOSE).
+  - Mỗi lần đăng nhập thành công tạo bản ghi trong `auth_session` (TTL `8 giờ` cấu hình qua `app.security.jwt-access-token-validity-seconds`, `A-01` Approved; Sprint 2 `QE-30` mở rộng thêm Refresh Cookie 7 ngày theo `A-AUTH-07`) và phát JWT HS256 (`JwtService` via Nimbus JOSE).
   - Mọi request có Bearer token đều qua `JwtDecoder` gồm `JwtTimestampValidator` + `SessionJwtValidator`: kiểm tra chữ ký, `exp`, bản ghi `auth_session` tồn tại (`revoked_at IS NULL`, `expires_at >= now`), và `app_user.status == ACTIVE`. Nhờ vậy `POST /api/v1/auth/logout` thu hồi phiên tức thì (`401 SESSION_REVOKED`) và khóa tài khoản có hiệu lực ở mọi request kế tiếp (`REQ-AUTH-010`).
   - Lỗi 401/403 tại tầng filter được `AuthenticationEntryPoint` và `AccessDeniedHandler` chuẩn hóa thành JSON `ApiError`; riêng truy cập trái phép `POST /api/v1/events/{id}/publish` được `AccessDeniedHandler` ghi audit `EVENT_PUBLISH_DENIED`.
-- **Lỗ hổng & Hardening bắt buộc trước Production (R7, `#8`, `#9`):**
-  1. `JwtService`, `SecurityConfiguration` và `QrTokenService` hiện có **chuỗi fallback secret hardcode** khi `JWT_SECRET` hoặc `QR_SIGNING_SECRET` rỗng/`< 32` ký tự. Với môi trường `prod`/staging, phải cấu hình **fail-fast** từ chối khởi động nếu thiếu biến môi trường secret.
-  2. Chưa cài đặt cơ chế **tạm khóa 15 phút sau 5 lần nhập sai liên tiếp (`REQ-AUTH-015`)** trong `AuthService`. *(Lưu ý: `docs/test/sprint1-test-execution-report.md` §2.2 có mô tả nhầm rằng đã có 423 `ACCOUNT_LOCKED` — kiểm chứng code cho thấy chưa triển khai và `ErrorCode` chưa có mã này.)*
+- **Hardening đã hoàn tất trên `main` (`QE-90`, `ARCH-A07`) & Hạng mục cần bổ sung ở Sprint 2 (`QE-30`):**
+  1. **Đã khắc phục trên `main`:** `SecurityConfiguration.resolveJwtSecret(...)` (`JwtService`) và `QrTokenService` đã loại bỏ fallback secret hardcode ngoài profile `dev`/`demo`/`test`, bắt buộc fail-fast nếu thiếu `JWT_SECRET` / `QR_SIGNING_SECRET` hợp lệ (`>= 32` byte), và `AuthService` đọc TTL từ `app.security.jwt-access-token-validity-seconds`.
+  2. **Cần bổ sung trong `QE-30` (Sprint 2):** Chưa cài đặt cơ chế **tạm khóa 15 phút sau 5 lần nhập sai liên tiếp (`REQ-AUTH-015`)**, luồng Refresh Token 7 ngày `HttpOnly` (`A-AUTH-07`) và kiểm tra `UserStatus.LOCKED` sau `BCrypt` match (`A-AUTH-03`) trong `AuthService`. *(Lưu ý `R1`: `docs/test/sprint1-test-execution-report.md` §2.2 từng mô tả nhầm rằng đã có `423 ACCOUNT_LOCKED` — kiểm chứng code trên `main` cho thấy chưa triển khai và `ErrorCode` không dùng mã này.)*
 
 ### 4.3 Ma trận RBAC & Kiểm tra Phạm vi Dữ liệu (Role ≠ Data Scope)
 
@@ -312,7 +312,7 @@ sequenceDiagram
 - **Đã khắc phục hoàn tất trên `main` (`26/11/2026`):** BE & FE đã đồng bộ `GET /api/v1/me/history` (`Page<HistoryItem>`), `alreadyRegistered`, `QR_EPOCH_SECONDS = 10`, `GET /api/v1/events/{id}/attendance/me` (`QE-98`), `fail-fast` secret ngoài `dev`/`demo`/`test`, và `TransactionTemplate` trong `RegistrationService`.
 - **3 đầu mục cần người phụ trách UI cập nhật tay trên Figma (`HX4313AoLQX4zNidDz2Ixo`):**
   1. **Chuyển menu Quản trị Dữ liệu nền & Import SV (`D-3`):** Di chuyển toàn bộ cụm màn CRUD Khoa / Ngành / Lớp / Học kỳ & Import CSV Sinh viên (`UC025–026`) từ nhánh `ADMIN / EVENT OWNER` sang **`SYSTEM_ADMIN`**.
-  2. **Hoàn thiện luồng Auth trên `01 · login` & Shell (`D-10`):** Bổ sung nút *"Đăng nhập với Google (Email QNU)"* (`QE-74`), link *"Quên mật khẩu?"* (`TBD-AUTH-01` → `QE-30`), và nút Đăng xuất trên Mobile nav (`< 640px`).
+  2. **Hoàn thiện luồng Auth trên `01 · login` & Shell (`D-10`):** Bổ sung nút *"Đăng nhập với Google (Email QNU)"* (`QE-74`), link *"Quên mật khẩu?"* (`A-AUTH-08` / `QE-30`), và nút Đăng xuất trên Mobile nav (`< 640px`).
   3. **Ghi chú bán kính GPS (`D-7`):** Ghi chú `60m` trên màn cấu hình/check-in GPS hiện tại chỉ là ví dụ cấu hình cho một sự kiện cụ thể; mặc định hệ thống là **`50m`** (dải `10–500m`).
 
 ---

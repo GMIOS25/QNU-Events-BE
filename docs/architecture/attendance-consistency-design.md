@@ -21,38 +21,33 @@
 | `attendance_attempts` | `UNIQUE (event_id, student_id, idempotency_key)`<br>`outcome CHECK (outcome IN ('ACCEPTED','REJECTED'))`<br>`counted boolean NOT NULL`, `http_status smallint NOT NULL`, `response_body jsonb NOT NULL` | Khóa duy nhất cho Idempotency Replay theo `(event_id, student_id, idempotency_key)` kèm cờ `counted` và payload phản hồi đã lưu. |
 | `audit_logs` | `outcome CHECK (outcome IN ('SUCCESS','REJECTED','DENIED'))`<br>Trigger `trg_audit_logs_immutable` (`BEFORE UPDATE OR DELETE`) gọi `audit_logs_immutable()` | Bảo đảm nhật ký kiểm toán append-only, chống sửa/xóa ở mức CSDL. |
 
-### 1.2 Cơ chế đang chạy trên `develop` vs Các lỗ hổng/khoảng trống thực tế
+### 1.2 Hiện trạng Sprint 1 trên `main` vs Các mở rộng & hardening còn lại cho Sprint 2–3
 
 #### A. Luồng Đăng ký (`RegistrationService`, `RegistrationRepository`, `RegistrationController`)
-- **Đã hiện thực đúng:**
-  - `RegistrationService.register(UUID eventId)` chạy trong `@Transactional(rollbackFor = Exception.class)`: kiểm tra role `STUDENT`, `EventStatus.PUBLISHED`, `Instant.now(clock) <= registrationDeadline`, `student.getClassId() != null && event.getAudienceClassIds().contains(student.getClassId())`.
+- **Đã hiện thực đúng trên `main`:**
+  - `RegistrationService.register(UUID eventId)` sử dụng `TransactionTemplate` (giải phóng DB connection #1 trước khi gọi `auditService.record(...)` với `Propagation.REQUIRES_NEW` — đã khắc phục lỗi nghẽn HikariCP pool ở tải đồng thời), kiểm tra role `STUDENT`, `EventStatus.PUBLISHED`, `Instant.now(clock) <= registrationDeadline`, `student.getClassId() != null && event.getAudienceClassIds().contains(student.getClassId())`.
   - Gọi native query `RegistrationRepository.tryInsertRegistration(...)` (`INSERT INTO registrations ... ON CONFLICT (event_id, student_id) WHERE status IN ('REGISTERED', 'WAITING_LIST') DO NOTHING`). Nếu trả `0` (đã đăng ký), truy vấn `findActiveByEventAndStudent` và trả `200 OK` `{id, status, alreadyRegistered: true}` mà **không** chạm tới `events.registered_count`.
-  - Nếu chèn được dòng mới (`rowsInserted == 1`), gọi native query `RegistrationRepository.reserveSeat(eventId)` (`UPDATE events SET registered_count = registered_count + 1 WHERE id = :eventId AND registered_count < quota_total`). Nếu trả `0`, ghi audit `REJECTED / CAPACITY_FULL` rồi ném `ApiException(ErrorCode.CAPACITY_FULL)` để rollback toàn bộ `INSERT` ở bước trước.
+  - Nếu chèn được dòng mới (`rowsInserted == 1`), gọi native query `RegistrationRepository.reserveSeat(eventId)` (`UPDATE events SET registered_count = registered_count + 1 WHERE id = :eventId AND registered_count < quota_total`). Nếu trả `0`, thoát `TransactionTemplate`, ghi audit `REJECTED / CAPACITY_FULL` rồi ném `ApiException(ErrorCode.CAPACITY_FULL)` để rollback toàn bộ `INSERT` ở bước trước.
   - Được kiểm chứng bởi 7 test trong `MigrationIT` và 12 test trong `RegistrationIT` (bao gồm tranh suất cuối `quota=1`, tranh 5 suất với 30 luồng song song, và 10 request song song từ cùng 1 sinh viên).
-- **Lỗ hổng & Điểm cần mở rộng cho Sprint 2–3:**
-  1. **Nguy cơ cạn kiệt HikariCP Pool khi `AuditService.record` dùng `Propagation.REQUIRES_NEW` bên trong `@Transactional`:** `RegistrationService.register` giữ 1 kết nối DB (và giữ row lock sau `tryInsertRegistration` / `reserveSeat`) rồi gọi `auditService.record(...)` (`AuditService.java:28` khai báo `REQUIRES_NEW`), buộc Spring tạm treo TX ngoài và mượn **kết nối thứ 2** từ HikariCP (`maximum-pool-size: 30` trong `application.yml:11`). Khi burst vượt quá ~15–30 luồng đồng thời, có thể xảy ra tự khóa cạn pool (`connection-timeout: 10000ms`).
-  2. **Lệch hợp đồng `Idempotency-Key` ở BE vs FE:** `RegistrationController.register` không đọc header `Idempotency-Key`, trong khi FE (`src/api/events.ts:61-67`) vẫn sinh và gửi `Idempotency-Key` ở `registerEvent()`, và `RegistrationSlot` (`src/features/registration/index.tsx:49`) xử lý mã lỗi `ALREADY_REGISTERED` không có trong `ErrorCode.java` (BE trả `200 OK {alreadyRegistered: true}`).
-  3. **`reserveSeat` cập nhật trực tiếp `events.registered_count` mà không tăng `events.version`:** An toàn ở Sprint 1 vì `EventService.update` chặn sửa sự kiện khác `DRAFT`, nhưng sẽ xung đột nếu Sprint 2 cho phép chỉnh sửa sự kiện đã `PUBLISHED` (`QE-15`/`QE-32`).
-  4. **Chưa có tính năng Sprint 2–3:** Multi-tier quota (`QE-12`, `QE-38`), `WAITING_LIST` FIFO & auto-promote (`QE-39`, `QE-40`), hủy đăng ký với ngưỡng cắt 12h (`QE-40`), khóa đăng ký 7 ngày do `NO_SHOW` (`QE-14`).
+- **Hardening & Điểm cần mở rộng cho Sprint 2–3:**
+  1. **Kiểm toán `REQUIRES_NEW` trên luồng nóng khác (`P1`):** `RegistrationService` đã tách được audit khỏi `TransactionTemplate`, nhưng vẫn cần cân nhắc ghi success audit cùng ACID transaction hoặc `outbox_events` (`ARCH-A02`) để giảm xuống còn 1 transaction khi burst `100 req/s` (`QE-46`).
+  2. **Hợp đồng `Idempotency-Key` trên `/registrations` (`A-QE8-03`):** `RegistrationController.register` chưa đọc header `Idempotency-Key`, trong khi FE (`src/api/events.ts:61-67`) có gửi header này; ở Sprint 2 (`QE-40`) cần hỗ trợ tùy chọn `Idempotency-Key` cho đăng ký/hủy, còn FE `RegistrationSlot` không dùng mã lỗi `ALREADY_REGISTERED` vì BE trả `200 OK {alreadyRegistered: true}`.
+  3. **`reserveSeat` cập nhật trực tiếp `events.registered_count` mà không tăng `events.version`:** An toàn ở Sprint 1 vì `EventService.update` chặn sửa sự kiện khác `DRAFT`; từ Sprint 2 (`A-EVT-01`) khi sửa sức chứa sự kiện `PUBLISHED` phải dùng canonical lock order (`events(id) FOR UPDATE`).
+  4. **Tính năng Sprint 2–3:** Multi-tier quota (`event_pools`, `QE-12`, `QE-38`), `WAITING_LIST` FIFO & auto-promote (`QE-39`, `QE-40`), hủy đăng ký với ngưỡng cắt 12h (`QE-40`), khóa đăng ký 7 ngày do `NO_SHOW` (`QE-14`).
 
 #### B. Luồng Điểm danh QR (`AttendanceService`, `AttendanceAttemptService`, `QrTokenService`, `AttendanceController`)
-- **Đã hiện thực đúng:**
-  - `QrTokenService` tạo/xác thực token định dạng `qr1.<eventId>.<epoch>.<base64url(HMAC-SHA256)>` dùng `MessageDigest.isEqual` chống timing attack, sử dụng `java.time.Clock` của server (`ClockConfiguration`), hỗ trợ `epoch == currentEpoch` và `epoch == currentEpoch - 1` trong `graceSeconds`. Được phủ bởi 8 unit test trong `QrTokenServiceTest`.
-  - `AttendanceService.checkInWithQr` kiểm tra header `Idempotency-Key`, tra cứu `attendance_attempts` trước, kiểm tra cửa sổ `[attendanceOpenAt, attendanceCloseAt]`, trạng thái `REGISTERED`, kiểm tra đã điểm danh, đếm `countByEventIdAndStudentIdAndCountedTrue >= 3`, xác thực QR, lưu `Attendance`, lưu `AttendanceAttempt`, và ghi `AuditLog` với `tokenMasked` cắt còn 8 ký tự đầu (`R7`). Được phủ bởi 11 test tuần tự trong `AttendanceIT`.
-- **Các lỗi nhất quán nghiêm trọng (Bug/Gap) phát hiện trong mã nguồn Sprint 1 hiện tại (`develop @ 4ac5da1`):**
-  1. **Thiếu khóa tuần tự theo `(event_id, student_id)` (`SELECT ... FOR UPDATE`):** Ngược với thiết kế ban đầu ở `docs/agent/sprint1-rescue-plan.md §6.7`, `AttendanceService.java:137` chỉ gọi `registrationRepository.findActiveByEventAndStudent(...)` (SELECT thường, không khóa). Mọi luồng song song của cùng sinh viên đều lọt qua kiểm tra điều kiện cùng lúc (TOCTOU).
-  2. **Lỗi `500 INTERNAL_ERROR` khi tranh chấp đồng thời trên `attendances` hoặc `attendance_attempts`:**
-     - `AttendanceService.java:207` gọi `attendanceRepository.save(attendance)` (JPA `INSERT` thuần, không `ON CONFLICT DO NOTHING`), và `GlobalExceptionHandler.java` **không có** `@ExceptionHandler(DataIntegrityViolationException.class)`. Nếu 2 request hợp lệ khác key chạy song song, request thua sẽ đụng `uq_attendances_valid` và văng **`500 INTERNAL_ERROR`** thay vì `409 ALREADY_CHECKED_IN`.
-     - Nếu 2 request retry có **cùng `Idempotency-Key`** chạy song song (in-flight race), cả hai cùng hụt `findByEventIdAndStudentIdAndIdempotencyKey` ở dòng 103 và cùng gọi `attemptService.recordAttempt`, luồng sau đụng `UNIQUE (event_id, student_id, idempotency_key)` -> **`500 INTERNAL_ERROR`**.
-  3. **Bất nhất giao dịch do `AttendanceAttemptService.recordAttempt` dùng `Propagation.REQUIRES_NEW` (`AttendanceAttemptService.java:18`):**
-     - Ở nhánh thành công (dòng 207–219), `attemptService.recordAttempt(..., "ACCEPTED", ...)` **commit ngay trong TX con trước khi TX cha commit bảng `attendances`**. Nếu TX cha rollback sau đó (do đụng `uq_attendances_valid` hoặc lỗi commit), bảng `attendance_attempts` vẫn lưu vĩnh viễn kết quả `"ACCEPTED"` khiến các lần retry sau replay thành công giả dù **không có dòng `attendances` nào trong DB**.
-     - Ở nhánh từ chối (dòng 125, 142, 155, 169, 192), dùng `REQUIRES_NEW` chỉ để né việc ném `ApiException` làm rollback TX cha — nhưng lại tạo rủi ro mượn 2 kết nối HikariCP như đã phân tích.
-  4. **Race condition vượt trần 3 lần thử (TOCTOU):** Khi sinh viên đang có `failedAttempts = 2` và gửi đồng thời $N$ request sai với các `Idempotency-Key` khác nhau, cả $N$ luồng đều đọc `failedAttempts == 2 < 3` ở dòng 167 và ghi nhận `2 + N` bản ghi `counted = true`.
-  5. **Lần thứ 4 (`ATTEMPT_LIMIT_REACHED`) bị ghi `counted = true` (`AttendanceService.java:170`):** Làm bộ đếm `countByEventIdAndStudentIdAndCountedTrue` tăng thành `4, 5, 6...` thay vì giữ trần `3/3`.
-  6. **Replay bản ghi `REJECTED` bỏ qua `http_status` và `response_body` (`AttendanceService.java:114-117`):** Code hiện tại gọi `ErrorCode.valueOf(attempt.getReasonCode())` rồi ném `ApiException` mới, làm mất `timestamp`/`traceId`/`details` gốc và có nguy cơ `IllegalArgumentException` nếu `reason_code` không khớp tên enum `ErrorCode`.
-  7. **`AttendanceAttemptService` hardcode `"DYNAMIC_QR"` (`AttendanceAttemptService.java:33`)**, chưa nhận tham số `method` (`GPS`, `EVIDENCE`, `OFFLINE_QR`, `OFFLINE_GPS`, `PROXY_EVIDENCE`).
-  8. **Thiếu kiểm thử đồng thời trong `AttendanceIT`:** 11/11 test hiện tại đều chạy tuần tự 1 luồng. *(Ghi nhận thêm từ `#8`: ticket `QE-54` đang `In Review` có PR #9 trên remote nhưng trỏ nhầm base vào `main` thay vì `develop`, và chưa có PR FE cho `QE-54`.)*
-  9. **Lệch cấu hình QR & FE retry:** `application.yml:61` khai báo `app.qr.epoch-seconds: 15` (không được `QrTokenService` đọc vì service nhận `event.getQrRotationSeconds() = 10`); `QrTokenService.java:25` có fallback secret dev hardcode trong mã nguồn; FE `checkInQr` (`src/api/events.ts:78`) tạo `Idempotency-Key` mới ở mỗi lần gọi thay vì giữ nguyên key khi retry lỗi mạng; `AttendanceSlot` thiếu bộ đếm `Lượt gửi xác nhận: x/3` và Offline Queue; `EventQrPage.tsx` thiếu bộ đếm tham dự trực tiếp (`234/312` trên Figma) và hardcode chu kỳ `10s` (`refetchInterval: 9500`).
+- **Đã hiện thực đúng trên `main` (`QE-56`/`QE-57`/`QE-54`/`QE-90`):**
+  - `QrTokenService` tạo/xác thực token định dạng `qr1.<eventId>.<epoch>.<base64url(HMAC-SHA256)>` dùng `MessageDigest.isEqual` chống timing attack, sử dụng `Clock` server (`ClockConfiguration`), fail-fast khi thiếu `QR_SIGNING_SECRET >= 32` byte ngoài profile `dev`/`demo`, hỗ trợ `epoch == currentEpoch` và `epoch == currentEpoch - 1` trong `graceSeconds` (`10s` / `3s` ở `application.yml`). Được phủ bởi **13 unit test trong `QrTokenServiceTest`**.
+  - `AttendanceService.checkInWithQr` trên `main` **đã hiện thực**:
+    * Khóa tuần tự từng cặp `(event_id, student_id)` bằng 1-arg advisory lock **`pg_advisory_xact_lock(hashtextextended(CAST(?1 AS text) || ':' || CAST(?2 AS text), 0))`** (`AttendanceService.java:403–412`) và re-check `findCachedAttempt` sau khi nhận lock (chặn in-flight collision).
+    * Kiểm tra cửa sổ `[attendanceOpenAt, attendanceCloseAt]`, trạng thái `REGISTERED`, kiểm tra đã có `ACCEPTED`, đếm `counted = true >= 3`, trả `CheckInResult` trực tiếp (không ném `ApiException`), lưu `ATTEMPT_LIMIT_REACHED` với `counted = false` (giữ bộ đếm `<= 3`), và trả `errorDetails` (`method`, `attemptCount`, `maxAttempts`, `remainingAttempts`, `canRetry`).
+    * `AttendanceAttemptService.recordAttempt` dùng `@Transactional` mặc định (`REQUIRED`) trong cùng transaction và đã nhận tham số `String method` động.
+    * Ghi `AuditLog` với `tokenMasked` (`qrTokenService.fingerprint`) cắt gọn để tuân thủ `R7`; được phủ bởi **25 test trong `AttendanceIT`** (và **5 unit test trong `AttendanceServiceTest`**).
+- **Hardening & Mở rộng cần hoàn tất cho Sprint 2–3 (`QE-54`, `QE-55`, `QE-33`, `QE-42`, `QE-19`):**
+  1. **Tách `AuditService.record` (`REQUIRES_NEW`) khỏi `AttendanceService` TX:** Hiện `AttendanceService.checkInWithQr` là `@Transactional`, nên gọi `auditService.record(...)` ở dòng `275` / `380` vẫn tạm treo connection chính và mượn connection #2 trong HikariCP (`maximum-pool-size: 30`) — cần chuyển sang mô hình `TransactionTemplate` hoặc `outbox_events` (`A-QE8-01`) để đạt `P1`.
+  2. **Mapping phòng vệ `DataIntegrityViolationException` & khóa hàng đăng ký `FOR UPDATE`:** Hiện tại `AttendanceService` dựa vào `pg_advisory_xact_lock` + `saveAndFlush`; cần bổ sung `@ExceptionHandler(DataIntegrityViolationException.class)` ánh xạ mọi va chạm `uq_attendances_valid` / `uq_attempts_idempotency` sang `409 ALREADY_CHECKED_IN` (tuyệt đối cấm lọt xuống `500 INTERNAL_ERROR`).
+  3. **Mở rộng phương thức & `payload_hash` (`V2`):** Hiện `AttendanceService.processCheckIn` mới mở `"DYNAMIC_QR"` (`line 165`); Sprint 2–3 bổ sung `payload_hash` (`SHA-256`) vào `attendance_attempts` (`A-QE8-02`) và mở khóa cho `GPS`, `EVIDENCE`, `PROXY_EVIDENCE`, `OFFLINE_QR`, `OFFLINE_GPS`.
+  4. **Kiểm thử đồng thời & FE UI Sync:** Bổ sung `AttendanceConcurrencyIT` đa luồng song song thật (`ExecutorService`) cho `QR` + `GPS` + BCS duyệt `EVIDENCE`/`PROXY_EVIDENCE`; FE `src/api/events.ts` giữ nguyên `Idempotency-Key` khi retry lỗi mạng và `EventQrPage.tsx` hiển thị bộ đếm tham dự trực tiếp (`234/312`).
 
 ---
 
@@ -150,7 +145,7 @@ sequenceDiagram
 
     API->>DB: TX1: SELECT events WHERE id=? FOR UPDATE
     Note over DB: TX1 giu row lock events(id); TX2 cho lock
-    API->>DB: TX1: Check active reg (khong co) + Lock pools (tier_rank, id)
+    API->>DB: TX1: Check active reg (khong co) + Lock pools (priority ASC, id ASC)
     API->>DB: TX1: registered_count (99) < quota_total (100) & pools OK
     API->>DB: TX1: UPDATE events SET registered_count=100; INSERT reg(REGISTERED)
     DB-->>API: TX1 COMMIT
@@ -198,10 +193,12 @@ Theo `BR-ATT-01`, `REQ-ATT-022`, `OTH-DATA-001` (`#9`) và `V1__sprint1_core_sch
 
 Để khắc phục lỗi `500 INTERNAL_ERROR` đang tồn tại ở Sprint 1 (`AttendanceService.java:207` + `GlobalExceptionHandler`):
 
-1. **Tầng 1 — Khóa tuần tự theo `(event_id, student_id)` trong PostgreSQL:**
-   Đầu mỗi giao dịch check-in (QR, GPS, Offline Sync item), gọi:
+1. **Tầng 1 — Khóa tuần tự theo `(event_id, student_id)` trong PostgreSQL (`AttendanceService.java:403–412`):**
+   Đầu mỗi giao dịch check-in (QR, GPS, Offline Sync item), gọi 1-arg 64-bit advisory transaction lock:
    ```sql
-   SELECT pg_advisory_xact_lock(hashtext(:eventIdText), hashtext(:studentIdText));
+   SELECT pg_advisory_xact_lock(
+       hashtextextended(CAST(:eventIdText AS text) || ':' || CAST(:studentIdText AS text), 0)
+   );
    ```
    và (khi đã đăng ký) khóa hàng đăng ký tương ứng:
    ```sql
@@ -239,8 +236,8 @@ Request (eventId, studentId, idempotencyKey, payload)
   │       └─ Nếu ĐÃ CÓ: kiểm tra payload_hash (nếu bật) -> trả nguyên vẹn (http_status, response_body)
   │          (kể cả ACCEPTED 200, PENDING 202, hay REJECTED 403/409/422 theo UC019 4b.1). KHÔNG tăng attempt!
   │
-  └─► [3] Bắt đầu 1 @Transactional duy nhất (KHÔNG dùng REQUIRES_NEW lồng trong TX này):
-        ├─ 3a. Gọi pg_advisory_xact_lock(hashtext(eventId), hashtext(studentId))
+  └─► [3] Bắt đầu 1 @Transactional duy nhất (sử dụng TransactionTemplate hoặc Outbox, KHÔNG lồng REQUIRES_NEW):
+        ├─ 3a. Gọi pg_advisory_xact_lock(hashtextextended(CAST(:eventIdText AS text) || ':' || CAST(:studentIdText AS text), 0))
         ├─ 3b. Re-check attendance_attempts theo (eventId, studentId, idempotencyKey)
         │      └─ Nếu luồng song song vừa commit trước 1ms -> trả nguyên vẹn (http_status, response_body)!
         ├─ 3c. Kiểm tra lần lượt:
@@ -259,7 +256,7 @@ Request (eventId, studentId, idempotencyKey, payload)
 > **Lợi ích cốt lõi:**
 > 1. **Không bao giờ chia tách trạng thái (`split-brain`):** `attendances`, `attendance_attempts` và `audit_logs` cùng commit hoặc cùng rollback nguyên tử trong **1 kết nối DB duy nhất**.
 > 2. **Retry khi đang xử lý (in-flight):** Luồng đến sau cùng `Idempotency-Key` chờ `pg_advisory_xact_lock` vài mili-giây rồi đọc được kết quả vừa commit ở bước 3b và replay chính xác, không dính lỗi `UNIQUE` violation (`500`).
-> 3. **Thống nhất liên phương thức (`QE-54` & `QE-33`):** Bảng `attendance_attempts` có sẵn cột `method` (`V1__sprint1_core_schema.sql:104`). Bằng cách bỏ hardcode `"DYNAMIC_QR"` ở `AttendanceAttemptService.java:33`, cơ chế replay này áp dụng đồng nhất cho:
+> 3. **Thống nhất liên phương thức (`QE-54` & `QE-33`):** `AttendanceAttemptService.recordAttempt` đã hỗ trợ tham số `method` động thay cho `"DYNAMIC_QR"` cố định, áp dụng đồng nhất cho:
 >    - `POST /events/{id}/attendance/qr` (`DYNAMIC_QR`)
 >    - `POST /events/{id}/attendance/gps` (`GPS`)
 >    - `POST /events/{id}/attendance/evidence` (`EVIDENCE`, replay trả `202`/`200 PENDING` kèm `attendanceId`, không tạo file/bản ghi trùng)
@@ -319,9 +316,9 @@ Theo `BR-ATT-02`, `REQ-ATT-021`, `UC015`, `UC018` (`#9`) và màn hình Figma (`
   - `epoch == currentEpoch - 1` và `now.getEpochSecond() - (currentEpoch * rotationSeconds) <= graceSeconds` -> hợp lệ (mặc định `rotationSeconds = 10`, `graceSeconds = 3`; trong số học giây nguyên, hiệu lực tối đa từ cuối epoch trước sang đầu epoch mới lên đến ~3.99s, đã được test tại `QrTokenServiceTest#verifyPreviousEpochWithinGraceSuccess`).
   - Các trường hợp còn lại -> `422 QR_EXPIRED`.
   - Yêu cầu multi-node (`NFR-PERF-009` `[Đề xuất]`): sai lệch đồng hồ giữa các node BE `<= 1 giây` (NTP).
-- **3 Điểm cần chuẩn hóa kỹ thuật (`ASSUMPTION` & Security `R7`):**
-  1. **Lệch cấu hình `application.yml`:** `application.yml:61` đang đặt `app.qr.epoch-seconds: 15`, trong khi `V1__sprint1_core_schema.sql:50`, `Event.java:59`, `EventService.java:62`, và FE `EventQrPage.tsx` đều dùng `10s`. Cần bỏ/đổi mặc định về `10s` và truyền vào `EventService.create` thay vì hardcode `10, 3`.
-  2. **Secret fallback trong `QrTokenService.java:23-25`:** Không được fallback về chuỗi secret cố định ở môi trường ngoài `dev`/`test`; phải fail-fast khi khởi động nếu thiếu `QR_SIGNING_SECRET` (>= 32 byte, tách biệt hoàn toàn với `JWT_SECRET`).
+- **3 Điểm chuẩn hóa kỹ thuật (`A-QE8-10` — Approved `28/11/2026` & Security `R7`):**
+  1. **Đồng bộ cấu hình `application.yml` (đã sửa trên `main`):** Bản cũ trước đây từng đặt `15` giây, nay `application.yml:61` đã thống nhất `app.qr.epoch-seconds: ${QR_EPOCH_SECONDS:10}` khớp với `V1__sprint1_core_schema.sql:50`, `Event.java`, `EventService.java`, và FE `EventQrPage.tsx` (`10s` / `3s` grace).
+  2. **Fail-fast `QR_SIGNING_SECRET` trong `QrTokenService.java:28–39` (đã sửa trên `main`):** Đã loại bỏ chuỗi fallback cố định; ngoài profile `dev`/`demo`, ứng dụng từ chối khởi động (`IllegalStateException`) nếu thiếu `QR_SIGNING_SECRET` (`>= 32` byte, tách biệt hoàn toàn với `JWT_SECRET`).
   3. **Liên kết `qr1` vs `random_nonce` (`SRS UC015` / `QE-44`):** `qr1` không có `random_nonce` nên hai màn hình owner hoặc hai node BE cùng hiển thị một mã QR đồng nhất trong mỗi 10s. Định dạng `qr1` giữ ổn định cho Sprint 1–2; khi cần `nonce` cho mỗi phiên chiếu có thể nâng cấp sang `qr2.<eventId>.<epoch>.<nonce>.<sig>` (`A-QE8-10` — Approved).
 
 ### 6.2 GPS Check-in (`QE-55`)
@@ -366,7 +363,7 @@ Theo `BR-ATT-02`, `REQ-ATT-021`, `UC015`, `UC018` (`#9`) và màn hình Figma (`
 | **INV-ATT-01** | Tối đa 1 bản ghi `ACCEPTED` mỗi `(event, student)` qua mọi phương thức | `MigrationIT#attendancesUniqueAcceptedConstraint`<br>`AttendanceIT#checkInTwiceWithDifferentKeysFails` | `AttendanceConcurrencyIT` (`QE-54`): 10 luồng song song của cùng SV (khác `Idempotency-Key`) -> đúng 1 `200`, 9 `409 ALREADY_CHECKED_IN` (**0 lỗi `500`**); test chéo `QR` + `GPS` + BCS duyệt `EVIDENCE`/`PROXY_EVIDENCE` cùng lúc |
 | **INV-ATT-02** | Idempotent Replay trả nguyên trạng thái (`ACCEPTED`/`PENDING`/`REJECTED`), không tăng attempt/attendance | `AttendanceIT#checkInWithSameIdempotencyKeyReturnsCachedResponse`<br>`AttendanceIT#checkInWithoutIdempotencyKeyFails` | `AttendanceConcurrencyIT` (`QE-54`): 10 luồng song song **cùng `Idempotency-Key`** (in-flight retry) -> tất cả nhận cùng `http_status` & body, 0 lỗi `500`, `count(attempts) == 1`; retry `REJECTED` giữ đúng `422` & `counted=true` chỉ tính 1 lần |
 | **INV-ATT-03** | Trần 3 lần thử (`0,1,2,3` và lần 4 -> `409 ATTEMPT_LIMIT_REACHED`, `counted` giữ `<= 3`) | `AttendanceIT#checkInAttemptLimitReachedAfter3Failures` | `AttendanceAttemptBoundaryIT` (`QE-54`): 5 luồng sai song song khi đã có 2 lỗi -> đúng 1 luồng tăng lên 3, 4 luồng còn lại nhận `409 ATTEMPT_LIMIT_REACHED`; xác nhận DB `count(counted=true) == 3` (không thành 4) |
-| **INV-QR-01** | Token HMAC-SHA256 dùng server `Clock`, rotation/grace đúng biên, không lộ token trong log/DB | `QrTokenServiceTest` (8 tests: format, current, grace, expired, future, tampered, wrong event, malformed)<br>`AttendanceIT` (#9, #10)<br>`AuditIT` (3 tests) | Test xác nhận `response_body` & `audit_logs.details` không chứa token QR đầy đủ; kiểm tra cấu hình `rotationSeconds` đồng bộ từ DB (`10s` vs `application.yml`) |
+| **INV-QR-01** | Token HMAC-SHA256 dùng server `Clock`, rotation/grace đúng biên, không lộ token trong log/DB | `QrTokenServiceTest` (13 tests: format, current, grace, expired, future, tampered, wrong event, malformed, fingerprint)<br>`AttendanceIT` (25 tests)<br>`AuditIT` (3 tests) | Test xác nhận `response_body` & `audit_logs.details` không chứa token QR đầy đủ; giữ nhất quán `rotationSeconds` giữa `Event` & `application.yml` (`10s`) |
 | **INV-OFF-01** | Offline queue replay an toàn & xác thực `OFFLINE_QR`/`OFFLINE_GPS` không tin clock client | *(Chưa có — Sprint 3–4)* | `OfflineSyncIT` (`QE-33`, `QE-76..78`): batch retry với partial failure; `OFFLINE_QR` quá `OFFLINE_SYNC_MAX_WINDOW` bị từ chối; `OFFLINE_GPS` `isMocked=true` giữ `ACCEPTED` + `suspicious_flag=true` |
 | **INV-POOL-01** | Không cạn kiệt connection pool & đạt ngưỡng tải `Proposal P1` | *(Chưa có)* | `BurstLoadTest` (`QE-46`): 100 req/s trong 10s (3,000 req/60s) trên HikariCP pool=30 không timeout/deadlock |
 

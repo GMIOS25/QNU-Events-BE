@@ -2,7 +2,7 @@
 
 > **Mã tài liệu:** `CONTRACT-IMP-DEPARTMENT-v1.0`
 > **Liên kết Jira:** `QE-45`, `QE-26`, `QE-62`
-> **Liên kết SRS:** `UC026` (UC6.2 — Nhập dữ liệu khoa ngành và lớp), `REQ-DATA-001` → `REQ-DATA-003`, `REQ-DATA-007` → `REQ-DATA-010`, `TBD-DATA-01`
+> **Liên kết SRS:** `UC026` (UC6.2 — Nhập dữ liệu khoa ngành và lớp), `REQ-DATA-001` → `REQ-DATA-003`, `REQ-DATA-007` → `REQ-DATA-010`, `TBD-DATA-01` *(Closed `28/11/2026` — xem [`README.md`](README.md) & [`v2-schema-blueprint.md`](../Design/v2-schema-blueprint.md))*
 > **Tệp dữ liệu nguồn QNU:** `khoa.csv` (52 đơn vị, trong đó 22 Khoa đào tạo và 12 Khoa đang quản lý trực tiếp các lớp chính quy K46–K49)
 
 ---

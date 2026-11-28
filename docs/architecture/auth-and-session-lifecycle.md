@@ -13,18 +13,18 @@
 
 ## 1. Mục tiêu & Đối chiếu Sprint 1 Baseline (`QE-64`) vs Production Target (`QE-30`, `QE-73`, `QE-74`)
 
-Sprint 1 (`QE-64`, trạng thái `Done`) xây dựng một lát cắt xác thực tối giản để phục vụ luồng lõi với tài khoản mẫu trong môi trường phát triển/demo (`DemoDataSeeder`). Tài liệu này chốt thiết kế kiến trúc mục tiêu cho môi trường **Production** theo Proposal v2 §11.1 và SRS v1.0, đồng thời chỉ rõ các khoảng trống kỹ thuật của nền tảng Sprint 1 hiện tại và các quyết định còn chờ stakeholder phê duyệt (`R11`, `R12`).
+Sprint 1 (`QE-64`, trạng thái `Done`) xây dựng một lát cắt xác thực để phục vụ luồng lõi với tài khoản mẫu trong môi trường phát triển/demo (`DemoDataSeeder`). Tài liệu này chốt thiết kế kiến trúc mục tiêu cho môi trường **Production** theo `Proposal v2` §11.1 và `SRS v1.1` (các quyết định nghiệp vụ `D-1`, `D-3`, `D-10` đã chốt ngày `28/11/2026`), đồng thời chỉ rõ các khoảng trống giữa Sprint 1 trên `main` với Sprint 2 (`QE-30`, `QE-73`, `QE-74`, `QE-35`) và điểm mở hạ tầng `Q-AUTH-03` (`R11`, `R12`).
 
 ### 1.1 Bảng so sánh Baseline Sprint 1 (`QE-64`) vs Production Target
 
 | Hạng mục | Hiện trạng Sprint 1 (`QE-64`) — Đã kiểm chứng trong code | Mục tiêu Production (`QE-30`, `QE-73`, `QE-74`, `QE-35`) | Khoảng cách & Rủi ro chính |
 |---|---|---|---|
 | **Phương thức đăng nhập** | Chỉ `loginId + password` qua `POST /api/v1/auth/login` (`AuthController`). Dữ liệu mẫu nạp từ `DemoDataSeeder` (`@Profile({"dev","demo"})`). FE `LoginPage.tsx` có 2 nút quick-fill demo (`owner01`, `sv001` dùng `Demo@12345`). | **2 phương thức song song** (`Proposal §11.1`, `REQ-AUTH-001/002`):<br>1. `loginId` (MSSV/username, 5–50 ký tự `[a-zA-Z0-9._]`) + `password` (8–64 ký tự, `REQ-AUTH-014`).<br>2. Google OAuth2/OIDC với email do QNU cấp (`QE-74`). | Chưa có Google OAuth2 (`pom.xml` đã có `spring-boot-starter-security-oauth2-client` nhưng chưa cấu hình). Nút quick-fill trong `LoginPage.tsx` chưa ẩn theo biến môi trường `import.meta.env.DEV`. |
-| **Lược đồ CSDL (`V1`)** | `V1__sprint1_core_schema.sql`: `app_user` (`id`, `login_id`, `password_hash NOT NULL`, `full_name`, `student_code`, `class_id`, `status IN ('ACTIVE','LOCKED')`), `user_role` (`STUDENT`, `CLASS_REPRESENTATIVE`, `EVENT_OWNER`, `SYSTEM_ADMIN`), `auth_session` (`id`, `user_id`, `issued_at`, `expires_at`, `revoked_at`). | Bổ sung qua migration mới (`V2__...`, chỉ A0 tạo theo `R6`): `email` (unique, case-insensitive), `google_sub` (unique), `auth_version` (hoặc cơ chế thu hồi theo lần đổi quyền), trường phục vụ khóa tạm thời (`failed_login_attempts`, `locked_until`), `must_change_password`, phạm vi quản trị (`unit_id`), và quyết định về vai trò `CVHT` (`SRS`). | `app_user` thiếu cột `email` và `google_sub` để ánh xạ Google OAuth (`QE-74`). `password_hash` đang `NOT NULL`. `V1` không được phép sửa (`R6`). |
-| **JWT & Phiên làm việc** | `JwtService` ký HS256 (`sub`, `sid`, `roles`, `classId`, `iat`, `exp`). `AuthService.java:60` hardcode TTL `8 giờ` (`ChronoUnit.HOURS`), chưa đọc `app.security.jwt-access-token-validity-seconds` (`28800`) từ `application.yml`. `JwtService` và `SecurityConfiguration` có secret fallback dev cứng trong code. | Không cho phép fallback secret ở production (fail-fast nếu thiếu `JWT_SECRET` ≥ 32 byte). Áp dụng TTL & cơ chế `"Lưu đăng nhập"` đã chốt (`TBD-AUTH-01`). Phiên bị thu hồi tức thì khi logout, lock, đổi role, hoặc reset mật khẩu (`REQ-AUTH-007/010/011`). | `CurrentUserProvider.require()` đọc `roles` và `classId` từ **claim trong JWT**, không đọc DB -> đổi role/class không có hiệu lực tức thì nếu không thu hồi `auth_session` hoặc kiểm tra version. |
+| **Lược đồ CSDL (`V1`)** | `V1__sprint1_core_schema.sql`: `app_user` (`id`, `login_id`, `password_hash NOT NULL`, `full_name`, `student_code`, `class_id`, `status IN ('ACTIVE','LOCKED')`), `user_role` (`STUDENT`, `CLASS_REPRESENTATIVE`, `EVENT_OWNER`, `SYSTEM_ADMIN`), `auth_session` (`id`, `user_id`, `issued_at`, `expires_at`, `revoked_at`). | Bổ sung qua `V2__sprint2_core_extensions.sql` (chỉ A0 tạo theo `R6`): `email` (unique `LOWER`), `google_sub` (unique), `auth_version`, khóa tạm (`failed_login_attempts`, `locked_until`), `must_change_password`, `refresh_token_hash`, `remember_me`, `unit_id`, và vai trò `'CVHT'` (`D-1`, `D-10`). | `app_user` thiếu cột `email` và `google_sub` để ánh xạ Google OAuth (`QE-74`). `password_hash` đang `NOT NULL`. `V1` không được phép sửa (`R6`). |
+| **JWT & Phiên làm việc** | `JwtService` ký HS256 (`sub`, `sid`, `roles`, `classId`, `iat`, `exp`). Trên `main` (`QE-90`), `AuthService` đã đọc TTL `28800s` từ `app.security.jwt-access-token-validity-seconds`, và `SecurityConfiguration.resolveJwtSecret` đã fail-fast khi thiếu `JWT_SECRET >= 32` byte ngoài `dev`/`demo`/`test`. | Áp dụng Access Token ngắn hạn + `"Lưu đăng nhập"` qua **Refresh Token 7 ngày cookie `HttpOnly; Secure; SameSite=Lax`** (+ CSRF, tối đa 5 phiên active — `A-AUTH-04`/`A-AUTH-07`). Thu hồi tức thì khi logout, lock, đổi role, hoặc reset mật khẩu (`REQ-AUTH-007/010/011`, `auth_version`). | `CurrentUserProvider.require()` đọc `roles` và `classId` từ **claim trong JWT**, không đọc DB -> cần thu hồi `auth_session` & kiểm tra `auth_version` khi đổi quyền (`A-AUTH-02`). |
 | **Lưu trữ phía Client (FE)** | `AuthContext.tsx` lưu `qnu_events_access_token` và `qnu_events_user_info` trong `sessionStorage`. `LoginPage.tsx` không có checkbox `"Lưu đăng nhập"`. `api/client.ts` tự xóa session khi gặp HTTP `401`. | Tuân thủ `NFR-SEC-004`: không ghi token vào URL/log; token ngắn hạn trong memory + refresh/session qua `HttpOnly; Secure; SameSite` cookie (nếu dùng cookie) hoặc cơ chế lưu trữ an toàn được duyệt, kèm UX `"Lưu đăng nhập"` và thông báo rõ khi phiên hết hạn. | Lưu JWT dài hạn trong `sessionStorage`/`localStorage` nhạy cảm với XSS; FE `api/client.ts` xử lý `401` bằng cách đẩy về `/login` nhưng chưa hiển thị lý do `SESSION_REVOKED`/`SESSION_EXPIRED`. |
 | **Chống thử mật khẩu & Tài khoản khóa** | `AuthService.login` dùng `DUMMY_HASH` khi không tìm thấy `loginId` để giảm khác biệt thời gian và trả `401 INVALID_CREDENTIALS`. Tuy nhiên kiểm tra `status == LOCKED` **trước** `passwordEncoder.matches(...)` và trả `403 FORBIDDEN`. Chưa có đếm sai mật khẩu / khóa 15 phút. | Thực thi `REQ-AUTH-015`: sai mật khẩu **5 lần liên tiếp -> khóa đăng nhập tạm thời 15 phút** + ghi log cảnh báo bảo mật; thông báo lỗi không cho phép dò tài khoản (`REQ-AUTH-004`, `REQ-AUTH-015`). | Thứ tự kiểm tra `LOCKED` trước password match ở Sprint 1 tạo lỗ hổng dò trạng thái tài khoản (*user enumeration*). Chưa có bảng/bộ đếm chống brute-force. |
-| **Phân quyền RBAC & Scope** | `SecurityConfiguration` cấu hình tường minh cho `STUDENT` và `EVENT_OWNER`, kết thúc bằng `anyRequest().denyAll()`. `CLASS_REPRESENTATIVE` và `SYSTEM_ADMIN` đã có trong `user_role` CHECK & `CurrentUser`, nhưng chưa có endpoint nào mở cho 2 role này. | Đủ 4 role Proposal (`STUDENT`, `CLASS_REPRESENTATIVE`, `EVENT_OWNER`, `SYSTEM_ADMIN`) + chốt phương án `CVHT` của SRS (`REQ-AUTH-005/006`). Kiểm tra cả role lẫn object scope (`class_id`, `unit_id`, `owner_id`) ở backend (`R9`). | `EventService.java:219-236` và `245-269` dùng `if (EVENT_OWNER) ... else if (STUDENT)` sẽ che mất quyền `STUDENT` nếu một tài khoản mang đồng thời cả 2 role. FE `AuthContext.tsx:147` điều hướng `/unauthorized` nhưng `router.tsx` chưa có route này. |
+| **Phân quyền RBAC & Scope** | `SecurityConfiguration` cấu hình tường minh cho `STUDENT` và `EVENT_OWNER`, kết thúc bằng `anyRequest().denyAll()`. `CLASS_REPRESENTATIVE` và `SYSTEM_ADMIN` đã có trong `user_role` CHECK & `CurrentUser`, nhưng chưa có endpoint nào mở cho 2 role này. | Đủ 5 vai trò (`STUDENT`, `CLASS_REPRESENTATIVE`, `CVHT`, `EVENT_OWNER`, `SYSTEM_ADMIN` — `D-1`, `REQ-AUTH-005/006`). Kiểm tra cả role lẫn object scope (`class_id`, `unit_id`, `owner_id`) ở backend (`R9`). | `EventService.java:219-236` và `245-269` dùng `if (EVENT_OWNER) ... else if (STUDENT)` sẽ che mất quyền `STUDENT` nếu một tài khoản mang đồng thời cả 2 role. FE `AuthContext.tsx:147` điều hướng `/unauthorized` nhưng `router.tsx` chưa có route này. |
 | **Audit Logging** | Bảng `audit_logs` bất biến (`trg_audit_logs_immutable`), `AuditService` chạy `REQUIRES_NEW` đã gắn cho các nghiệp vụ event/registration/attendance (`EventService`: `EVENT_PUBLISH`/`EVENT_PUBLISH_DENIED`, `SecurityConfiguration.accessDeniedHandler`: `EVENT_PUBLISH_DENIED`, `RegistrationService`: `REGISTRATION_CREATE`, `AttendanceService`: `ATTENDANCE_CHECKIN`/`ATTENDANCE_DENIED`). Riêng `AuthService` chưa ghi audit đăng nhập/đăng xuất. | Ghi đầy đủ audit cho luồng xác thực và quản trị tài khoản: login thành công/thất bại, cảnh báo brute-force, logout, cấp phát/import tài khoản, đổi/reset mật khẩu, khóa/mở khóa, cấp/thu hồi role — tuyệt đối không ghi password, hash, hoặc token đầy đủ (`REQ-AUTH-013`, `NFR-SEC-012`, `R7`). | `AuthService` thiếu `AuditService` calls; thiếu `actor_id` (khi chưa đăng nhập) và thiếu mã hành động chuẩn cho module `auth` và `admin`. |
 
 > [!WARNING]
@@ -34,11 +34,11 @@ Sprint 1 (`QE-64`, trạng thái `Done`) xây dựng một lát cắt xác thự
 
 ## 2. Cấp phát Tài khoản & Vòng đời Credential theo Vai trò (`QE-73`, `QE-35`)
 
-### 2.1 Ma trận vai trò và nguồn cấp phát (`Proposal §2, §11.1` vs `SRS v1.0`)
+### 2.1 Ma trận vai trò và nguồn cấp phát (`Proposal v2 §2, §11.1` vs `SRS v1.1`)
 
 | Vai trò (`user_role` / SRS) | Nguồn cấp phát & Thẩm quyền | Phạm vi dữ liệu (`Scope`) | Ghi chú đồng bộ Proposal vs SRS |
 |---|---|---|---|
-| **`STUDENT`** *(Sinh viên)* | **System Admin** tạo hàng loạt từ dữ liệu/định danh do trường cung cấp qua CSV/Excel (`UC025`, `QE-73`). Cấm tự đăng ký (*no self-signup*). | Chỉ xem và thao tác trên dữ liệu của chính `userId` (`registrations`, `attendances`, `history`, `appeals`) và sự kiện thuộc `class_id` của mình. | Thống nhất giữa Proposal v2, SRS v1.0 và `V1`. |
+| **`STUDENT`** *(Sinh viên)* | **System Admin** tạo hàng loạt từ dữ liệu/định danh do trường cung cấp qua CSV/Excel (`UC025`, `QE-73`). Cấm tự đăng ký (*no self-signup*). | Chỉ xem và thao tác trên dữ liệu của chính `userId` (`registrations`, `attendances`, `history`, `appeals`) và sự kiện thuộc `class_id` của mình. | Thống nhất giữa Proposal v2, `SRS v1.1` và `V1`. |
 | **`CLASS_REPRESENTATIVE`** *(Ban cán sự - BCS)* | **System Admin** gán vai trò `CLASS_REPRESENTATIVE` cho tài khoản sinh viên đã có (kèm gán lớp phụ trách). | Chỉ duyệt/từ chối evidence và ca điểm danh bán tự động thuộc lớp được phân công; **không có quyền cộng/trừ điểm rèn luyện** (`Proposal §2`). | Đã có trong `V1` (`user_role` CHECK & `CurrentUser.isClassRepresentative()`). Chưa có bảng phân công nếu BCS quản lý khác `app_user.class_id` hoặc chuyển nhiệm kỳ. |
 | **`EVENT_OWNER`** *(Admin / Event Owner)* | **System Admin** cấp/gán khi có yêu cầu và có thẩm quyền tổ chức hoạt động (`unit_id`, `REQ-AUTH-009`). | Quản lý sự kiện (`owner_id`/`unit_id`), xử lý Phúc khảo Appeal Vòng 2 & gỡ chế tài No-show (`D-2`); **không** CRUD/Import dữ liệu nền; không mặc định xem toàn bộ Evidence ngoài thẩm quyền. | Trong Jira `QE-30`, thống nhất nhãn `"Admin/Event Owner"` (`D-2`, `D-3`). |
 | **`SYSTEM_ADMIN`** *(Quản trị hệ thống)* | Khởi tạo an toàn qua quy trình vận hành/bootstrap ngoài public UI; quản trị bởi System Admin hiện hữu. | **Duy nhất CRUD/Import danh mục & SV (`UC025–026`, `QE-26/62/73`)**, cấp/khóa/thu hồi role, phân công BCS/CVHT, tra `audit_logs`, retention (`UC029`). **Không phải business reviewer** trong luồng Evidence/Appeal (`D-2`). | Đã có trong `V1` (`DemoDataSeeder` tạo `admin01` chỉ trong profile `dev`/`demo`). |
@@ -52,13 +52,13 @@ Theo `Proposal §11.1–11.2` và AC của `QE-73`:
    - `student_code` (MSSV — khóa định danh nghiệp vụ bất biến của sinh viên, `app_user.student_code` UNIQUE).
    - `full_name` (họ và tên).
    - `class_code` (ánh xạ tới `org_class.id`; lỗi nếu lớp chưa tồn tại trong danh mục khoa/ngành/lớp — `UC026`).
-   - `email` (email do QNU cấp dùng để đối chiếu `QE-74`, kiểm tra định dạng + domain allowlist `TBD-AUTH-03`).
+   - `email` (email do QNU cấp dùng để đối chiếu `QE-74`, kiểm tra định dạng + domain allowlist **`APP_GOOGLE_ALLOWED_DOMAINS=st.qnu.edu.vn,qnu.edu.vn`** đã chốt theo `D-10`).
    - `login_id` (mặc định bằng `student_code` đã `trim()`, thỏa regex `REQ-AUTH-014`: `^[a-zA-Z0-9._]{5,50}$`).
 2. **Nguyên tắc Idempotent & Không ghi đè ngầm (*No Silent Overwrite*, `QE-73` AC):**
    - **Sinh viên mới** (`student_code` chưa có trong `app_user` và `login_id`/`email` chưa trùng ai): Tạo mới `app_user` (`status = ACTIVE`), gán `user_role = 'STUDENT'`, cấp credential khởi tạo (Mục 2.4).
    - **Import lại cùng sinh viên** (khớp `student_code` đã tồn tại):
      * **Tuyệt đối không** reset/ghi đè `password_hash`, không tự mở khóa tài khoản đang `LOCKED`, không xóa các role bổ sung như `CLASS_REPRESENTATIVE`, và không ghi đè `google_sub` đã liên kết.
-     * Nếu `full_name` hoặc `email` mới khác dữ liệu cũ: ghi nhận trạng thái `SKIPPED` hoặc chỉ cập nhật metadata hành chính khi có cờ cấu hình tường minh kèm audit diff (lưu ý `Proposal §11.2`: MVP không quản lý chuyển lớp/chuyển khoa sau nhập học nên thay đổi `class_id` trên user đã có cần cảnh báo/chặn hoặc xử lý theo quy định riêng).
+     * Nếu `full_name` hoặc `email` mới khác dữ liệu cũ: ghi nhận `SKIPPED` hoặc cập nhật metadata hành chính khi có cờ cấu hình tường minh kèm audit diff. Riêng thay đổi `class_id`: mặc định **`allowClassTransfer = false`** (`D-10`, `A-AUTH-08` — giữ ổn định `Proposal §11.2`), chỉ cho phép ghi đè lớp khi `SYSTEM_ADMIN` chủ động bật cờ và phải ghi `audit_logs` (`STUDENT_CLASS_TRANSFER`).
    - **Xung đột định danh (Reject row, không tạo bản ghi lỗi):**
      * `email` của dòng CSV đã thuộc về một `student_code` khác -> từ chối dòng đó với mã xung đột *(đề xuất: `DUPLICATE_EMAIL`)*, không gắn nhầm tài khoản.
      * `login_id` đã bị tài khoản khác (ví dụ `EVENT_OWNER`) chiếm dụng -> từ chối dòng đó *(đề xuất: `DUPLICATE_LOGIN_ID`)*.
@@ -70,10 +70,10 @@ Theo `Proposal §11.1–11.2` và AC của `QE-73`:
 Khớp với `REQ-AUTH-009` (`UC002`) và 9 màn hình `System Admin / US1.1` trong Figma (`HX4313AoLQX4zNidDz2Ixo`):
 
 1. **Cấp quyền cho tài khoản đã tồn tại (`GRANT_ROLE`):** `SYSTEM_ADMIN` chọn user từ danh sách tài khoản, chọn vai trò cần gán (`EVENT_OWNER` hoặc `CLASS_REPRESENTATIVE` / `SYSTEM_ADMIN`), nhập bắt buộc **phạm vi quản lý** (`unit_id` / khoa / đoàn thể hoặc lớp) và **lý do cấp quyền** (`reason`).
-2. **Mời / Tạo tài khoản mới (`INVITE_ADMIN` — khớp Figma `US1.1`):** Khi cấp cho trưởng đơn vị (Đoàn, Hội, CLB, Khoa) chưa có tài khoản (`Proposal §2`): nhập `email`, `role`, `scope` (`unit_id`), `reason`. Hệ thống tạo `app_user` với trạng thái phù hợp (`ACTIVE` hoặc chờ kích hoạt — `TBD-AUTH-01`), gán vai trò và gửi/cấp credential khởi tạo theo kênh được chốt.
+2. **Mời / Tạo tài khoản mới (`INVITE_ADMIN` — khớp Figma `US1.1`):** Khi cấp cho trưởng đơn vị (Đoàn, Hội, CLB, Khoa) chưa có tài khoản (`Proposal §2`): nhập `email`, `role`, `scope` (`unit_id`), `reason`. Hệ thống tạo `app_user` (`ACTIVE`), gán vai trò và gửi activation token một lần (hoặc mật khẩu tạm ngẫu nhiên mạnh kèm `must_change_password = true`, `A-AUTH-08`).
 3. **Thu hồi quyền (`REVOKE_ROLE` / `REVOKE_ADMIN`):** Bắt buộc có `reason`; xóa dòng tương ứng khỏi `user_role` (không xóa tài khoản gốc nếu user vẫn còn vai trò khác như `STUDENT`, khớp `UC001` precondition & `REQ-AUTH-011`), đồng thời vô hiệu hóa tức thì quyền đó trên mọi phiên đang mở (Mục 3.4).
 
-### 2.4 Vòng đời Mật khẩu & Reset Credential (`TBD-AUTH-01`)
+### 2.4 Vòng đời Mật khẩu & Reset Credential (`A-AUTH-08`, đóng `TBD-AUTH-01`)
 
 - **Thuật toán băm (`NFR-SEC-003`):** Giữ nguyên `BCryptPasswordEncoder(12)` như `SecurityConfiguration.java:262-264` (`strength = 12`, đã có test xác nhận prefix `$2` trong `AuthIT.java:75`). Cần stakeholder xác nhận thêm mức cost cho môi trường tải cao trong `TBD-SEC-01`.
 - **Ràng buộc `V1` hiện tại:** Cột `app_user.password_hash` có ràng buộc `NOT NULL`. Trong Sprint 1, `DemoDataSeeder` băm chuỗi `DEMO_PASSWORD` (mặc định `Demo@12345`). Với Production, **tuyệt đối không** dùng mật khẩu mặc định chung kiểu `Demo@12345` hay ngày sinh dễ đoán cho hàng loạt sinh viên.
@@ -139,12 +139,12 @@ sequenceDiagram
             F-->>C: 401 SESSION_REVOKED
         else expires_at nho hon now
             V-->>F: Failure session_expired SESSION_EXPIRED
-            F-->>C: 401 SESSION_EXPIRED de xuat Prod - Sprint 1 tra UNAUTHENTICATED
+            F-->>C: 401 SESSION_EXPIRED o Prod - Sprint 1 tra UNAUTHENTICATED
         else Session dang ACTIVE
             V->>DB: SELECT app_user WHERE id = sub
             alt User khong ton tai hoac status khac ACTIVE
                 V-->>F: Failure user_locked
-                F-->>C: 401 UNAUTHENTICATED Sprint 1 hoac 403 de xuat Prod
+                F-->>C: 401 UNAUTHENTICATED Sprint 1 hoac 403 Prod
             else Hop le va auth_version khop
                 V-->>F: Success
                 F->>API: Dispatch voi CurrentUser
@@ -154,18 +154,15 @@ sequenceDiagram
     end
 ```
 
-### 3.3 Các khiếm khuyết của Sprint 1 cần sửa cho Production
+### 3.3 Hardening đã hoàn tất trên `main` (`QE-90`) & Khiếm khuyết còn cần sửa ở Sprint 2 (`QE-30`)
 
-1. **Secret fallback cứng trong mã nguồn (`R7` / Bảo mật):**
-   - Cả `JwtService.java:28-30` và `SecurityConfiguration.java:147-149` đều fallback về chuỗi `"qnu-events-dev-secret-key-must-be-at-least-256-bits-long-for-hmac-sha256!"` nếu `app.security.jwt-secret` rỗng hoặc `< 32` ký tự.
-   - **Yêu cầu Production:** Chỉ cho phép secret mẫu ở profile `dev`/`demo`/`test`. Nếu khởi chạy ở môi trường production mà `JWT_SECRET` thiếu hoặc `< 32` byte (256 bit), ứng dụng phải **từ chối khởi động (fail-fast)**. Ngoài ra cần gộp logic đọc khóa về một bean/properties class dùng chung thay vì nhân bản ở 2 file.
-2. **TTL hardcode trong `AuthService`:**
-   - `application.yml:58` khai báo `app.security.jwt-access-token-validity-seconds: ${JWT_ACCESS_TOKEN_VALIDITY_SECONDS:28800}`, nhưng `AuthService.java:60` lại hardcode `now.plus(8, ChronoUnit.HOURS)`.
-   - **Yêu cầu Production:** Tiêm giá trị cấu hình vào `AuthService` (đã có `Clock` bean để test deterministic với `MutableClock`).
-3. **Phân loại mã lỗi `401` trong `SecurityConfiguration.authenticationEntryPoint`:**
-   - Hiện tại `SessionJwtValidator` trả về 3 mã `OAuth2Error` khác nhau (`"session_revoked"` / `"SESSION_REVOKED"`, `"session_expired"` / `"SESSION_EXPIRED"`, `"user_locked"`), nhưng `SecurityConfiguration.java:168-173` chỉ kiểm tra chuỗi `"SESSION_REVOKED"` hoặc `"session_revoked"` để trả `ErrorCode.SESSION_REVOKED`, còn `SESSION_EXPIRED` và `user_locked` đều rơi về `ErrorCode.UNAUTHENTICATED`.
-   - **Yêu cầu Production:** Ánh xạ rõ ràng: `SESSION_REVOKED` -> `401 SESSION_REVOKED` (bị thu hồi do logout/lock/đổi quyền), `SESSION_EXPIRED` -> `401 SESSION_EXPIRED` *(đề xuất bổ sung vào `ErrorCode` nếu tách riêng khỏi `SESSION_REVOKED`)*, và khóa tài khoản giữa phiên cần phản hồi rõ ràng theo `REQ-AUTH-010`.
-4. **Dữ liệu `roles` và `classId` cũ trong JWT (`Stale Claims`):**
+1. **Đã khắc phục trên `main` (`QE-90` / `BUG-07`, `A-AUTH-01`):**
+   - `SecurityConfiguration.resolveJwtSecret(...)` và `JwtService` đã gom logic đọc khóa và bật **fail-fast** từ chối khởi động ngoài profile `dev`/`demo`/`test` nếu `JWT_SECRET` thiếu hoặc `< 32` byte.
+   - `AuthService` đã tiêm và đọc `app.security.jwt-access-token-validity-seconds` (`28800s` = `8 giờ`) thay cho hardcode `ChronoUnit.HOURS`.
+2. **Phân loại mã lỗi `401` trong `SecurityConfiguration.authenticationEntryPoint` (`QE-30`):**
+   - Hiện tại `SessionJwtValidator` trả về 3 mã `OAuth2Error` khác nhau (`"session_revoked"` / `"SESSION_REVOKED"`, `"session_expired"` / `"SESSION_EXPIRED"`, `"user_locked"`), nhưng `SecurityConfiguration.java:168-173` chỉ kiểm tra chuỗi `"SESSION_REVOKED"` / `"session_revoked"` để trả `ErrorCode.SESSION_REVOKED`, còn `SESSION_EXPIRED` và `user_locked` đều rơi về `ErrorCode.UNAUTHENTICATED`.
+   - **Yêu cầu Sprint 2 (`QE-30`):** Ánh xạ chuẩn theo [`docs/api/error-codes.md`](../api/error-codes.md): `SESSION_REVOKED` -> `401 SESSION_REVOKED` (bị thu hồi do logout/lock/đổi quyền), `SESSION_EXPIRED` -> `401 SESSION_EXPIRED`, và khóa tài khoản giữa phiên phản hồi `403 FORBIDDEN` / `401` rõ ràng theo `REQ-AUTH-010`.
+3. **Dữ liệu `roles` và `classId` cũ trong JWT (`Stale Claims`):**
    - `CurrentUserProvider.java:29-38` lấy `roles` và `classId` trực tiếp từ JWT claim mà không đọc từ DB. Trong khi đó `RegistrationService.java:89` đọc `student.getClassId()` từ DB, còn `EventService.java:224-252` lại đọc `currentUser.classId()` từ JWT!
    - Xem mục 3.4 dưới đây để xử lý triệt để.
 
@@ -177,18 +174,18 @@ sequenceDiagram
   3. Nhờ `SessionJwtValidator` kiểm tra cả `auth_session.revoked_at` lẫn `app_user.status == ACTIVE` trên mọi request, mọi JWT đã phát trước đó lập tức bị từ chối ở request kế tiếp.
 - **Khi cấp hoặc thu hồi vai trò (`GRANT_ROLE` / `REVOKE_ADMIN` / đổi phạm vi, `REQ-AUTH-011`) hoặc đổi mật khẩu / reset credential:**
   - Nếu chỉ cập nhật bảng `user_role`, các JWT cũ vẫn giữ claim `roles` cũ cho đến hết TTL! Để tuân thủ tuyệt đối `REQ-AUTH-011` (*"từ chối các request quản trị tiếp theo kể cả trên phiên cũ và không tự khôi phục quyền sau khi đăng nhập lại"*):
-    * **Cơ chế bắt buộc (`ASSUMPTION A-AUTH-02`):** Trong cùng một `@Transactional` khi thay đổi `user_role`, `unit_id`, `class_id` hoặc `password_hash`, server đồng thời **thu hồi tất cả `auth_session` đang mở** của user (`SET revoked_at = :now`), HOẶC tăng cột `app_user.auth_version` (đối chiếu với claim `ver` trong `SessionJwtValidator`) và nạp `roles`/`scope` tươi từ DB/cache ngắn hạn. Việc thu hồi toàn bộ `auth_session` giúp FE tự động nhận `401 SESSION_REVOKED`, xóa state cũ và yêu cầu người dùng đăng nhập lại để lấy quyền mới nhất.
+    * **Cơ chế bắt buộc (`A-AUTH-02` — Approved `28/11/2026`):** Trong cùng một `@Transactional` khi thay đổi `user_role`, `unit_id`, `class_id` hoặc `password_hash`, server đồng thời **thu hồi tất cả `auth_session` đang mở** của user (`SET revoked_at = :now`) và tăng `app_user.auth_version` (đối chiếu với claim `ver` trong `SessionJwtValidator`), giúp FE tự động nhận `401 SESSION_REVOKED`, xóa state cũ và yêu cầu đăng nhập lại để lấy quyền mới nhất.
 - **Lỗi bóng mờ đa vai trò trong `EventService`:**
   - `EventService.java:219-236` (`getEventDetail`) và `245-269` (`listEvents`) viết `if (currentUser.roles().contains("EVENT_OWNER")) ... else if (currentUser.roles().contains("STUDENT"))`. Nếu một tài khoản (hoặc một lớp trưởng/CTV câu lạc bộ) mang đồng thời cả `STUDENT` và `EVENT_OWNER`, nhánh `STUDENT` bị bỏ qua. Cần tách rõ chế độ xem/endpoint hoặc tham số ngữ cảnh thay vì `else if` ngầm.
 
 ### 3.5 Ngữ nghĩa `"Lưu đăng nhập"`, Logout (`UC003`) & Chính sách Phiên Đồng thời
 
-1. **Ngữ nghĩa `"Lưu đăng nhập"` (`UC001`, Figma `01 · login`, `TBD-AUTH-01`):**
-   - Figma `01 · login` có checkbox `"Lưu đăng nhập"`, trong khi SRS `UC001` định nghĩa là cờ boolean `True/False` nhưng mở tại `TBD-AUTH-01`, còn Sprint 1 FE chưa có checkbox này và lưu JWT trong `sessionStorage`.
-   - **Đề xuất chờ chốt (`ASSUMPTION A-AUTH-07`):**
-     * **Khi KHÔNG chọn `"Lưu đăng nhập"` (`rememberMe = false`):** Phiên ngắn hạn (ví dụ Access Token / session TTL `8 giờ` hoặc hết hạn khi đóng phiên trình duyệt); FE không lưu token vào `localStorage`.
-     * **Khi CHỌN `"Lưu đăng nhập"` (`rememberMe = true`):** Không kéo dài access JWT HS256 lên nhiều tuần; thay vào đó phát hành **Refresh Token / Persistent Session** lưu bản băm trong `auth_session` với thời hạn dài hơn (ví dụ 7–14 ngày, sliding hoặc rotating refresh token) truyền qua cookie **`HttpOnly; Secure; SameSite=Lax`** (`NFR-SEC-004`) để cấp lại Access Token ngắn hạn (ví dụ 15–60 phút hoặc 8 giờ). Nếu có thao tác khóa tài khoản/đổi quyền/đổi mật khẩu, thu hồi cả refresh session.
-     * Lưu ý với FE hiện tại: `SecurityConfiguration.corsConfigurationSource` đang đặt `configuration.setAllowCredentials(false)`. Nếu chuyển sang cookie `HttpOnly` trên môi trường khác origin, cần cấu hình `allowCredentials(true)` đi kèm `allowedOrigins` tường minh và bật cơ chế bảo vệ CSRF phù hợp (`docs/backend-foundation.md` dòng 30).
+1. **Ngữ nghĩa `"Lưu đăng nhập"` (`UC001`, Figma `01 · login`, `D-10` — đóng `TBD-AUTH-01`):**
+   - Figma `01 · login` có checkbox `"Lưu đăng nhập"`, còn Sprint 1 FE chưa có checkbox này và lưu JWT trong `sessionStorage`.
+   - **Quy tắc đã chốt (`A-AUTH-07` — Approved `28/11/2026`):**
+     * **Khi KHÔNG chọn `"Lưu đăng nhập"` (`rememberMe = false`):** Phiên ngắn hạn (`8 giờ` hoặc hết hạn khi đóng phiên trình duyệt); FE không lưu token vào `localStorage`.
+     * **Khi CHỌN `"Lưu đăng nhập"` (`rememberMe = true`):** Không kéo dài access JWT HS256 lên nhiều tuần; phát hành **Refresh Token 7 ngày** lưu bản băm trong `auth_session.refresh_token_hash` truyền qua cookie **`HttpOnly; Secure; SameSite=Lax`** (`NFR-SEC-004`) để cấp lại Access Token ngắn hạn. Nếu khóa tài khoản/đổi quyền/đổi mật khẩu, thu hồi đồng loạt cả refresh session.
+     * Lưu ý với FE hiện tại: `SecurityConfiguration.corsConfigurationSource` đang đặt `configuration.setAllowCredentials(false)`. Khi bật cookie `HttpOnly` trên môi trường khác origin ở `QE-30`, cấu hình `allowCredentials(true)` đi kèm `allowedOrigins` tường minh và bật bảo vệ CSRF (`docs/backend-foundation.md`).
 2. **Đăng xuất (`POST /api/v1/auth/logout`, `UC003`, `REQ-AUTH-007..008`):**
    - **Trực tuyến:** Server đặt `auth_session.revoked_at = Instant.now(clock)` trả `204 No Content`. FE xóa token và `UserInfo` khỏi bộ nhớ/storage và chuyển về `/login`.
    - **Phiên đã hết hạn/thu hồi trước đó (`UC003` nhánh A1):** `POST /api/v1/auth/logout` trả `401 UNAUTHENTICATED` hoặc `401 SESSION_REVOKED`; FE bắt trạng thái `401` trong `logout()`, xóa state cục bộ và đưa về `/login` êm đẹp, không báo lỗi nghiệp vụ giả.
@@ -197,7 +194,7 @@ sequenceDiagram
 3. **Chính sách phiên đồng thời (*Concurrent Sessions*):**
    - Bảng `auth_session` (`V1`) cho phép nhiều bản ghi `ACTIVE` cùng `user_id` (`ix_auth_session_user`).
    - **Thực tế nghiệp vụ QNU-Events:** Một sinh viên hoặc Event Owner thường đăng nhập đồng thời trên **laptop** (xem lịch/chiếu QR) và **điện thoại** (quét QR/chụp evidence). Nếu áp dụng chính sách *"đăng nhập mới đá văng phiên cũ"* (`single-session`) sẽ làm gián đoạn buổi điểm danh thực tế.
-   - **Đề xuất (`ASSUMPTION A-AUTH-04`):** Cho phép nhiều phiên đồng thời nhưng giới hạn trần hợp lý theo user (ví dụ tối đa **5 phiên active**; vượt trần sẽ thu hồi phiên cũ nhất theo `issued_at` hoặc yêu cầu đăng xuất bớt), kèm tùy chọn *"Đăng xuất khỏi tất cả thiết bị"* thu hồi mọi `auth_session` của user.
+   - **Quy tắc đã chốt (`A-AUTH-04` — Approved `28/11/2026`):** Cho phép nhiều phiên đồng thời với giới hạn tối đa **5 phiên active / tài khoản** (vượt trần sẽ thu hồi FIFO phiên cũ nhất theo `issued_at`), kèm tùy chọn *"Đăng xuất khỏi tất cả thiết bị"* thu hồi mọi `auth_session` của user.
 
 ---
 
@@ -232,20 +229,20 @@ if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
 ```
 
 - **Vấn đề:** Kiểm tra `user.getStatus() == UserStatus.LOCKED` nằm **trước** `passwordEncoder.matches(...)` (và test `AuthIT.loginWithLockedUserReturnsForbidden` gửi `"password": "AnyPassword"` vẫn nhận `403 FORBIDDEN`). Điều này cho phép bất kỳ ai chưa xác thực dò được `loginId` nào tồn tại và đang bị khóa.
-- **Thiết kế Production (`ASSUMPTION A-AUTH-03`):**
+- **Thiết kế Production `QE-30` (`A-AUTH-03` — Approved `28/11/2026`):**
   1. **Luôn chạy `passwordEncoder.matches(request.password(), user.getPasswordHash())` trước** (hoặc `DUMMY_HASH` nếu không tìm thấy user) để cân bằng thời gian xử lý và không xác nhận trạng thái trước khi đúng mật khẩu.
   2. Nếu mật khẩu **SAI**: tăng bộ đếm sai (nếu user tồn tại) và trả `401 INVALID_CREDENTIALS` (`"Thông tin đăng nhập không chính xác."`), **kể cả khi user đang `LOCKED`**.
   3. Chỉ khi mật khẩu **ĐÚNG** nhưng `user.getStatus() == UserStatus.LOCKED` (khóa quản trị bởi `SYSTEM_ADMIN`): mới từ chối với `403 FORBIDDEN` (hoặc `ACCOUNT_LOCKED`, ghi rõ đã bị quản trị viên khóa, khớp `UC001` 6b) và ghi audit.
-  4. *(Lưu ý chuyển tiếp:* Khi áp dụng sửa đổi này ở Sprint sau, cần cập nhật lại test `AuthIT.loginWithLockedUserReturnsForbidden` dùng mật khẩu đúng cho case `403` và thêm test gửi mật khẩu sai cho user `LOCKED` phải trả `401 INVALID_CREDENTIALS`).*
+  4. *(Lưu ý chuyển tiếp:* Khi áp dụng sửa đổi này ở `QE-30`, cập nhật lại test `AuthIT.loginWithLockedUserReturnsForbidden` dùng mật khẩu đúng cho case `403` và thêm test gửi mật khẩu sai cho user `LOCKED` phải trả `401 INVALID_CREDENTIALS`).*
 
 ### 4.3 Phân biệt Hai Loại Khóa Tài khoản
 
 | Thuộc tính | Khóa tạm thời do Brute-Force (`locked_until > now`) | Khóa quản trị (`app_user.status = 'LOCKED'`) |
 |---|---|---|
 | **Nguyên nhân** | 5 lần nhập sai mật khẩu liên tiếp (`REQ-AUTH-015`). | `SYSTEM_ADMIN` khóa thủ công qua `US1.1` kèm lý do (`UC002`). |
-| **Thời hạn** | Tự hết sau 15 phút (hoặc `SYSTEM_ADMIN` can thiệp mở sớm nếu `TBD-AUTH-02` cho phép). | Vô thời hạn cho đến khi `SYSTEM_ADMIN` thực hiện `UNLOCK`. |
+| **Thời hạn** | Tự hết sau 15 phút (hoặc `SYSTEM_ADMIN` mở khóa sớm kèm `reason` + audit theo `TBD-AUTH-02` đã đóng `28/11/2026`). | Vô thời hạn cho đến khi `SYSTEM_ADMIN` thực hiện `UNLOCK`. |
 | **Phiên hiện tại** | Không tự động thu hồi phiên đang hợp lệ trên thiết bị khác (chỉ chặn tạo phiên mới bằng mật khẩu). | **Thu hồi tức thì toàn bộ `auth_session`** và chặn mọi request kế tiếp (`REQ-AUTH-010`). |
-| **Google OAuth2 (`QE-74`)** | Cần stakeholder chốt: chặn cả Google hay chỉ chặn đăng nhập mật khẩu (`Open Question`). | **Bị chặn tuyệt đối** cả password lẫn Google OAuth (`REQ-AUTH-010`). |
+| **Google OAuth2 (`QE-74`)** | Không khóa Google OAuth khi sai mật khẩu cục bộ (khóa brute-force 15 phút chỉ áp dụng cho đăng nhập mật khẩu — `A-AUTH-06`). | **Bị chặn tuyệt đối** cả password lẫn Google OAuth (`REQ-AUTH-010`). |
 
 ---
 
@@ -266,24 +263,24 @@ sequenceDiagram
     participant AUD as AuditService audit_logs
 
     SV->>FE: Chon Dang nhap voi Google Email QNU
-    FE->>BE: GET /api/v1/auth/oauth2/google de xuat
+    FE->>BE: GET /api/v1/auth/oauth2/google
     BE-->>FE: 302 Redirect kem state va PKCE code_challenge va nonce
     FE->>Google: Xac thuc Google Account
     Google-->>BE: Callback kem authorization code va state
     BE->>Google: Doi authorization code lay id_token qua HTTPS back-channel
     BE->>BE: Verify chu ky Google JWKS, iss, aud = GOOGLE_CLIENT_ID, exp, nonce
-    BE->>BE: Check email_verified = true va domain thuoc EXPLICIT ALLOWLIST
+    BE->>BE: Check email_verified = true va domain thuoc APP_GOOGLE_ALLOWED_DOMAINS
     alt Token khong hop le hoac domain ngoai allowlist
         BE->>AUD: Record AUTH_GOOGLE_REJECTED
-        BE-->>FE: 403 OAUTH_DOMAIN_NOT_ALLOWED de xuat
+        BE-->>FE: 403 OAUTH_DOMAIN_NOT_ALLOWED
     else Email thuoc QNU allowlist
         BE->>DB: Tim app_user theo google_sub hoac LOWER email
         alt Khong tim thay tai khoan da cap truoc
             BE->>AUD: Record AUTH_GOOGLE_REJECTED
-            BE-->>FE: 403 OAUTH_ACCOUNT_NOT_PROVISIONED de xuat - khong tu tao TK
+            BE-->>FE: 403 OAUTH_ACCOUNT_NOT_PROVISIONED - khong tu tao TK
         else Xung dot google_sub hoac status = LOCKED
             BE->>AUD: Record AUTH_GOOGLE_REJECTED
-            BE-->>FE: 403 OAUTH_IDENTITY_MISMATCH de xuat hoac FORBIDDEN
+            BE-->>FE: 403 OAUTH_IDENTITY_MISMATCH hoac FORBIDDEN
         else Tai khoan ACTIVE va khop danh tinh
             BE->>DB: Bind google_sub neu NULL va INSERT auth_session
             BE->>AUD: Record AUTH_GOOGLE_SUCCESS
@@ -292,43 +289,43 @@ sequenceDiagram
     end
 ```
 
-### 5.2 Quy tắc Kiểm tra & Ánh xạ Bắt buộc (`QE-74`, `REQ-AUTH-002`, `UC001` 3a)
+### 5.2 Quy tắc Kiểm tra & Ánh xạ Bắt buộc (`QE-74`, `REQ-AUTH-002`, `UC001` 3a — `D-10` Approved)
 
 1. **Xác minh hoàn toàn tại Backend (`R9`, `NFR-SEC-001`):**
    - Nếu dùng Authorization Code Flow + PKCE (khuyến nghị, hỗ trợ sẵn qua `spring-boot-starter-security-oauth2-client`): Backend nhận `code` từ callback (kiểm tra `state`, `PKCE`, `nonce`), tự gọi Google token endpoint và giải mã `id_token` bằng Google JWKS (`https://www.googleapis.com/oauth2/v3/certs`).
    - Nếu client gửi trực tiếp Google `id_token` (ví dụ Google Identity Services One-Tap hoặc Mobile SDK qua `POST /api/v1/auth/google`): Backend vẫn phải verify chữ ký JWKS, `iss` (`https://accounts.google.com` hoặc `accounts.google.com`), `aud` khớp chính xác `GOOGLE_CLIENT_ID` của QNU-Events, và `exp` theo `Clock` server. **Tuyệt đối không** nhận `email`, `sub`, hay `role` dạng JSON thô từ client.
-2. **Xác minh `email_verified` & Allowlist Miền Email QNU (`TBD-AUTH-03`):**
+2. **Xác minh `email_verified` & Allowlist Miền Email QNU (`D-10` — đóng `TBD-AUTH-03` về kiến trúc; `Q-AUTH-03` giữ mở cho thông số Google Cloud Console):**
    - Bắt buộc `email_verified == true`.
    - Chuẩn hóa `normalizedEmail = email.trim().toLowerCase(Locale.ROOT)`, tách phần domain sau `@` (chỉ có đúng 1 ký tự `@`).
-   - Đối chiếu `domain` với danh sách **allowlist tường minh** cấu hình qua biến môi trường (ví dụ `APP_GOOGLE_ALLOWED_DOMAINS` — chưa chốt giá trị chính thức cho đến khi stakeholder xác nhận `@st.qnu.edu.vn` / `@qnu.edu.vn`).
+   - Đối chiếu `domain` với danh sách **allowlist tường minh đã chốt (`D-10`, `A-AUTH-05` — Approved `28/11/2026`)**: **`APP_GOOGLE_ALLOWED_DOMAINS=st.qnu.edu.vn,qnu.edu.vn`**.
    - **Cấm** kiểm tra bằng `email.endsWith("qnu.edu.vn")` vì sẽ bị lọt tên miền giả mạo kiểu `fakeqnu.edu.vn` hoặc subdomain không được phép (`#9`). Nếu sử dụng claim `hd` (Google Workspace Hosted Domain), chỉ dùng làm lớp kiểm tra bổ sung sau bước kiểm tra `domain` trong allowlist.
 3. **Ánh xạ chặt chẽ về `app_user` đã cấp trước & Xử lý Trùng / Không khớp:**
-   - Trong `V2` migration (do `A0` tạo theo `R6`), `app_user` cần bổ sung `email varchar(255)` với unique index không phân biệt hoa thường (`CREATE UNIQUE INDEX uq_app_user_email_lower ON app_user (LOWER(email)) WHERE email IS NOT NULL`) và `google_sub varchar(128)` với unique constraint (`UNIQUE (google_sub)`).
-   - **Không tồn tại bản ghi khớp (`Unmatched`):** Từ chối ngay *(mã lỗi đề xuất cho `ErrorCode`: `OAUTH_ACCOUNT_NOT_PROVISIONED`)* với thông báo chuẩn SRS (`UC001` 3a.4a): *"Chỉ chấp nhận tài khoản email do Trường Đại học Quy Nhơn cấp và đã được khai báo trên hệ thống"*. **Không bao giờ tự tạo `app_user` mới** (*No auto-provisioning / auto-signup*).
+   - Trong `V2__sprint2_core_extensions.sql` (do `A0` tạo theo `R6`), `app_user` bổ sung `email varchar(255)` với unique index không phân biệt hoa thường (`CREATE UNIQUE INDEX uq_app_user_email_lower ON app_user (LOWER(email)) WHERE email IS NOT NULL`) và `google_sub varchar(128)` với unique constraint (`UNIQUE (google_sub)`).
+   - **Không tồn tại bản ghi khớp (`Unmatched`):** Từ chối ngay bằng **`403 OAUTH_ACCOUNT_NOT_PROVISIONED`** ([`docs/api/error-codes.md`](../api/error-codes.md)) với thông báo chuẩn SRS (`UC001` 3a.4a): *"Chỉ chấp nhận tài khoản email do Trường Đại học Quy Nhơn cấp và đã được khai báo trên hệ thống"*. **Không bao giờ tự tạo `app_user` mới** (*No auto-provisioning / auto-signup*).
    - **Lần đầu liên kết (`google_sub IS NULL`):** Khi tìm thấy duy nhất 1 `app_user` khớp `LOWER(email)` và đang `ACTIVE`, cập nhật `google_sub = token.sub` bằng điều kiện nguyên tử (`WHERE id = :id AND google_sub IS NULL`) để tránh race condition khi người dùng bấm đúp.
-   - **Không khớp (`Mismatch`):** Nếu `app_user` tìm thấy theo `email` đã có `google_sub` khác với `token.sub` (hoặc `token.sub` đã liên kết với một `app_user` khác có `email` khác), **TỪ CHỐI** *(mã lỗi đề xuất: `OAUTH_IDENTITY_MISMATCH`)*, ghi cảnh báo vào `audit_logs` để `SYSTEM_ADMIN` kiểm tra (tránh chiếm tài khoản khi email trường bị tái cấp phát cho người khác).
+   - **Không khớp (`Mismatch`):** Nếu `app_user` tìm thấy theo `email` đã có `google_sub` khác với `token.sub` (hoặc `token.sub` đã liên kết với một `app_user` khác có `email` khác), **TỪ CHỐI** bằng **`403 OAUTH_IDENTITY_MISMATCH`** ([`docs/api/error-codes.md`](../api/error-codes.md)), ghi cảnh báo vào `audit_logs` để `SYSTEM_ADMIN` kiểm tra (tránh chiếm tài khoản khi email trường bị tái cấp phát cho người khác).
    - **Trùng dữ liệu (`Duplicate`):** Nhờ ràng buộc `UNIQUE` ở DB và kiểm tra trước khi import CSV (`QE-73`), không thể tồn tại 2 user dùng chung 1 `email` hoặc 1 `google_sub`. Nếu dữ liệu legacy vi phạm trước khi thêm constraint, migration/import phải chặn lại trước.
-4. **Chống Leo thang Đặc quyền (`NFR-SEC-001`, `Appendix A`) & Quy tắc Vai trò:**
-   - Khi tài khoản Google đã khớp `app_user` đang `ACTIVE`, hệ thống đọc danh sách quyền từ bảng `user_role` trong DB. Không bao giờ tự cấp `EVENT_OWNER`, `CLASS_REPRESENTATIVE` hay `SYSTEM_ADMIN` dựa trên domain email.
+4. **Chống Leo thang Đặc quyền (`NFR-SEC-001`, `Appendix A`) & Phạm vi Vai trò Đã Chốt (`D-10`):**
+   - Khi tài khoản Google đã khớp `app_user` đang `ACTIVE`, hệ thống đọc danh sách quyền từ bảng `user_role` trong DB. Không bao giờ tự cấp `EVENT_OWNER`, `CLASS_REPRESENTATIVE`, `CVHT` hay `SYSTEM_ADMIN` dựa trên domain email.
    - Tài khoản bị khóa (`LOCKED`) bị từ chối mọi đăng nhập Google (`REQ-AUTH-010`).
    - **Cộng sinh với MSSV + Mật khẩu:** Cả hai phương thức đăng nhập trỏ về **cùng 1 `app_user.id`** và tạo phiên trên **cùng bảng `auth_session`**. Sinh viên đã đăng nhập bằng Google hay bằng `loginId + password` đều dùng chung lịch sử, đăng ký, điểm danh và chịu chung lệnh khóa/logout.
    - **Lưu ý `password_hash NOT NULL` trong `V1`:** Vì `V1` đặt `app_user.password_hash` là `NOT NULL`, mọi tài khoản sinh viên vẫn có `password_hash` hợp lệ (hoặc hash ngẫu nhiên trước khi kích hoạt mật khẩu); nếu sau này cho phép tài khoản *Google-only* (`password_hash IS NULL`), luồng login mật khẩu phải kiểm tra `user.getPasswordHash() != null` trước khi gọi `passwordEncoder.matches` để tránh `IllegalArgumentException` từ BCrypt.
-   - **Chú ý cho Stakeholder (`QE-74`):** Xác nhận xem Google OAuth chỉ mở cho `STUDENT` (bao gồm `STUDENT` kiêm `CLASS_REPRESENTATIVE`) hay cho phép cả `EVENT_OWNER` / `SYSTEM_ADMIN` nếu email QNU của họ có trong `app_user`.
+   - **Phạm vi vai trò (`D-10`, `A-AUTH-05` — Approved `28/11/2026`):** Google OAuth mở thống nhất cho **mọi vai trò** (`STUDENT`, `CLASS_REPRESENTATIVE`, `CVHT`, `EVENT_OWNER`, `SYSTEM_ADMIN`) đã được cấp phát trước trong `app_user` với email QNU hợp lệ (vẫn giữ nguyên nguyên tắc không tự cấp tài khoản).
 
 ---
 
 ## 6. Phân tích Khoảng trống Giao diện Figma (`HX4313AoLQX4zNidDz2Ixo`) & FE Hiện tại
 
-Đối chiếu thiết kế Figma đã xác minh (`01 · login` và `System Admin / US1.1`) cùng mã nguồn `QNU-Events FE` (`0fe4a3c`) với yêu cầu của `QE-30`, `QE-36`, `QE-73`, `QE-74`, `QE-35`:
+Đối chiếu thiết kế Figma đã xác minh (`01 · login` và `System Admin / US1.1`) cùng mã nguồn `QNU-Events FE` với yêu cầu của `QE-30`, `QE-36`, `QE-73`, `QE-74`, `QE-35`:
 
 ### 6.1 Màn hình Đăng nhập (`01 · login` vs `LoginPage.tsx` vs `QE-30/36/74`)
 
 | Thành phần UI / Luồng | Figma (`01 · login`) | FE hiện tại (`LoginPage.tsx`, `AuthContext.tsx`) | Khoảng trống cần bổ sung cho Production |
 |---|---|---|---|
 | **Form Tài khoản + Mật khẩu** | Có `Tài khoản`, `Mật khẩu`, nút `Đăng nhập`. | Có `Tên đăng nhập / Mã sinh viên` (`loginId`), `Mật khẩu` (`password`), nút `Đăng nhập`. | Bổ sung hint/validation rõ cho MSSV/username (`5–50` ký tự, không dấu cách). |
-| **Checkbox `"Lưu đăng nhập"`** | **Có** trên frame `01 · login`. | **Thiếu** hoàn toàn; `AuthContext.tsx` chỉ lưu `sessionStorage`. | Bổ sung checkbox `"Lưu đăng nhập"` gửi cờ `rememberMe` lên API sau khi `TBD-AUTH-01` được chốt. |
-| **Nút Đăng nhập Google (`QE-74`)** | **Thiếu** trên Figma `01 · login`. | **Thiếu**. | Cần bổ sung frame Figma & component nút *"Đăng nhập bằng Google (Email QNU)"* + trang/xử lý `/auth/callback` (hiển thị lỗi rõ khi dùng Gmail cá nhân hoặc email chưa cấp phát). |
-| **Quên / Đặt lại / Đổi mật khẩu (`QE-30`, `QE-73`)** | **Thiếu** trên Figma `01 · login`. | **Thiếu**. | Cần bổ sung link *"Quên mật khẩu?"*, màn hình nhập email/mã xác nhận đặt lại mật khẩu, và màn bắt buộc đổi mật khẩu lần đầu (nếu chọn phương án temp password ở `TBD-AUTH-01`). |
+| **Checkbox `"Lưu đăng nhập"`** | **Có** trên frame `01 · login`. | **Thiếu** hoàn toàn; `AuthContext.tsx` chỉ lưu `sessionStorage`. | Bổ sung checkbox `"Lưu đăng nhập"` gửi cờ `rememberMe` (`A-AUTH-07` — Refresh Cookie 7 ngày `HttpOnly`) khi triển khai `QE-30`. |
+| **Nút Đăng nhập Google (`QE-74`)** | **Thiếu** trên Figma `01 · login`. | **Thiếu**. | Bổ sung frame Figma & component nút *"Đăng nhập bằng Google (Email QNU)"* + xử lý `/auth/callback` (hiển thị lỗi rõ khi dùng Gmail cá nhân hoặc email chưa cấp phát). |
+| **Quên / Đặt lại / Đổi mật khẩu (`QE-30`, `QE-73`)** | **Thiếu** trên Figma `01 · login`. | **Thiếu**. | Bổ sung link *"Quên mật khẩu?"*, màn hình nhập email/OTP/mã xác nhận đặt lại mật khẩu, và màn bắt buộc đổi mật khẩu lần đầu (`must_change_password = true`, `A-AUTH-08`). |
 | **Tài khoản Demo Quick-fill** | Không có. | Có 2 nút `Chủ sự kiện` (`owner01`) và `Sinh viên (K49)` (`sv001`) gắn cứng `'Demo@12345'` trong `LoginPage.tsx:59-63, 112-136`. | **Phải ẩn/loại bỏ khỏi build production** (chỉ bật khi `import.meta.env.DEV` hoặc cờ demo tường minh). |
 
 ### 6.2 Vòng đời Phiên, Đăng xuất & Đa vai trò trong Shell Ứng dụng
@@ -354,7 +351,7 @@ Figma đã thiết kế **9 màn hình** trong luồng `System Admin / US1.1` ba
 **Khoảng trống đối chiếu:**
 - **FE hiện tại (`router.tsx`):** Có **0/9** màn hình `SYSTEM_ADMIN`.
 - **Import sinh viên (`QE-73` / `UC025`):** Trong Figma, các màn Master Data CRUD (Khoa / Ngành / Lớp / Import Sinh viên CSV / Học kỳ) đang đặt dưới nhánh **`ADMIN / EVENT OWNER`**, trong khi `Proposal §11.1` và `SRS UC025` quy định **`System Admin`** mới là người tạo tài khoản sinh viên từ dữ liệu nhà trường! Cần chốt lại quyền màn hình này trên Figma để không gán nhầm quyền tạo tài khoản hệ thống cho `EVENT_OWNER`.
-- **Reset mật khẩu bởi Admin:** Luồng `US1.1` chưa thể hiện nút/modal *Đặt lại mật khẩu* trên màn chi tiết tài khoản nếu `TBD-AUTH-01` chọn hướng Admin hỗ trợ reset.
+- **Reset mật khẩu bởi Admin (`A-AUTH-08`):** Luồng `US1.1` chưa thể hiện nút/modal *Đặt lại mật khẩu* (sinh mật khẩu tạm ngẫu nhiên hoặc link đặt lại 1 lần + `must_change_password = true`) trên màn chi tiết tài khoản.
 
 ---
 
