@@ -30,6 +30,24 @@ public class Attendance {
     @Column(name = "recorded_at", nullable = false)
     private Instant recordedAt;
 
+    @Column(name = "gps_lat")
+    private Double gpsLat;
+
+    @Column(name = "gps_lng")
+    private Double gpsLng;
+
+    @Column(name = "gps_accuracy_meters")
+    private Double gpsAccuracyMeters;
+
+    @Column(name = "gps_distance_meters")
+    private Double gpsDistanceMeters;
+
+    @Column(name = "suspicious_flag", nullable = false)
+    private boolean suspiciousFlag = false;
+
+    @Column(name = "suspicious_reason", length = 200)
+    private String suspiciousReason;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt = Instant.now();
 
@@ -51,6 +69,12 @@ public class Attendance {
     public String getMethod() { return method; }
     public String getStatus() { return status; }
     public Instant getRecordedAt() { return recordedAt; }
+    public Double getGpsLat() { return gpsLat; }
+    public Double getGpsLng() { return gpsLng; }
+    public Double getGpsAccuracyMeters() { return gpsAccuracyMeters; }
+    public Double getGpsDistanceMeters() { return gpsDistanceMeters; }
+    public boolean isSuspiciousFlag() { return suspiciousFlag; }
+    public String getSuspiciousReason() { return suspiciousReason; }
     public Instant getCreatedAt() { return createdAt; }
 
     public void setId(UUID id) { this.id = id; }
@@ -59,6 +83,11 @@ public class Attendance {
     public void setMethod(String method) { this.method = method; }
     public void setStatus(String status) { this.status = status; }
     public void setRecordedAt(Instant recordedAt) { this.recordedAt = recordedAt; }
+    public void setGpsLat(Double gpsLat) { this.gpsLat = gpsLat; }
+    public void setGpsLng(Double gpsLng) { this.gpsLng = gpsLng; }
+    public void setGpsAccuracyMeters(Double gpsAccuracyMeters) { this.gpsAccuracyMeters = gpsAccuracyMeters; }
+    public void setGpsDistanceMeters(Double gpsDistanceMeters) { this.gpsDistanceMeters = gpsDistanceMeters; }
+    public void setSuspiciousFlag(boolean suspiciousFlag) { this.suspiciousFlag = suspiciousFlag; }
+    public void setSuspiciousReason(String suspiciousReason) { this.suspiciousReason = suspiciousReason; }
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
 }
-

@@ -61,6 +61,15 @@ public class Event {
     @Column(name = "qr_grace_seconds", nullable = false)
     private int qrGraceSeconds = 3;
 
+    @Column(name = "gps_lat")
+    private Double gpsLat;
+
+    @Column(name = "gps_lng")
+    private Double gpsLng;
+
+    @Column(name = "allowed_radius_meters")
+    private Integer allowedRadiusMeters;
+
     @Column(name = "quota_total", nullable = false)
     private int quotaTotal;
 
@@ -197,5 +206,11 @@ public class Event {
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(Instant updatedAt) { this.updatedAt = updatedAt; }
+    public Double getGpsLat() { return gpsLat; }
+    public void setGpsLat(Double gpsLat) { this.gpsLat = gpsLat; }
+    public Double getGpsLng() { return gpsLng; }
+    public void setGpsLng(Double gpsLng) { this.gpsLng = gpsLng; }
+    public Integer getAllowedRadiusMeters() { return allowedRadiusMeters; }
+    public void setAllowedRadiusMeters(Integer allowedRadiusMeters) { this.allowedRadiusMeters = allowedRadiusMeters; }
 }
 

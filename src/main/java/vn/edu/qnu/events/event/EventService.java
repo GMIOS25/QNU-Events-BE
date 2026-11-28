@@ -23,12 +23,15 @@ import java.util.stream.Collectors;
 @Service
 public class EventService {
 
+    public static final int DEFAULT_GPS_RADIUS_METERS = 60;
+
     private final EventRepository eventRepository;
     private final EventValidator eventValidator;
     private final AuditService auditService;
     private final Clock clock;
     private final RegistrationRepository registrationRepository;
     private final OrgClassRepository orgClassRepository;
+    private final int defaultGpsRadiusMeters;
 
     public EventService(
             EventRepository eventRepository,
@@ -38,18 +41,43 @@ public class EventService {
             RegistrationRepository registrationRepository,
             OrgClassRepository orgClassRepository
     ) {
+        this(
+                eventRepository,
+                eventValidator,
+                auditService,
+                clock,
+                registrationRepository,
+                orgClassRepository,
+                DEFAULT_GPS_RADIUS_METERS
+        );
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public EventService(
+            EventRepository eventRepository,
+            EventValidator eventValidator,
+            AuditService auditService,
+            Clock clock,
+            RegistrationRepository registrationRepository,
+            OrgClassRepository orgClassRepository,
+            @org.springframework.beans.factory.annotation.Value("${app.gps.default-radius-meters:60}") int defaultGpsRadiusMeters
+    ) {
         this.eventRepository = eventRepository;
         this.eventValidator = eventValidator;
         this.auditService = auditService;
         this.clock = clock;
         this.registrationRepository = registrationRepository;
         this.orgClassRepository = orgClassRepository;
+        this.defaultGpsRadiusMeters = defaultGpsRadiusMeters > 0 ? defaultGpsRadiusMeters : DEFAULT_GPS_RADIUS_METERS;
     }
 
     @Transactional
     public EventDetail create(EventUpsert upsert) {
         CurrentUser currentUser = CurrentUserProvider.require();
-        eventValidator.validate(upsert);
+        AttendanceMethod effectiveMethod = upsert.attendanceMethod() != null
+                ? upsert.attendanceMethod()
+                : AttendanceMethod.DYNAMIC_QR;
+        eventValidator.validate(upsert, effectiveMethod);
 
         Event event = new Event(
                 UUID.randomUUID(),
@@ -62,7 +90,7 @@ public class EventService {
                 upsert.registrationDeadline(),
                 upsert.attendanceOpenAt(),
                 upsert.attendanceCloseAt(),
-                upsert.attendanceMethod(),
+                effectiveMethod,
                 10,
                 3,
                 upsert.quotaTotal(),
@@ -70,6 +98,8 @@ public class EventService {
                 upsert.activityPoints(),
                 upsert.audienceClassIds()
         );
+        applyGpsConfiguration(event, upsert);
+        eventValidator.validateGpsConfiguration(event);
 
         Event saved = eventRepository.saveAndFlush(event);
         return toDetail(saved);
@@ -101,7 +131,10 @@ public class EventService {
             throw new ApiException(ErrorCode.VERSION_CONFLICT);
         }
 
-        eventValidator.validate(upsert);
+        AttendanceMethod effectiveMethod = upsert.attendanceMethod() != null
+                ? upsert.attendanceMethod()
+                : event.getAttendanceMethod();
+        eventValidator.validate(upsert, effectiveMethod);
 
         event.setTitle(upsert.title());
         event.setDescription(upsert.description());
@@ -111,9 +144,9 @@ public class EventService {
         event.setRegistrationDeadline(upsert.registrationDeadline());
         event.setAttendanceOpenAt(upsert.attendanceOpenAt());
         event.setAttendanceCloseAt(upsert.attendanceCloseAt());
-        if (upsert.attendanceMethod() != null) {
-            event.setAttendanceMethod(upsert.attendanceMethod());
-        }
+        event.setAttendanceMethod(effectiveMethod);
+        applyGpsConfiguration(event, upsert);
+        eventValidator.validateGpsConfiguration(event);
         event.setQuotaTotal(upsert.quotaTotal());
         event.setActivityType(upsert.activityType());
         event.setActivityPoints(upsert.activityPoints());
@@ -168,6 +201,24 @@ public class EventService {
 
         if (!request.confirm()) {
             throw new ApiException(ErrorCode.VALIDATION_FAILED, "Cần xác nhận trước khi công bố sự kiện.");
+        }
+
+        if (event.getAttendanceMethod() == AttendanceMethod.GPS && !eventValidator.hasValidGpsConfiguration(event)) {
+            auditService.record(
+                    currentUser.userId(),
+                    "EVENT_OWNER",
+                    "EVENT_PUBLISH_DENIED",
+                    "EVENT",
+                    event.getId().toString(),
+                    "DENIED",
+                    "GPS_NOT_CONFIGURED",
+                    Map.of(
+                            "title", event.getTitle(),
+                            "version", event.getVersion() != null ? event.getVersion() : 0
+                    ),
+                    UUID.randomUUID().toString()
+            );
+            throw new ApiException(ErrorCode.GPS_NOT_CONFIGURED);
         }
 
         if (event.getPreviewedVersion() == null) {
@@ -356,8 +407,25 @@ public class EventService {
                 e.getPreviewedVersion(),
                 e.getPublishedAt(),
                 audienceClasses,
-                eligible
+                eligible,
+                e.getGpsLat(),
+                e.getGpsLng(),
+                e.getAllowedRadiusMeters()
         );
+    }
+
+    private void applyGpsConfiguration(Event event, EventUpsert upsert) {
+        if (event.getAttendanceMethod() == AttendanceMethod.GPS) {
+            event.setGpsLat(upsert.gpsLat());
+            event.setGpsLng(upsert.gpsLng());
+            event.setAllowedRadiusMeters(
+                    upsert.allowedRadiusMeters() != null ? upsert.allowedRadiusMeters() : defaultGpsRadiusMeters
+            );
+        } else {
+            event.setGpsLat(upsert.gpsLat());
+            event.setGpsLng(upsert.gpsLng());
+            event.setAllowedRadiusMeters(upsert.allowedRadiusMeters());
+        }
     }
 
     public EventSummary toSummary(Event e) {
