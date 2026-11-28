@@ -3,8 +3,8 @@
 | Metadata | Details |
 |---|---|
 | **RFC Identifier** | `RFC-004-DYNAMIC-QR-VERIFICATION` |
-| **Associated Tickets** | **`QE-44`** (Đặc tả token QR, thời gian grace và chống replay), [`QE-56`](file:///c:/Users/fleya/QNU-Events-BE/docs/agent/sprint1-rescue-plan.md) (Dynamic QR Engine), [`QE-54`](file:///c:/Users/fleya/QNU-Events-BE/docs/agent/sprint1-rescue-plan.md) (Attempt Boundary & Concurrency), [`QE-57`](file:///c:/Users/fleya/QNU-Events-FE) (Frontend Attendance Panel) |
-| **Status** | **PROPOSED / PENDING STAKEHOLDER SIGN-OFF** (Quy tắc R11) |
+| **Associated Tickets** | **`QE-44`** (Đặc tả token QR, thời gian grace và chống replay), [`QE-56`](../agent/sprint1-rescue-plan.md) (Dynamic QR Engine), [`QE-54`](../agent/sprint1-rescue-plan.md) (Attempt Boundary & Concurrency), `QE-57` (Frontend Attendance Panel — `QNU-Events-FE`) |
+| **Status** | **✅ APPROVED (28/11/2026 — đồng bộ `D-6`, `D-7`, [`../decisions.md`](../decisions.md) & [`../api/error-codes.md`](../api/error-codes.md))** |
 | **Authors** | Agent A3 — Đan (`@Dan28-05`), Senior Backend & Security Specialist |
 | **Reviewers** | Agent A0 — Trần Thanh Cường (`@GMIOS25`), Tech Lead & Platform Architect |
 | **Target Milestone** | Sprint 1 — Production Readiness (Milestone M1) |
@@ -169,21 +169,21 @@ stateDiagram-v2
 
 ---
 
-## 4. Đặc Tả Ranh Giới Kiến Trúc Ngoại Tuyến (Offline Sync Boundary)
+## 4. Đặc Tả Ranh Giới Kiến Trúc Ngoại Tuyến (Offline Sync Boundary — `D-6`)
 
-### 4.1. Thông Nghĩa Bảo Mật: Nghịch Lý Của "Offline Prefetch"
+### 4.1. Thông Nghĩa Bảo Mật: Cấm Tuyệt Đối "Offline Prefetch"
 > [!CAUTION]
-> **Định lý cơ bản về bảo mật Dynamic QR:** Mã QR xoay vòng thời gian thực (Time-Bound Dynamic QR) và Tải trước ngoại tuyến (Offline Prefetch) là hai khái niệm **triệt tiêu lẫn nhau về mặt toán học (Mutually Exclusive)**.
+> **Định lý cơ bản về bảo mật Dynamic QR:** Mã QR xoay vòng thời gian thực (Time-Bound Dynamic QR) và Tải trước ngoại tuyến (Offline Prefetch — tải sẵn chuỗi token tương lai về máy sinh viên) là hai khái niệm **triệt tiêu lẫn nhau về mặt toán học (Mutually Exclusive)**.
 > 
-> Nếu ứng dụng di động của sinh viên được phép "tải trước" 360 token cho 1 giờ sự kiện về máy để dùng khi không có mạng, kẻ tấn công có thể dịch ngược bộ nhớ RAM hoặc LocalStorage của ứng dụng, trích xuất danh sách token chưa phát, và chia sẻ cho người khác điểm danh từ xa. Điều này phá vỡ hoàn toàn nguyên lý chống điểm danh hộ của Sprint 1.
+> Nếu ứng dụng di động của sinh viên được phép "tải trước" 360 token cho 1 giờ sự kiện về máy, kẻ tấn công có thể dịch ngược bộ nhớ RAM hoặc LocalStorage, trích xuất danh sách token chưa phát và chia sẻ cho người khác điểm danh từ xa. Do đó hệ thống **cấm tuyệt đối Offline Prefetch**.
 
-### 4.2. Nguyên Tắc Phân Tách Thiết Kế (Separation of Concerns)
-Nhằm giữ đúng cam kết cứu vãn tiến độ Sprint 1 (Quyết định D2 trong `docs/agent/sprint1-rescue-plan.md`):
-1. **Phạm vi Sprint 1 (QE-56 / QE-54):** Chỉ triển khai luồng **Online Dynamic QR Check-in**. Toàn bộ mã nguồn backend, migration và test case của Sprint 1 được làm sạch, không tồn tại bất kỳ endpoint hoặc logic offline sync chưa hoàn thiện nào.
-2. **Thiết Kế Định Hướng Cho Sprint 4 (QE-16 / QE-33):**
-   Chế độ điểm danh ngoại tuyến khi hội trường mất sóng hoàn toàn sẽ được thiết kế theo mô hình **Store-and-Forward (Capture tại chỗ $\rightarrow$ Ký số biên lai $\rightarrow$ Sync sau khi có mạng)**:
-   - **Người tổ chức (Event Staff) dùng thiết bị quét:** Thiết bị của cán bộ quản lý (đã đăng nhập) quét thẻ sinh viên / mã cá nhân của người tham dự, ghi nhận thời gian offline kèm chữ ký số cục bộ của Staff Device Key.
-   - **Đồng bộ hậu kỳ:** Khi thiết bị cán bộ có mạng trở lại, toàn bộ tệp batch điểm danh sẽ được gửi lên qua endpoint đồng bộ bảo mật (`/api/v1/events/{id}/attendance/offline-batch-sync`), xác thực dựa trên quyền của Staff chứ không dựa trên token 10 giây của sinh viên.
+### 4.2. Cơ chế Được Phép từ Sprint 3: Student Offline Store-and-Forward (`24 giờ`)
+Theo quyết định **`D-6` (`28/11/2026`, đóng `TBD-ATT-01`)** và [`attendance-consistency-design.md` §6.3](attendance-consistency-design.md):
+1. **Phạm vi Sprint 1 (`QE-56` / `QE-54`):** Chỉ triển khai luồng **Online Dynamic QR Check-in** (`qr1.<eventId>.<epoch>.<sig>`, 10s + grace 3s).
+2. **Thiết kế chính thức cho Sprint 3 (`QE-33` / `QE-76`):** Khi hội trường mất sóng cục bộ, hệ thống áp dụng mô hình **Student Offline Store-and-Forward** (KHÔNG phải Offline Prefetch):
+   - Ban tổ chức vẫn chiếu mã QR động 10s bình thường; sinh viên (đã **`REGISTERED`** trước đó) quét mã QR **đang được chiếu** và lưu bản ghi cục bộ (`PENDING_SYNC` trong IndexedDB kèm `idempotencyKey` UUID v4).
+   - Khi thiết bị có mạng trở lại trong cửa sổ **`OFFLINE_SYNC_MAX_WINDOW = 24 giờ` sau `attendance_close_at`** (và trước khi job `NO_SHOW` chạy), client gửi đồng bộ qua endpoint `/api/v1/events/{id}/attendance/offline-sync`.
+   - Máy chủ kiểm tra chữ ký HMAC-SHA256, xác minh `epoch` đã ký nằm trong `[attendance_open_at, attendance_close_at]` (không tin đồng hồ client — `R9`), kiểm tra cờ per-event `events.allow_offline_sync = true`, và gắn cờ hậu kiểm `is_offline_late_sync = true` nếu nhận sau `attendance_close_at`. Quá cửa sổ 24 giờ trả **`422 OFFLINE_SYNC_WINDOW_EXPIRED`** (`counted = true`).
 
 ---
 
@@ -206,7 +206,7 @@ Nhằm giữ đúng cam kết cứu vãn tiến độ Sprint 1 (Quyết định 
 | **TC-13** | Gửi lại cùng Idempotency Key (Retry) | Trùng `(event, student, key)` đã lưu | **200 / 4xx**| Giữ nguyên | **KHÔNG** | Giữ nguyên | N/A | Cơ chế Replay Response. Trả lại chính xác response body & HTTP status đã cached. |
 | **TC-14** | Chạm trần 3 lần thử vi phạm | Đã tích lũy đủ 3 lần `counted = true` | **409** | `ATTEMPT_LIMIT_REACHED` | **KHÔNG** | 0 | **false** | Bị từ chối ngay từ vòng ngoài (Gatekeeper check), không cần giải mã token. |
 | **TC-15** | Tranh chấp đồng thời (Parallel 10 threads) | Cùng 1 sinh viên gửi 10 request cùng lúc | **200 / 409**| Tùy thứ tự | **Hợp lệ 1**| Tùy thứ tự | N/A | PostgreSQL Advisory Lock tuần tự hóa: 1 thread vào trước được ACCEPTED, 9 thread sau 409. |
-| **TC-16** | Thiếu Header Idempotency-Key | Header không gửi lên trong request | **400** | `MISSING_HEADER` | **KHÔNG** | Giữ nguyên | **true** | Bị chặn ngay từ tầng validate request header của Spring Web. |
+| **TC-16** | Thiếu Header `Idempotency-Key` | Header không gửi lên trong request | **400** | `VALIDATION_FAILED` | **KHÔNG** | Giữ nguyên | **true** | Bị chặn ngay từ tầng validate request header (`GlobalExceptionHandler` / [`error-codes.md`](../api/error-codes.md)). |
 
 ---
 
@@ -319,7 +319,7 @@ Hệ thống được đánh giá an ninh nghiêm ngặt dựa trên khung mô h
    Nếu sinh viên tại hội trường sử dụng Discord/Zoom có kết nối 5G tốc độ cao để chia sẻ màn hình trực tiếp cho người ở xa, mã QR có thể được quét trong khoảng thời gian sống 10s.
 2. **Biện pháp đối ứng trong lộ trình tương lai (Sprint sau):**
    Bản MVP của Sprint 1 tập trung hoàn thiện tầng Mật mã học & Giới hạn thử. Để xử lý triệt để bài toán livestream, kiến trúc hệ thống đã sẵn sàng tích hợp 2 lớp phòng vệ bổ sung ở Sprint 2/3:
-   - **Xác thực Bán kính GPS (`QE-55`):** Bắt buộc tọa độ GPS của thiết bị quét phải nằm trong bán kính $R \le 100\text{m}$ quanh hội trường.
+   - **Xác thực Bán kính GPS (`QE-55`, `D-7`):** Cấu hình bán kính theo từng sự kiện (`allowed_radius_meters ∈ [10, 500]`, mặc định $R \le 50\text{m}$ quanh tâm tọa độ sự kiện theo `SRS REQ-EVT-009`; `422 GPS_OUT_OF_RANGE` nếu vượt bán kính).
    - **Dynamic Watermarking:** Chiếu mờ mã số sinh viên của người trình chiếu trên nền mã QR để truy cứu trách nhiệm nếu có hành vi phát tán trực tiếp.
 
 ---
@@ -357,34 +357,34 @@ Mọi sự kiện điểm danh (thành công hoặc bị từ chối) đều đ�
 
 ---
 
-## 9. Nhật Ký Quyết Định Kỹ Thuật (Architecture Decision Records — ADR theo Rule R11)
+## 9. Nhật Ký Quyết Định Kỹ Thuật (`QR-ADR-01..QR-ADR-04` — Rule R11)
 
-Theo **Quy tắc R11** trong [`AGENTS.md`](file:///c:/Users/fleya/QNU-Events-BE/AGENTS.md), các quyết định kỹ thuật vượt ngoài tài liệu SRS ban đầu được lưu vết chính thức dưới dạng ADR chờ ký duyệt:
+Theo **Quy tắc R11** trong [`AGENTS.md`](../../AGENTS.md) và [`decisions.md`](../decisions.md), các quyết định kỹ thuật đặc thù cho phân hệ Dynamic QR được chuẩn hóa dưới mã `QR-ADR-*` (tránh trùng mã `A-04..A-07` trong `decisions.md`) và đã được phê duyệt ngày `28/11/2026`:
 
-### ADR-01: Grace Period Cố Định 3 Giây Cho Chu Kỳ Xoay Vòng 10 Giây
+### QR-ADR-01: Grace Period Cố Định 3 Giây Cho Chu Kỳ Xoay Vòng 10 Giây
 - **Ngữ cảnh:** Mạng 4G/Wifi trường học thường có độ trễ biến động khi có hàng nghìn sinh viên tụ tập. Nếu không có thời gian ân hạn, sinh viên quét mã ở giây thứ 9.5 sẽ bị từ chối oan uổng khi gói tin tới server ở giây thứ 10.2.
-- **Quyết định:** Cố định thời gian ân hạn là chính xác $3\text{ giây}$ cho epoch liền kề trước đó ($E - 1$). Tổng thời gian sống của một token là $13\text{ giây}$.
-- **Trạng thái:** **CHỜ DUYỆT (Reviewing - Assumption A-04)**.
+- **Quyết định:** Cố định thời gian ân hạn là chính xác $3\text{ giây}$ cho epoch liền kề trước đó ($E - 1$). Tổng thời gian sống của một token trực tuyến là $13\text{ giây}$ (`A-05` trong `decisions.md`).
+- **Trạng thái:** **✅ APPROVED (28/11/2026 — đồng bộ `A-05`)**.
 
-### ADR-02: Phân Tách Lỗi Vi Phạm Phạt Lượt (`counted = true`) Và Lỗi Khách Quan
-- **Ngữ cảnh:** Sinh viên có ngân sách 3 lần thử. Nếu sinh viên bấm quét lúc ban tổ chức chưa mở cổng điểm danh hoặc quét nhầm khi chưa đăng ký mà bị trừ lượt thì sẽ mất quyền tham gia một cách không công bằng.
-- **Quyết định:** Chỉ đánh dấu `counted = true` đối với các lỗi làm suy yếu tính toàn vẹn của mã (`QR_EXPIRED`, `QR_BAD_SIGNATURE`, `QR_WRONG_EVENT`, `QR_MALFORMED`, `QR_FROM_FUTURE`). Các lỗi ngữ cảnh hệ thống (`ATTENDANCE_NOT_OPEN`, `NOT_REGISTERED`, `ALREADY_CHECKED_IN`) đánh dấu `counted = false`.
-- **Trạng thái:** **CHỜ DUYỆT (Reviewing - Assumption A-05)**.
+### QR-ADR-02: Phân Tách Lỗi Vi Phạm Phạt Lượt (`counted = true`) Và Lỗi Khách Quan
+- **Ngữ cảnh:** Sinh viên có ngân sách 3 lần thử cho các kênh xác thực tự động (`DYNAMIC_QR`, `GPS`, `OFFLINE_QR`, `OFFLINE_GPS`). Nếu sinh viên bấm quét lúc ban tổ chức chưa mở cổng điểm danh hoặc quét nhầm khi chưa đăng ký mà bị trừ lượt thì sẽ mất quyền tham gia không công bằng.
+- **Quyết định:** Chỉ đánh dấu `counted = true` đối với các lỗi vi phạm xác thực (`QR_*`, `GPS_OUT_OF_RANGE`, `OFFLINE_SYNC_WINDOW_EXPIRED`). Các lỗi tiền điều kiện hệ thống (`ATTENDANCE_NOT_OPEN`, `NOT_REGISTERED`, `ALREADY_CHECKED_IN`, `VALIDATION_FAILED`) và lần thử thứ 4 (`ATTEMPT_LIMIT_REACHED`) đánh dấu `counted = false`; kênh `EVIDENCE` (chờ BCS duyệt) tách riêng không bị chặn bởi 3 lượt tự động (`D-7`).
+- **Trạng thái:** **✅ APPROVED (28/11/2026 — đồng bộ `A-04` / `D-7`)**.
 
-### ADR-03: Cấm Tuyệt Đối Chế Độ Offline Prefetch Đối Với Dynamic QR
-- **Ngữ cảnh:** Có đề xuất cho phép client tải trước một loạt mã QR về máy để sinh viên tự quét khi mất mạng.
-- **Quyết định:** Bác bỏ hoàn toàn cơ chế Offline Prefetch vì vi phạm nguyên lý bảo mật cơ bản của Dynamic QR. Điểm danh ngoại tuyến (nếu triển khai ở Sprint 4) sẽ sử dụng cơ chế ký số biên lai từ thiết bị của Cán bộ tổ chức (Staff Device Verification).
-- **Trạng thái:** **CHỜ DUYỆT (Reviewing - Assumption A-06)**.
+### QR-ADR-03: Cấm Offline Prefetch — Hỗ trợ Student Offline Store-and-Forward (`24h`)
+- **Ngữ cảnh:** Cần xử lý mất mạng cục bộ tại hội trường mà vẫn giữ nguyên lý bảo mật của Dynamic QR.
+- **Quyết định:** Bác bỏ hoàn toàn cơ chế Offline Prefetch (tải trước token tương lai). Ở Sprint 3 (`QE-33`/`QE-76`), hỗ trợ **Student Offline Store-and-Forward** (quét mã QR đang chiếu khi mất sóng, lưu cục bộ `PENDING_SYNC`, đồng bộ trong cửa sổ `OFFLINE_SYNC_MAX_WINDOW = 24 giờ` sau `attendance_close_at`; server xác thực HMAC + `epoch` đã ký trong cửa sổ điểm danh + `events.allow_offline_sync`, gắn cờ hậu kiểm `is_offline_late_sync` nếu gửi muộn — `D-6`).
+- **Trạng thái:** **✅ APPROVED (28/11/2026 — đồng bộ `D-6` / `A-QE8-07`)**.
 
-### ADR-04: Đồng Bộ Giờ Màn Chiếu Dựa Trên Hiệu Số Server Time ($\Delta t$)
+### QR-ADR-04: Đồng Bộ Giờ Màn Chiếu Dựa Trên Hiệu Số Server Time ($\Delta t$)
 - **Ngữ cảnh:** Đồng hồ trên máy tính xách tay của người thuyết trình / giảng viên thường xuyên bị sai lệch từ vài chục giây đến vài phút so với giờ chuẩn quốc tế.
-- **Quyết định:** Backend trả về `serverTime` trong API lấy mã QR. Frontend tự tính toán $\Delta t = t_{\text{server}} - t_{\text{local}}$ và hiệu chỉnh bộ đếm xoay vòng dựa trên $\Delta t$, không phụ thuộc vào đồng hồ hệ điều hành của client.
-- **Trạng thái:** **CHỜ DUYỆT (Reviewing - Assumption A-07)**.
+- **Quyết định:** Backend trả về `serverTime` trong API lấy mã QR (`GET /api/v1/events/{id}/qr`). Frontend tự tính toán $\Delta t = t_{\text{server}} - t_{\text{local}}$ và hiệu chỉnh bộ đếm xoay vòng dựa trên $\Delta t$, không phụ thuộc vào đồng hồ hệ điều hành của client.
+- **Trạng thái:** **✅ APPROVED (28/11/2026)**.
 
 ---
 
 > **BIÊN BẢN DUYỆT ĐẶC TẢ KỸ THUẬT:**
 > 
-> - **Kỹ sư đệ trình:** Agent A3 — Đan (`@Dan28-05`), Senior Developer  
-> - **Kiến trúc sư nền tảng / Tech Lead:** Agent A0 — Trần Thanh Cường (`@GMIOS25`) `[Chờ phê duyệt]`  
-> - **Product Owner / Giảng viên hướng dẫn:** `[Chờ phê duyệt]`
+> - **Kỹ sư đệ trình:** Agent A3 — Đan (`@Dan28-05`)  
+> - **Kiến trúc sư nền tảng / Tech Lead:** Agent A0 — Trần Thanh Cường (`@GMIOS25`) — **✅ Approved (`28/11/2026`)**  
+> - **Xác nhận chuẩn hóa liên tài liệu:** Đã đồng bộ cùng `SRS v1.1` và `decisions.md` (`28/11/2026`)

@@ -2,10 +2,10 @@
 
 > **Jira:** `QE-8` ("Thiết kế attendance consistency: atomic quota, idempotency & duplicate prevention", 8 SP) — liên thông trực tiếp với `QE-54` (3 attempts & chống trùng), `QE-71` (Sprint 1 đăng ký), `QE-56`/`QE-57` (Sprint 1 QR động), `QE-12`/`QE-38`/`QE-39`/`QE-40` (multi-tier quota, waiting list, hủy & promote), `QE-55` (GPS), `QE-42`/`QE-43`/`QE-19` (Evidence & Proxy), và `QE-33`/`QE-76`–`QE-78` (Offline Sync).
 > **Nguồn sự thật đối chiếu:**
-> - Mã nguồn & Schema thực tế tại `develop @ 4ac5da1`: [`V1__sprint1_core_schema.sql`](../../src/main/resources/db/migration/V1__sprint1_core_schema.sql), [`docs/Design/erd.md`](../Design/erd.md), [`docs/api/sprint1-contract.md`](../api/sprint1-contract.md), [`docs/backend-foundation.md`](../backend-foundation.md), [`docs/decisions.md`](../decisions.md), các service/repository/test trong `vn.edu.qnu.events.{registration,attendance,event,audit,common,config}` và FE `QNU-Events FE/src/`.
-> - Trích xuất SRS v1.0 (`05/11/2026`), Proposal v2.0 (`02/10/2026`), và backlog (`#9` bởi `@srs-reader`); báo cáo kiểm tra repo/PR (`#8` bởi `@tech-audit`).
-> - Figma MVP (`HX4313AoLQX4zNidDz2Ixo`): luồng Đăng ký / Waiting List (`#03`, bỏ qua `#01` không đủ điều kiện, cắt hủy trước 12h), Màn hình QR Owner (`234/312`, xoay 10s), Scanner Sinh viên (`Lượt gửi xác nhận: 0/3 -> 1/3`), Offline Queue (`Đã lưu lượt quét` / `Chờ đồng bộ` / `Thử đồng bộ`), GPS 60m, Evidence & Điểm danh thay nhiều người (BCS duyệt).
-> - **Quy tắc R1 & R11 (`AGENTS.md`):** Mọi con số/hành vi chưa được SRS hoặc stakeholder chốt đều được gắn nhãn **`ASSUMPTION (chưa duyệt)`** để đưa vào `docs/decisions.md` xem xét; tuyệt đối không coi giả định là chuẩn đã duyệt.
+> - Mã nguồn & Schema thực tế: [`V1__sprint1_core_schema.sql`](../../src/main/resources/db/migration/V1__sprint1_core_schema.sql), [`docs/Design/erd.md`](../Design/erd.md), [`docs/Design/v2-schema-blueprint.md`](../Design/v2-schema-blueprint.md), [`docs/Design/quota-rules.md`](../Design/quota-rules.md), [`docs/api/sprint1-contract.md`](../api/sprint1-contract.md), [`docs/api/error-codes.md`](../api/error-codes.md), [`docs/decisions.md`](../decisions.md).
+> - Đặc tả chuẩn hóa: `SRS v1.1` ([`docs/spec/QNU_Event_SRS.docx`](../spec/QNU_Event_SRS.docx)), `Proposal v2` ([`docs/spec/QNU_Event_Participation_Management_Project_Proposal_v2.docx`](../spec/QNU_Event_Participation_Management_Project_Proposal_v2.docx)).
+> - Figma MVP (`HX4313AoLQX4zNidDz2Ixo`): luồng Đăng ký / Waiting List (`#03`, bỏ qua `#01` không đủ điều kiện, cắt hủy trước 12h), Màn hình QR Owner (`234/312`, xoay 10s), Scanner Sinh viên (`Lượt gửi xác nhận: 0/3 -> 1/3`), Offline Queue (`Đã lưu lượt quét` / `Chờ đồng bộ` / `Thử đồng bộ`), GPS (màn ví dụ `60m`; mặc định hệ thống `50m`), Evidence & Điểm danh thay nhiều người (BCS duyệt).
+> - **Trạng thái cập nhật (`28/11/2026`):** Toàn bộ giả định `A-QE8-01..A-QE8-11` đã chuyển sang **`APPROVED`** theo các quyết định `D-4` → `D-9` và khớp 100% mô hình `event_pools` + `wait_order` trong [`v2-schema-blueprint.md`](../Design/v2-schema-blueprint.md). Chỉ tiêu chí chi tiết `accuracy`/vận tốc của `suspicious_flag` (`TBD-ATT-03`) giữ mở cho tinh chỉnh thử nghiệm.
 
 ---
 
@@ -63,23 +63,23 @@
 Theo SRS (`REQ-EVT-005..006`, `REQ-REG-004..016`, `UC010`, `UC011`, `UC013`, `NFR-QUAL-001`) và Proposal §4.2–4.3, §12 (`#9`):
 
 1. **Nguyên tắc kiểm tra trước khi chạm quota (Server-Authoritative Preconditions — R9):**
-   - Kiểm tra đồng bộ tại backend bằng `Clock` server (`NFR-PERF-008`): `event.status == PUBLISHED`, `now <= event.registrationDeadline`, tài khoản `ACTIVE`, dữ liệu hồ sơ bắt buộc (`student_code`, `class_id`, `cohort_year`, `faculty_name`) đầy đủ — **dữ liệu hồ sơ thiếu tuyệt đối không được mặc định là đủ điều kiện (`REQ-REG-005`)**, phạm vi lớp/đối tượng khớp sự kiện, và không bị hạn chế `NO_SHOW` (`penalty_until IS NULL OR penalty_until <= now`, nếu còn hạn -> `403` `NO_SHOW_RESTRICTED`).
+   - Kiểm tra đồng bộ tại backend bằng `Clock` server (`NFR-PERF-008`): `event.status == PUBLISHED`, `now <= event.registrationDeadline`, tài khoản `ACTIVE`, dữ liệu hồ sơ bắt buộc (`student_code`, `class_id`, `cohort_year`, `faculty_name`) đầy đủ — **dữ liệu hồ sơ thiếu tuyệt đối không được mặc định là đủ điều kiện (`REQ-REG-005`)**, phạm vi lớp/đối tượng khớp sự kiện (`403 NOT_IN_AUDIENCE`), và không bị hạn chế `NO_SHOW` (`banned_until <= now`, nếu còn hạn → **`403 STUDENT_PENALIZED`**). Sinh viên đã `CANCELLED` trước đó **được phép đăng ký lại** (`D-5`).
 2. **Sprint 1 Single-Tier Atomic Update (đang chạy):**
    - `tryInsertRegistration` (`ON CONFLICT DO NOTHING`) -> `reserveSeat` (`UPDATE events SET registered_count = registered_count + 1 WHERE id = :eventId AND registered_count < quota_total`).
    - Tại PostgreSQL mức cô lập mặc định `READ COMMITTED`, `UPDATE` giữ row lock trên bản ghi `events`, đánh giá lại điều kiện `registered_count < quota_total` trên phiên bản mới nhất vừa commit của hàng đó, đảm bảo không bao giờ vượt `quota_total` dù có hàng trăm luồng tranh suất cuối.
    - **Điều chỉnh bắt buộc cho Sprint 1/2 (Chống cạn HikariCP Pool):** Không gọi `AuditService.record` (`REQUIRES_NEW`) từ bên trong `@Transactional` đang giữ connection/row lock. Thành công -> ghi audit **trong cùng transaction** (`REQUIRED`) hoặc qua Transactional Outbox / `@TransactionalEventListener(AFTER_COMMIT)`; thất bại -> ném `ApiException` cho rollback xong kết nối gốc, sau đó tầng ngoài (hoặc façade không có `@Transactional`) mới ghi audit `REJECTED`.
 
-### 2.2 Multi-Tier Quota & Thứ tự Khóa Chống Deadlock (Sprint 2–3)
+### 2.2 Multi-Tier Quota (`event_pools`: `1 seat = 1 pool`) & Thứ tự Khóa Chống Deadlock (Sprint 2–3)
 
-Trong Figma & Proposal §4.3 (`QE-12`, `QE-38`), một sự kiện có thể cấu hình:
-- **Quota tổng (`events.quota_total` / `registered_count`)**, và
-- **Quota nhiều tầng (`event_quota_pools`)**: theo Khóa (`COHORT`), Khoa/Ngành (`FACULTY`/`MAJOR`), hoặc Lớp (`CLASS`), kèm điều kiện đối tượng `AND`/`OR`.
-- **Ràng buộc tổng quát (`REQ-EVT-006`, `UC013 A1`):** Mỗi thành phần quota phải `<= quota_total`. *(Các quy tắc cộng/chồng lấn nhiều nhóm cùng cấp, nhóm đặt chỗ riêng `reserved slots` đang mở ở `TBD-EVT-01` — xem mục `ASSUMPTION`.)*
+Theo quyết định `D-4` và đặc tả [`docs/Design/quota-rules.md`](../Design/quota-rules.md) (`QE-38`), mỗi sự kiện cấu hình:
+- **Quota tổng (`events.quota_total` / `registered_count`)** là trần tuyệt đối, và
+- **Danh sách Pool phân bổ (`event_pools`)**: `scope_type ∈ {'LOP','KHOA','KHOI','CLB','ALL'}`, `scope_ref`, `capacity >= 1`, `used`, `priority` (số nhỏ hơn ưu tiên hơn), `allow_overflow`, `is_mandatory` (`is_mandatory = true` luôn kèm `allow_overflow = false`), `reserved_until`.
+- **Ràng buộc bất biến:** $\sum \text{capacity} \le \text{quota\_total}$ và **1 suất đăng ký `REGISTERED` thuộc về đúng 01 pool** (`registrations.pool_id`).
 
-**Vấn đề Deadlock:** Nếu giao dịch $T_1$ khóa `Class A -> Cohort K49 -> Event E` trong khi giao dịch $T_2$ (hủy/promote hoặc đăng ký lớp khác) khóa `Cohort K49 -> Class A -> Event E` hoặc khóa các `pool_id` theo thứ tự ngẫu nhiên của `HashSet`, PostgreSQL sẽ phát hiện vòng chờ và hủy giao dịch (`40P01 deadlock_detected`).
+**Vấn đề Deadlock:** Nếu giao dịch $T_1$ khóa `Pool A -> Event E` trong khi giao dịch $T_2$ (hủy/promote hoặc điều chỉnh quota) khóa `Pool B -> Event E` hoặc khóa các hàng chờ theo thứ tự ngược nhau, PostgreSQL sẽ phát hiện vòng chờ (`40P01 deadlock_detected`).
 
 **Giao thức Khóa Chuẩn hóa (Canonical Lock Ordering — Vô hiệu hóa Deadlock):**
-Mọi luồng ghi làm thay đổi bộ đếm suất (`Register`, `Cancel`, `Auto-Promote`, `Admin Adjust Quota`) **bắt buộc** tuân thủ thứ tự khóa một chiều nghiêm ngặt:
+Mọi luồng ghi làm thay đổi bộ đếm suất (`Register`, `Cancel`, `Auto-Promote`, `Adjust Quota` theo `A-EVT-01`) **bắt buộc** tuân thủ thứ tự khóa một chiều nghiêm ngặt:
 
 ```
 1. SELECT ... FROM events WHERE id = :eventId FOR UPDATE          (Khóa gốc duy nhất theo eventId)
@@ -87,48 +87,49 @@ Mọi luồng ghi làm thay đổi bộ đếm suất (`Register`, `Cancel`, `Au
    SELECT ... FROM registrations
    WHERE event_id = :eventId AND student_id = :studentId
      AND status IN ('REGISTERED', 'WAITING_LIST') FOR UPDATE
-   -> Nếu đã tồn tại: trả về ngay trạng thái & wait_order hiện tại (giữ nguyên #03, không chạm quota!).
-3. Khóa các event_quota_pools mà sinh viên khớp điều kiện theo thứ tự tăng dần:
-   ORDER BY tier_rank ASC, id ASC   (VD: COHORT=1 -> FACULTY=2 -> CLASS=3, cùng tầng xếp theo UUID)
-   SELECT * FROM event_quota_pools WHERE id IN (:matchedPoolIds) ORDER BY tier_rank ASC, id ASC FOR UPDATE
-4. Đánh giá nguyên tử:
-   - Toàn bộ (events.registered_count < quota_total) VÀ (với mọi pool khớp: pool.used_count < pool.quota_limit)?
-     -> CÓ: UPDATE events SET registered_count = registered_count + 1;
-            UPDATE event_quota_pools SET used_count = used_count + 1 WHERE id IN (...);
-            INSERT INTO registrations(..., status='REGISTERED');
-            INSERT INTO registration_pool_allocations(registration_id, pool_id); -- lưu dấu để hoàn trả chính xác khi hủy!
-     -> KHÔNG (hết suất ở ít nhất 1 tầng áp dụng):
-        Nếu sự kiện bật Waiting List:
-            UPDATE events SET next_wait_order = next_wait_order + 1 ...;
-            INSERT INTO registrations(..., status='WAITING_LIST', wait_order = allocatedOrder);
-        Ngược lại: rollback & trả 409 CAPACITY_FULL.
+   -> Nếu đã tồn tại: trả về ngay trạng thái & wait_order hiện tại (giữ nguyên vị trí chờ, không chạm quota!).
+3. Khóa danh sách event_pools khớp scope của sinh viên theo thứ tự priority tăng dần, cùng priority xếp theo id:
+   SELECT * FROM event_pools
+   WHERE event_id = :eventId
+   ORDER BY priority ASC, id ASC FOR UPDATE
+4. Duyệt từng pool khớp scope của sinh viên theo priority ASC:
+   - Nếu pool chưa bị reserved_until khóa, còn chỗ (used < capacity) VÀ events.registered_count < quota_total:
+     -> UPDATE event_pools SET used = used + 1 WHERE id = :poolId AND used < capacity;
+     -> UPDATE events SET registered_count = registered_count + 1 WHERE id = :eventId;
+     -> INSERT INTO registrations(..., status='REGISTERED', pool_id = :poolId); (hoặc UPDATE nếu tái kích hoạt bản ghi theo uq_registrations_active)
+   - Nếu pool đầy & allow_overflow = true: thử pool kế tiếp theo priority ASC.
+   - Nếu pool đầy & allow_overflow = false (đặc biệt mandatory) HOẶC hết mọi pool hợp lệ / quota_total đã đầy:
+     -> Chọn pool ưu tiên cao nhất mà sinh viên thuộc scope làm targetPoolId;
+     -> UPDATE events SET next_wait_order = next_wait_order + 1 ...;
+     -> INSERT INTO registrations(..., status='WAITING_LIST', pool_id = :targetPoolId, waiting_at = :now, wait_order = allocatedOrder);
+   - Nếu sinh viên không thuộc bất kỳ pool/audience nào được cấu hình -> rollback & trả 403 NOT_IN_AUDIENCE.
 ```
 
-> **Phân tích hiệu năng dưới Burst (`Proposal P1` = 100 req/s trong 10s):** Khi mọi thao tác trong TX chỉ gồm SQL nội bộ được đánh chỉ mục (không gọi mạng ngoài, không upload file, không `REQUIRES_NEW` lồng nhau), thời gian giữ khóa `events(E)` tại PostgreSQL chỉ khoảng 1–3 ms, đạt thông lượng lý thuyết ~300–1,000 TX/s trên một sự kiện — đáp ứng tốt ngưỡng burst 100 req/s trong `P1` (`#9`) mà vẫn bảo toàn tuyệt đối thứ tự FIFO của `wait_order` và loại bỏ 100% khả năng deadlock.
+> **Phân tích hiệu năng dưới Burst (`Proposal P1` = 100 req/s trong 10s):** Khi mọi thao tác trong TX chỉ gồm SQL nội bộ được đánh chỉ mục (không gọi mạng ngoài, không upload file, không `REQUIRES_NEW` lồng nhau), thời gian giữ khóa `events(E)` tại PostgreSQL chỉ khoảng 1–3 ms, đạt thông lượng lý thuyết ~300–1,000 TX/s trên một sự kiện — đáp ứng tốt ngưỡng burst 100 req/s trong `P1` mà vẫn bảo toàn tuyệt đối thứ tự FIFO của `wait_order` và loại bỏ 100% khả năng deadlock.
 
 ### 2.3 Luồng Hủy Đăng ký (Ngưỡng 12h), Waiting List FIFO & Auto-Promotion
 
-1. **Quy tắc Ngưỡng 12 giờ (`REQ-REG-012..014`, `UC011`, Figma):**
-   - Chỉ cho phép hủy khi **`Instant.now(clock).isBefore(event.getStartAt().minus(12, ChronoUnit.HOURS))`**.
-   - Tại thời điểm đúng bằng hoặc sau `start_at - 12h`: từ chối hoàn toàn và giữ nguyên trạng thái. *(Lưu ý: `UC011 3a.1` ghi `400 Bad Request`, còn bảng lỗi Sprint 1 đưa các lỗi vi phạm trạng thái/mốc thời gian về `409` như `REGISTRATION_CLOSED` — đánh dấu là `ASSUMPTION (chưa duyệt)` `A-QE8-08`.)*
+1. **Quy tắc Ngưỡng 12 giờ (`REQ-REG-012..014`, `UC011`, `D-5`):**
+   - Áp dụng cho trạng thái **`REGISTERED`**: chỉ cho phép hủy khi **`Instant.now(clock).isBefore(event.getStartAt().minus(12, ChronoUnit.HOURS))`**. Tại thời điểm đúng bằng hoặc sau `start_at - 12h`: từ chối với mã lỗi **`409 CANCELLATION_CUTOFF_PASSED`** (`counted = false`, giữ nguyên trạng thái).
+   - **Miễn trừ cho `WAITING_LIST` (`D-5`):** Sinh viên ở trạng thái `WAITING_LIST` được phép tự rút bất kỳ lúc nào (miễn mốc 12 giờ); chỉ chuyển sang `CANCELLED`, không hoàn quota và không kích hoạt promote.
 2. **Tính chất Idempotent khi Hủy (`REQ-REG-013`, `UC011 4b`):**
    - Khóa `events(E) FOR UPDATE` và `registrations(regId) FOR UPDATE`.
    - Nếu trạng thái hiện tại đã là `CANCELLED`: trả ngay `200 OK` trạng thái `CANCELLED`, **không** trừ `registered_count` lần 2 và **không** kích hoạt promote lần 2.
-   - Nếu trạng thái đang là `WAITING_LIST`: cập nhật thành `CANCELLED`, đưa ra khỏi hàng chờ; **không** cộng trả quota và **không** promote ai (`REQ-REG-014`, `UC011 4a`).
-   - Nếu trạng thái đang là `REGISTERED`: cập nhật thành `CANCELLED`, giảm `events.registered_count = registered_count - 1` và giảm đúng các `pool_id` đã ghi nhận trong `registration_pool_allocations` (chỉ giảm những pool thực sự đã tiêu thụ lúc đăng ký), sau đó kích hoạt Auto-Promotion ngay trong cùng transaction (hoặc qua worker sử dụng `FOR UPDATE SKIP LOCKED` nếu tách async — khuyến nghị chạy **cùng transaction** cho MVP để không phát sinh khe hở người mới đến cướp chỗ trước hàng chờ).
-3. **Auto-Promotion FIFO & Quy tắc Bỏ qua `#01` Không Đủ Điều Kiện (`REQ-REG-015..016`, `UC011 5–6`, `UC012 A2`, Figma):**
-   - Truy vấn ứng viên theo thứ tự FIFO:
+   - Nếu trạng thái đang là `REGISTERED`: cập nhật thành `CANCELLED`, hoàn suất đúng pool gốc (`UPDATE event_pools SET used = used - 1 WHERE id = :poolId`), giảm `events.registered_count = registered_count - 1`, sau đó kích hoạt Auto-Promotion cho pool đó ngay trong cùng transaction.
+3. **Auto-Promotion FIFO & Quy tắc Bỏ qua `#01` Không Đủ Điều Kiện (`REQ-REG-015..016`, `UC011 5–6`, `UC012 A2`, `D-4`, `D-5`):**
+   - Vẫn tiếp tục auto-promote cho người đã nằm sẵn trong `WAITING_LIST` kể cả **sau `registration_deadline` miễn còn trước mốc `start_at - 12h`** và sự kiện chưa `CANCELLED` (`D-5`, đóng `TBD-REG-02`). Khi tăng `quotaTotal`/`capacity` của sự kiện đã `PUBLISHED` có hàng chờ (`A-EVT-01`), hệ thống cũng kích hoạt vòng lặp promote này trong cùng giao dịch.
+   - Truy vấn ứng viên của đúng `pool_id` vừa có suất trống theo thứ tự FIFO:
      ```sql
      SELECT r.* FROM registrations r
-     WHERE r.event_id = :eventId AND r.status = 'WAITING_LIST'
+     WHERE r.event_id = :eventId AND r.pool_id = :poolId AND r.status = 'WAITING_LIST'
      ORDER BY r.wait_order ASC
      FOR UPDATE SKIP LOCKED
      ```
    - Duyệt tuần tự `#01, #02, #03...`:
-     - Tái xác thực đầy đủ (`REQ-REG-015`): user còn `ACTIVE`, không bị `NO_SHOW` restriction đang hiệu lực, lớp vẫn thuộc `event_audience`, và **tất cả các tầng quota áp dụng cho ứng viên này** đều còn chỗ (`events.registered_count < quota_total` và mọi pool khớp có `used_count < quota_limit`).
-     - **Nếu `#01` không đủ điều kiện** (ví dụ bị khóa do `NO_SHOW`, đổi trạng thái tài khoản, hoặc suất vừa trống thuộc Lớp B trong khi `#01` thuộc Lớp A đã hết pool Lớp A): **bỏ qua `#01`**, ghi nhận lý do bỏ qua vào `audit_logs` (và `waitlist_skip_reason` nếu hiển thị cho SV theo `UC012 A2`), rồi kiểm tra tiếp `#02`! *(Việc `#01` được giữ nguyên ở `WAITING_LIST` cho lượt trống đúng pool của mình hay bị loại khỏi hàng chờ khi bị ban `NO_SHOW` thuộc `TBD-REG-02` — ghi nhận làm `ASSUMPTION (chưa duyệt)` `A-QE8-09`.)*
-     - **Nếu `#02` đủ điều kiện:** chuyển `#02` -> `REGISTERED`, tăng `events.registered_count` và các `event_quota_pools.used_count` tương ứng của `#02`, ghi `registration_pool_allocations`, ghi `audit_logs` (`WAITLIST_PROMOTED`) và phát bản ghi `outbox_events` (`AFTER_COMMIT`) để gửi thông báo cho sinh viên `#02`. Dừng vòng lặp.
-     - Nếu không có ứng viên nào hợp lệ: suất trống từ người hủy được giữ nguyên (đã giảm `registered_count` ở bước hủy).
+     - Tái xác thực đầy đủ (`REQ-REG-015`): user còn `ACTIVE`, không bị `NO_SHOW` restriction đang hiệu lực (`student_restrictions`), lớp vẫn thuộc scope pool & `event_audience`, `events.registered_count < quota_total` và `pool.used < pool.capacity`.
+     - **Nếu `#01` không đủ điều kiện** (bị ban `NO_SHOW`, khóa tài khoản, hay chuyển lớp ngoài scope): **bỏ qua `#01`** và ghi audit `WAITLIST_PROMOTE_SKIPPED`, rồi kiểm tra tiếp `#02`!
+     - **Nếu `#02` đủ điều kiện:** chuyển `#02` → `REGISTERED`, tăng `event_pools.used` (+1) và `events.registered_count` (+1), ghi `audit_logs` (`WAITLIST_PROMOTED`) và phát bản ghi `outbox_events` (`AFTER_COMMIT`) để thông báo cho `#02`. Dừng vòng lặp.
+     - Nếu không có ứng viên nào hợp lệ: suất trống từ người hủy được giữ nguyên (`used` và `registered_count` giữ giá trị đã hoàn).
 
 ### 2.4 Sơ đồ Tuần tự: Tranh chấp Burst / Suất cuối & Waiting List
 
@@ -190,7 +191,7 @@ Theo `BR-ATT-01`, `REQ-ATT-022`, `OTH-DATA-001` (`#9`) và `V1__sprint1_core_sch
 |---|---|
 | Đã có `ACCEPTED` (bất kỳ phương thức nào) -> gửi mới `QR` / `GPS` / `OFFLINE_QR` / `OFFLINE_GPS` (với `Idempotency-Key` mới) | Trả `409 ALREADY_CHECKED_IN`, **không** tạo dòng `attendances` mới, **không** tính vào 3 attempt (`counted = false`). |
 | Đã có `ACCEPTED` -> gửi mới `EVIDENCE` hoặc bị bạn chọn trong `PROXY_EVIDENCE` | Từ chối ngay sinh viên đó với lý do `ALREADY_CHECKED_IN` (trong batch proxy: các sinh viên khác trong danh sách vẫn được tạo `PENDING` bình thường, kết quả trả về chi tiết từng sinh viên). |
-| Sinh viên có 1 dòng `EVIDENCE` đang `PENDING` -> quét thành công `DYNAMIC_QR` | `DYNAMIC_QR` chèn được `ACCEPTED` (vì `PENDING` không thuộc phạm vi `uq_attendances_valid`). Các dòng `PENDING` dư thừa nên được tự động chuyển `REJECTED` (lý do `SUPERSEDED_BY_ACCEPTED`) hoặc khi BCS duyệt `PENDING -> ACCEPTED` sau đó phải kiểm tra & map `uq_attendances_valid` sang `409 ALREADY_CHECKED_IN`. |
+| Sinh viên có 1 dòng `EVIDENCE` đang `PENDING` -> quét thành công `DYNAMIC_QR` (hoặc `GPS`) trong giờ | `DYNAMIC_QR`/`GPS` chèn được `ACCEPTED` (`PENDING` không nằm trong `uq_attendances_valid`). Hệ thống **chấp nhận `ACCEPTED`** và tự động chuyển các dòng `PENDING` dư thừa sang `REJECTED` (`reason = SUPERSEDED_BY_ACCEPTED`, `D-7`). |
 | BCS A và BCS B cùng bấm duyệt 1 dòng `PENDING` hoặc duyệt 2 dòng `PENDING` khác nhau của cùng 1 SV | Cập nhật điều kiện `UPDATE attendances SET status='ACCEPTED' WHERE id=:id AND status='PENDING'` kết hợp bắt lỗi `uq_attendances_valid` -> trả `409 ALREADY_CHECKED_IN` (hoặc replay idempotent nếu cùng trạng thái). |
 
 ### 3.2 Xử lý Tranh chấp Điểm danh Đồng thời (Race -> `409 ALREADY_CHECKED_IN`, cấm `500`)
@@ -222,7 +223,7 @@ Theo `BR-ATT-01`, `REQ-ATT-022`, `OTH-DATA-001` (`#9`) và `V1__sprint1_core_sch
 - **Quy tắc sinh key phía Client (`FE / Mobile / Offline Queue`):**
   - Sinh **1 UUID v4 cho mỗi hành động điểm danh của người dùng** (ví dụ: 1 lần quét camera ra 1 chuỗi QR, 1 lần bấm nút GPS, 1 lần bấm gửi Evidence, 1 mục trong Batch Proxy, hoặc lúc lưu bản ghi vào hàng đợi Offline).
   - **BẮT BUỘC tái sử dụng nguyên `Idempotency-Key` đó** khi retry do rớt mạng, timeout, `5xx`, hoặc nhấn đúp nút gửi (cần sửa `checkInQr` trong FE `src/api/events.ts:77-78` để giữ key qua TanStack Query retry / offline queue, chỉ tạo key mới khi người dùng quét một mã mới hoặc chủ động thực hiện lượt thử mới sau khi nhận lỗi nghiệp vụ như `422 QR_EXPIRED`).
-- **Bảo vệ sai lệch payload (`ASSUMPTION (chưa duyệt)` `A-QE8-02`):** Lưu thêm `payload_hash` (`SHA-256`) của `(method, canonicalPayload)` trong `attendance_attempts` (`V2+`). Nếu cùng `(event_id, student_id, idempotency_key)` nhưng `payload_hash` khác -> từ chối với `422` / `400 VALIDATION_FAILED` (`IDEMPOTENCY_PAYLOAD_MISMATCH`), tránh trường hợp bug client tái sử dụng key cũ cho token QR khác mà nhận nhầm replay.
+- **Bảo vệ sai lệch payload (`A-QE8-02` — Approved):** Lưu thêm `payload_hash` (`SHA-256`) của `(method, canonicalPayload)` trong `attendance_attempts` (`V2`). Nếu cùng `(event_id, student_id, idempotency_key)` nhưng `payload_hash` khác -> từ chối **`400 VALIDATION_FAILED`** (`IDEMPOTENCY_PAYLOAD_MISMATCH`), tránh trường hợp bug client tái sử dụng key cũ cho token QR khác mà nhận nhầm replay.
 - **Bảo mật dữ liệu replay (`R7`):** `response_body` lưu JSON phản hồi đầy đủ (bao gồm `code`, `message`, `details` cho lỗi hoặc `status`, `acceptedAt` cho thành công), **tuyệt đối không lưu token QR thô, JWT hay tọa độ nhạy cảm ngoài cấu trúc DTO chuẩn**.
 
 ### 4.2 Luồng Thực thi 1-Transaction & Xử lý Retry Đang Bay (In-Flight Concurrency)
@@ -279,31 +280,31 @@ Theo `BR-ATT-02`, `REQ-ATT-021`, `UC015`, `UC018` (`#9`) và màn hình Figma (`
   - `attemptsUsed = 1`: Thử sai 1 lần (`1/3`, còn 2 lượt).
   - `attemptsUsed = 2`: Thử sai 2 lần (`2/3`, còn 1 lượt).
   - `attemptsUsed = 3`: Đã dùng hết 3 lượt (`3/3`, còn 0 lượt).
-  - **Lần thử mới thứ 4** (với `Idempotency-Key` mới, kể cả gửi token QR hoặc GPS **hoàn toàn hợp lệ**): bị chặn ngay tại bước kiểm tra giới hạn **trước khi** xác thực QR/GPS, trả về **`409 ATTEMPT_LIMIT_REACHED`** *(lưu ý: `UC015 5a` trong SRS ghi `429 Too Many Requests`, nhưng Frozen Contract Sprint 1 [`docs/api/sprint1-contract.md`](../api/sprint1-contract.md), `ErrorCode.java:31` và `AttendanceIT:414` đã dùng `409 ATTEMPT_LIMIT_REACHED` — giữ `409` cho thống nhất contract hiện tại và ghi nhận trong `ASSUMPTION (chưa duyệt)` `A-QE8-05`)*.
+  - **Lần thử mới thứ 4** (với `Idempotency-Key` mới, kể cả gửi token QR hoặc GPS **hoàn toàn hợp lệ**): bị chặn ngay tại bước kiểm tra giới hạn **trước khi** xác thực QR/GPS, trả về **`409 ATTEMPT_LIMIT_REACHED`** *(quy chuẩn thống nhất thay thế `429` trong `SRS v1.0`; đã đồng bộ lên `SRS v1.1`, `error-codes.md` và `AttendanceIT` — `A-QE8-05` Approved)*.
 - **Sửa lỗi đếm dư ở Sprint 1 (`AttendanceService.java:170`):** Bản ghi từ chối `ATTEMPT_LIMIT_REACHED` ở lần thứ 4+ **BẮT BUỘC ghi `counted = false`** (vì lượt này bị chặn ở cổng chứ không tiêu thụ thêm lượt thử), giữ bất biến `0 <= attemptsUsed <= 3` vĩnh viễn và giúp UI hiển thị chuẩn `3/3`.
-- **Phản hồi hỗ trợ UI Figma:** Nên bổ sung vào `CheckInResponse` và `ApiError.details` các trường `{attemptsUsed, maxAttempts: 3, attemptsRemaining}` (`ASSUMPTION (chưa duyệt)` `A-QE8-04`) để FE hiển thị `Lượt gửi xác nhận: x/3` đồng bộ với trạng thái thật từ server (`R9`).
+- **Phản hồi hỗ trợ UI Figma:** Bổ sung/giữ đồng bộ `attemptCount`, `maxAttempts: 3`, `remainingAttempts`, `canRetry` trong `/attendance/me` (`QE-98`) và `ApiError.details` (`A-QE8-04` Approved) để FE hiển thị `Lượt gửi xác nhận: x/3` đồng bộ với trạng thái thật từ server (`R9`).
 
 ### 5.2 Ma trận Phân loại `counted = true` vs `counted = false`
 
-> **Lưu ý R11 (`TBD-ATT-02` đang `Open` trong SRS Phụ lục C):** SRS chưa chốt cuối cùng phạm vi tính 3 lần thử giữa các phương thức (QR/GPS/Evidence dùng chung 3 lượt hay tách riêng) và đầy đủ danh mục lỗi tiêu tốn lượt cho GPS/Evidence. Bảng dưới phân tách rõ phần **Đã chạy ở Sprint 1** và phần **Đề xuất (`ASSUMPTION`)** cho Sprint 2–3:
+> **Đã chốt `TBD-ATT-02` (`D-7`, `28/11/2026`):** Giới hạn 3 lượt (`counted = true`) **dùng chung** cho nhóm xác thực tự động (`DYNAMIC_QR`, `GPS`, `OFFLINE_QR`, `OFFLINE_GPS`); **`EVIDENCE` là kênh dự phòng riêng** không bị chặn bởi trần 3 lượt lỗi:
 
 | Tình huống / Kết quả | `counted` | HTTP Status | Ghi chú & Nguồn |
 |---|:-:|:-:|---|
 | Replay cùng `Idempotency-Key` đã xử lý trước đó | **`false`** | Trả lại `http_status` cũ | Bắt buộc theo `REQ-ATT-023`, `UC018`, `UC019 4b.1` (chạy ở Sprint 1) |
 | Điểm danh thành công (`ACCEPTED`) | **`false`** | `200` | Không tiêu tốn lượt lỗi (chạy ở Sprint 1) |
-| Nộp Evidence chờ duyệt (`PENDING`) | **`false`** | `202` / `200` | Chuyển hàng đợi BCS (`ASSUMPTION`) |
-| Thiếu/sai format `Idempotency-Key`, JSON lỗi (`VALIDATION_FAILED`) | **`false`** | `400` | Lỗi đầu vào / hạ tầng, chưa vào nghiệp vụ (chạy ở Sprint 1) |
+| Nộp Evidence chờ duyệt (`PENDING`) | **`false`** | `202` / `200` | Chuyển hàng đợi BCS (`D-2`, `D-7`) |
+| Thiếu/sai format `Idempotency-Key`, JSON lỗi (`VALIDATION_FAILED`) | **`false`** | `400` | Lỗi đầu vào / hạ tầng (`error-codes.md`) |
 | Chưa đăng nhập / phiên hết hạn / sai role (`UNAUTHENTICATED`, `SESSION_REVOKED`, `FORBIDDEN`) | **`false`** | `401` / `403` | Cổng bảo mật (chạy ở Sprint 1) |
-| Ngoài cửa sổ điểm danh / sự kiện chưa publish (`ATTENDANCE_NOT_OPEN`, `EVENT_NOT_PUBLISHED`) | **`false`** | `409` | Cổng trạng thái sự kiện — Assumption A-04 Sprint 1 |
-| Chưa đăng ký hợp lệ (`NOT_REGISTERED` — gồm cả `WAITING_LIST` / `CANCELLED`) | **`false`** | `403` | Cổng đăng ký — Assumption A-04 Sprint 1 |
-| Đã có điểm danh `ACCEPTED` (`ALREADY_CHECKED_IN`) | **`false`** | `409` | Chống trùng — Assumption A-04 Sprint 1 |
-| Đã hết 3 lượt trước đó (`ATTEMPT_LIMIT_REACHED`) | **`false`** | `409` | **Cần sửa** từ `true` (`AttendanceService.java:170`) sang `false` |
+| Ngoài cửa sổ điểm danh / sự kiện chưa publish (`ATTENDANCE_NOT_OPEN`, `EVENT_NOT_PUBLISHED`) | **`false`** | `409` | Cổng trạng thái sự kiện (`A-04` Approved) |
+| Chưa đăng ký hợp lệ (`NOT_REGISTERED` — gồm cả `WAITING_LIST` / `CANCELLED`) | **`false`** | `403` | Cổng đăng ký (`A-04` Approved) |
+| Đã có điểm danh `ACCEPTED` (`ALREADY_CHECKED_IN`) | **`false`** | `409` | Chống trùng (`A-04` Approved) |
+| Đã hết 3 lượt trước đó (`ATTEMPT_LIMIT_REACHED`) | **`false`** | `409` | Chặn ở cổng, không tăng quá 3 (`A-QE8-04`) |
 | Lỗi kỹ thuật hệ thống / DB timeout (`5xx` chưa commit) | **`false`** | `500` / `503` | Lỗi hạ tầng, rollback toàn bộ (`REQ-ATT-023`) |
-| Lỗi QR (`QR_MALFORMED`, `QR_BAD_SIGNATURE`, `QR_WRONG_EVENT`, `QR_EXPIRED`, `QR_FROM_FUTURE`) | **`true`** | `422` | Đã chạy ở Sprint 1 (`AttendanceService.java:193`, `AttendanceIT#11`, Figma `1/3` khi QR hết hạn) |
-| GPS ngoài bán kính (`GPS_OUT_OF_RANGE`) | **`true`** | `422` | `ASSUMPTION (chưa duyệt)` (`TBD-ATT-02`) — tương đương sai xác thực vị trí |
+| Lỗi QR (`QR_MALFORMED`, `QR_BAD_SIGNATURE`, `QR_WRONG_EVENT`, `QR_EXPIRED`, `QR_FROM_FUTURE`) | **`true`** | `422` | Đã chạy ở Sprint 1 (`AttendanceIT`, Figma `1/3` khi QR hết hạn) |
+| GPS ngoài bán kính (`GPS_OUT_OF_RANGE`) | **`true`** | `422` | Quy chuẩn `D-7` — sai xác thực vị trí |
 | GPS đáng ngờ (`isMocked` / accuracy bất thường) nhưng trong vùng & hợp lệ khác | **`false`** | `200` | **`ACCEPTED` + `suspicious_flag = true`** theo `BR-ATT-07`, `REQ-ATT-007` & Figma |
-| Offline QR/GPS sync về server bị từ chối xác thực (hết cửa sổ sync / sai vị trí / sai chữ ký) | **`true`** | `422` | `ASSUMPTION (chưa duyệt)` (`TBD-ATT-01`/`02`) — tối đa 3 lượt; retry mạng cùng key vẫn `false` |
-| **Phạm vi trần 3 lượt giữa QR/GPS vs Evidence** | — | — | `ASSUMPTION (chưa duyệt)` (`TBD-ATT-02`): 3 lượt áp dụng chung cho các phương thức tự động hóa (`DYNAMIC_QR`, `GPS`, `OFFLINE_QR`, `OFFLINE_GPS`) trên mỗi `(event_id, student_id)`; khi hết 3 lượt, sinh viên vẫn có thể nộp `EVIDENCE` (chờ BCS duyệt) hoặc gửi `Appeal` nếu sự kiện cho phép. |
+| Offline QR/GPS sync về server bị từ chối xác thực (`OFFLINE_SYNC_WINDOW_EXPIRED` / sai vị trí / sai chữ ký) | **`true`** | `422` | `D-6`, `D-7` — tối đa 3 lượt; retry mạng cùng key vẫn `false` |
+| **Phạm vi trần 3 lượt giữa QR/GPS vs Evidence** | — | — | **`APPROVED (D-7)`:** 3 lượt áp dụng chung cho các kênh tự động hóa (`DYNAMIC_QR`, `GPS`, `OFFLINE_QR`, `OFFLINE_GPS`) trên mỗi `(event_id, student_id)`; khi hết 3 lượt, sinh viên vẫn có thể nộp `EVIDENCE` (chờ BCS duyệt) hoặc gửi `Appeal`. |
 
 ---
 
@@ -321,36 +322,35 @@ Theo `BR-ATT-02`, `REQ-ATT-021`, `UC015`, `UC018` (`#9`) và màn hình Figma (`
 - **3 Điểm cần chuẩn hóa kỹ thuật (`ASSUMPTION` & Security `R7`):**
   1. **Lệch cấu hình `application.yml`:** `application.yml:61` đang đặt `app.qr.epoch-seconds: 15`, trong khi `V1__sprint1_core_schema.sql:50`, `Event.java:59`, `EventService.java:62`, và FE `EventQrPage.tsx` đều dùng `10s`. Cần bỏ/đổi mặc định về `10s` và truyền vào `EventService.create` thay vì hardcode `10, 3`.
   2. **Secret fallback trong `QrTokenService.java:23-25`:** Không được fallback về chuỗi secret cố định ở môi trường ngoài `dev`/`test`; phải fail-fast khi khởi động nếu thiếu `QR_SIGNING_SECRET` (>= 32 byte, tách biệt hoàn toàn với `JWT_SECRET`).
-  3. **Liên kết `qr1` vs `random_nonce` (`SRS UC015` / `QE-44`):** `qr1` không có `random_nonce` nên hai màn hình owner hoặc hai node BE cùng hiển thị một mã QR đồng nhất trong mỗi 10s. Nếu `QE-44` muốn thêm `nonce` để mỗi phiên chiếu QR duy nhất, nâng cấp prefix sang `qr2.<eventId>.<epoch>.<nonce>.<sig>` (`ASSUMPTION (chưa duyệt)` `A-QE8-10`).
+  3. **Liên kết `qr1` vs `random_nonce` (`SRS UC015` / `QE-44`):** `qr1` không có `random_nonce` nên hai màn hình owner hoặc hai node BE cùng hiển thị một mã QR đồng nhất trong mỗi 10s. Định dạng `qr1` giữ ổn định cho Sprint 1–2; khi cần `nonce` cho mỗi phiên chiếu có thể nâng cấp sang `qr2.<eventId>.<epoch>.<nonce>.<sig>` (`A-QE8-10` — Approved).
 
 ### 6.2 GPS Check-in (`QE-55`)
 
-- **Tham số cấu hình theo sự kiện (`REQ-ATT-007`):** Không hardcode toàn cục `40–50m` (Proposal/SRS) hay `60m` (Figma); mỗi sự kiện lưu `gps_lat`, `gps_lng`, `allowed_radius_meters` (gợi ý default `60m` khớp Figma hoặc `50m` — đánh dấu là `ASSUMPTION (chưa duyệt)` `A-QE8-06` chờ PO chốt).
+- **Tham số cấu hình theo sự kiện (`REQ-ATT-007`, `D-7`):** Mỗi sự kiện lưu `gps_lat`, `gps_lng`, `allowed_radius_meters` (`10–500m`), **mặc định `50m`** (khớp `SRS REQ-EVT-009`; giá trị `60m` trên Figma là ví dụ cấu hình cho một sự kiện cụ thể).
 - **Quy tắc server (`BR-ATT-07`, `REQ-ATT-007`):**
   - Kiểm tra giá trị hữu hạn (`lat ∈ [-90, 90]`, `lng ∈ [-180, 180]`, `accuracy >= 0` hữu hạn).
-  - Tính khoảng cách Haversine trên server; nếu `> allowed_radius_meters` -> từ chối (`422 GPS_OUT_OF_RANGE`, `counted = true`).
-  - Nếu trong bán kính nhưng có dấu hiệu bất thường (`isMocked == true`, `accuracy > threshold` — `TBD-ATT-03`): vẫn lưu `status = 'ACCEPTED'` nhưng gắn `suspicious_flag = true` và `suspicious_reason` để Owner/BCS hậu kiểm (đúng Figma & `BR-ATT-07`).
+  - Tính khoảng cách Haversine trên server; nếu `> allowed_radius_meters` -> từ chối **`422 GPS_OUT_OF_RANGE`** (`counted = true`).
+  - Nếu **trong bán kính** nhưng có dấu hiệu bất thường (`isMocked == true`, `accuracy > threshold` — `TBD-ATT-03` giữ mở để tinh chỉnh): vẫn lưu `status = 'ACCEPTED'` nhưng gắn `suspicious_flag = true` và `suspicious_reason` để Owner/BCS hậu kiểm (đúng Figma & `BR-ATT-07`).
 
-### 6.3 Hàng đợi Offline & Cửa sổ Đồng bộ (`QE-33`, `QE-76`, `QE-77`, `QE-78`, `TBD-ATT-01`)
+### 6.3 Hàng đợi Offline & Cửa sổ Đồng bộ (`QE-33`, `QE-76`, `QE-77`, `QE-78`, `D-6`)
 
-> **Cảnh báo quan trọng từ SRS (`TBD-ATT-01`, `#9`):** **Cửa sổ 13s của QR online KHÔNG phải là cửa sổ đồng bộ offline!** Khi mất mạng, sinh viên lưu lượt quét tại máy (`PENDING_SYNC`), chỉ đồng bộ khi có mạng trở lại (`SYNCED`).
+> **Quyết định `D-6` (`28/11/2026`, đóng `TBD-ATT-01`):** Tuyệt đối **cấm Offline Prefetch** (không tải trước chuỗi QR tương lai về máy SV). Hỗ trợ **Student Offline Store-and-Forward**: Owner vẫn chiếu QR động 10s bình thường; SV mất sóng quét mã đang chiếu lưu cục bộ (`PENDING_SYNC`), chỉ đồng bộ khi có mạng trong cửa sổ **`OFFLINE_SYNC_MAX_WINDOW = 24 giờ`** sau `attendance_close_at` (và trước khi job `NO_SHOW` chạy). Quá cửa sổ → trả **`422 OFFLINE_SYNC_WINDOW_EXPIRED`** (`counted = true`).
 
 1. **Dữ liệu hàng đợi cục bộ (`IndexedDB` / `SQLite` phân vùng theo `(userId, eventId)` — `UC019`):**
    - Mỗi bản ghi hàng đợi gồm: `idempotencyKey` (UUID v4 tạo ngay tại thời điểm quét/chụp offline), `eventId`, `method` (`OFFLINE_QR` | `OFFLINE_GPS` | `EVIDENCE`), `payload` (chuỗi QR nguyên bản / tọa độ + `integrityHash` / blob ảnh nén), `clientCapturedAt`, `syncStatus` (`PENDING_SYNC` | `SYNCED` | `FAILED_PERMANENT`).
    - Trên UI (Figma): hiển thị `Đã lưu lượt quét` -> `Chờ đồng bộ` -> nút `Thử đồng bộ` khi có mạng.
 2. **Xác thực Offline trên Server mà không tin đồng hồ Client (`R9`, `NFR-PERF-008`):**
-   - **Với `OFFLINE_QR` (`QE-76`):** Chuỗi QR `qr1.<eventId>.<epoch>.<sig>` đã mang **mốc thời gian được server ký HMAC**! Server tính:
+   - **Với `OFFLINE_QR` (`QE-76`):** Chuỗi QR `qr1.<eventId>.<epoch>.<sig>` đã mang **mốc thời gian được server ký HMAC**! Server kiểm tra cờ `events.allow_offline_sync = true`, xác thực SV đã `REGISTERED` trước đó và tính:
      `tokenStart = Instant.ofEpochSecond(epoch * rotationSeconds)`
      `tokenEnd = Instant.ofEpochSecond((epoch + 1) * rotationSeconds + graceSeconds)`
      Vì client không thể giả mạo `epoch` mà không làm hỏng HMAC, server xác minh được mã QR đó **thực sự được phát hành trong thời gian sự kiện mở điểm danh** (`tokenEnd >= attendanceOpenAt && tokenStart <= attendanceCloseAt && tokenStart <= serverNow`) mà **không cần tin `clientCapturedAt`**.
-     - Điều kiện hợp lệ về độ trễ đồng bộ:
-       `serverReceivedAt <= attendanceCloseAt + OFFLINE_SYNC_MAX_WINDOW` (và `serverReceivedAt <= tokenEnd + OFFLINE_QR_MAX_AGE`, `ASSUMPTION (chưa duyệt)` `A-QE8-07`).
-     - *Đánh đổi bảo mật cần lưu ý (`TBD-ATT-01`):* Nếu không giới hạn thời gian hoặc không gắn thêm ràng buộc, ảnh chụp QR hợp lệ của người A có thể bị người B (đã đăng ký sự kiện) gửi offline sau đó. Biện pháp giảm thiểu cho MVP: chỉ cho phép `OFFLINE_QR` đối với sinh viên **đã `REGISTERED` từ trước**, bắt buộc đồng bộ trong `OFFLINE_SYNC_MAX_WINDOW` **trước thời điểm job `NO_SHOW` chốt phiên** (`UC014`), và có thể gắn cờ hậu kiểm nếu `serverReceivedAt > attendanceCloseAt` (`ASSUMPTION (chưa duyệt)` `A-QE8-07`).
+     - Điều kiện hợp lệ về độ trễ đồng bộ (`OFFLINE_SYNC_MAX_WINDOW = 24 giờ`):
+       `serverReceivedAt <= attendanceCloseAt + 24 hours` (trễ hơn trả `422 OFFLINE_SYNC_WINDOW_EXPIRED`). Nếu nhận sau `attendanceCloseAt`, đánh dấu **`is_offline_late_sync = true`** để phục vụ hậu kiểm.
    - **Với `OFFLINE_GPS` (`QE-77`):**
-     - Lưu `client_captured_at`, tọa độ, `accuracy`, `isMocked`, và `integrity_hash = SHA-256(canonicalPayload + clientAppPepper)`. Theo `NFR-SEC-006/010` (`#9`), secret ở client có thể bị dịch ngược nên `integrity_hash` chỉ là lớp chống sửa đổi ngẫu nhiên trong DB local chứ không phải bằng chứng mật mã tuyệt đối.
-     - Server bắt buộc: `serverReceivedAt <= attendanceCloseAt + OFFLINE_SYNC_MAX_WINDOW`, kiểm tra `clientCapturedAt` nằm trong `[attendanceOpenAt, attendanceCloseAt]` và không vượt quá `serverReceivedAt + clockSkewTolerance`, đồng thời kiểm tra Haversine; nếu hợp lệ lưu `method = 'OFFLINE_GPS'` và gắn `suspicious_flag = true` nếu có bất thường.
+     - Lưu `client_captured_at`, tọa độ, `accuracy`, `isMocked`, và `integrity_hash = SHA-256(canonicalPayload + clientAppPepper)`. Theo `NFR-SEC-006/010`, secret ở client chỉ là lớp chống sửa đổi ngẫu nhiên trong DB local chứ không phải bằng chứng mật mã tuyệt đối.
+     - Server bắt buộc: `events.allow_offline_sync = true`, `serverReceivedAt <= attendanceCloseAt + 24 hours`, kiểm tra `clientCapturedAt` nằm trong `[attendanceOpenAt, attendanceCloseAt]` và không vượt quá `serverReceivedAt + clockSkewTolerance`, đồng thời kiểm tra Haversine; nếu hợp lệ lưu `method = 'OFFLINE_GPS'` (kèm `is_offline_late_sync = true` nếu nhận sau `attendanceCloseAt` và `suspicious_flag = true` nếu có bất thường).
    - **Với `EVIDENCE` offline (`QE-78`):**
-     - Upload ảnh lên private storage, tạo `attendances(method='EVIDENCE', status='PENDING')` chờ BCS duyệt nếu `serverReceivedAt <= evidenceSubmissionDeadline` (`TBD-EVT-03`).
+     - Upload ảnh JPEG/PNG `< 5 MB` lên private storage (`EvidenceStoragePort` — Local Private FS mặc định, retention `150 ngày`), tạo `attendances(method='EVIDENCE', status='PENDING')` chờ BCS duyệt nếu `serverReceivedAt <= evidence_deadline` (`evidence_deadline >= attendance_close_at`, mặc định `+24 giờ` — `TBD-EVT-03`).
 
 ---
 
@@ -370,20 +370,20 @@ Theo `BR-ATT-02`, `REQ-ATT-021`, `UC015`, `UC018` (`#9`) và màn hình Figma (`
 | **INV-OFF-01** | Offline queue replay an toàn & xác thực `OFFLINE_QR`/`OFFLINE_GPS` không tin clock client | *(Chưa có — Sprint 3–4)* | `OfflineSyncIT` (`QE-33`, `QE-76..78`): batch retry với partial failure; `OFFLINE_QR` quá `OFFLINE_SYNC_MAX_WINDOW` bị từ chối; `OFFLINE_GPS` `isMocked=true` giữ `ACCEPTED` + `suspicious_flag=true` |
 | **INV-POOL-01** | Không cạn kiệt connection pool & đạt ngưỡng tải `Proposal P1` | *(Chưa có)* | `BurstLoadTest` (`QE-46`): 100 req/s trong 10s (3,000 req/60s) trên HikariCP pool=30 không timeout/deadlock |
 
-### 7.2 Tổng hợp Giả định Chưa Duyệt (`ASSUMPTION`) & Điểm Chờ Stakeholder (`TBD`)
+### 7.2 Tổng hợp Quyết định Kiến trúc (`A-QE8-01..A-QE8-11` — `APPROVED 28/11/2026`)
 
-> **Tuân thủ R11 & R12:** Các mục dưới đây chưa có quyết định chốt trong `docs/QNU_Event_SRS.docx` hoặc có xung đột giữa SRS / Figma / Sprint 1 contract; cần nhóm/stakeholder phê duyệt và cập nhật vào `docs/decisions.md` và SRS trước khi code Sprint 2–4:
+> **Đã đồng bộ vào [`docs/spec/QNU_Event_SRS.docx`](../spec/QNU_Event_SRS.docx) (`v1.1`) và [`docs/decisions.md`](../decisions.md) ngày `28/11/2026`.** Toàn bộ các mục dưới đây đã chuyển sang trạng thái **`APPROVED`** (chỉ riêng tinh chỉnh ngưỡng chi tiết `accuracy`/tốc độ của `suspicious_flag` thuộc `TBD-ATT-03` được giữ mở cho thử nghiệm hiện trường):
 
-| Mã | Mục / Ngữ cảnh | Giá trị / Quy tắc đề xuất (`ASSUMPTION (chưa duyệt)`) | Tham chiếu SRS / Figma |
+| Mã | Mục / Ngữ cảnh | Quy tắc đã chốt (`APPROVED 28/11/2026`) | Tham chiếu chuẩn |
 |---|---|---|---|
-| **A-QE8-01** | Hạn chế `REQUIRES_NEW` trong luồng nóng (`RegistrationService` & `AttendanceService`) | Loại bỏ `REQUIRES_NEW` lồng bên trong TX đang giữ row lock: ghi attempt & success audit trong **1 TX duy nhất** (dùng `CheckInResult` thay vì ném exception để TX không bị ép rollback); rejection audit ghi sau khi TX ngoài kết thúc. Tránh tự khóa cạn HikariCP pool (`30` conn). | Code thực tế `AuditService.java:28`, `AttendanceAttemptService.java:18`, `application.yml:11` |
-| **A-QE8-02** | Bảo vệ `Idempotency-Key` sai lệch payload | Bổ sung `payload_hash` (`SHA-256`) trên `attendance_attempts` (`V2+`); dùng lại `Idempotency-Key` với payload/method khác -> từ chối `400 VALIDATION_FAILED` (`IDEMPOTENCY_PAYLOAD_MISMATCH`). | `QE-54`, `QE-33`, `V1__sprint1_core_schema.sql` |
-| **A-QE8-03** | Khóa chống double-register/cancel trên `/registrations` | Hỗ trợ tùy chọn `Idempotency-Key` (hoặc bảng khóa yêu cầu) cho `POST /registrations` và `DELETE /registrations/me` ở Sprint 2 để retry mạng sau khi hủy không tái đăng ký nhầm. | FE `src/api/events.ts:62`, `QE-40` |
-| **A-QE8-04** | Trả `attemptsUsed` & `attemptsRemaining` + sửa `counted=false` ở lần 4 | `ATTEMPT_LIMIT_REACHED` ghi `counted = false` (giữ DB `<= 3`); bổ sung `attemptsUsed`, `attemptsRemaining`, `maxAttempts` vào DTO/error details để FE hiển thị `Lượt gửi xác nhận: x/3`. | `AttendanceService.java:170`, Figma scanner, `QE-54` |
-| **A-QE8-05** | HTTP Status cho lần thử thứ 4 (`409` vs `429`) & Scope 3 lần thử | Giữ **`409 ATTEMPT_LIMIT_REACHED`** theo Frozen Contract Sprint 1 (thay vì `429` ở `UC015 5a`). Đề xuất giới hạn 3 lần thử dùng chung cho các phương thức tự động (`QR`, `GPS`, `OFFLINE_QR`, `OFFLINE_GPS`), còn `EVIDENCE`/`Appeal` là kênh dự phòng riêng (**chờ chốt `TBD-ATT-02`**). | `docs/api/sprint1-contract.md`, SRS `UC015 5a`, `TBD-ATT-02` (`#9`) |
-| **A-QE8-06** | Bán kính GPS mặc định & ngưỡng cờ đáng ngờ (`suspicious_flag`) | Cho phép cấu hình `allowed_radius_meters` **theo từng sự kiện** (`REQ-ATT-007`), gợi ý mặc định `60m` (khớp Figma; Proposal/SRS gợi ý `40–50m`). Tiêu chí `accuracy` bất thường & khoảng nhảy tốc độ chờ chốt **`TBD-ATT-03`**. | Figma, `docs/backend-foundation.md`, `TBD-ATT-03` (`#9`) |
-| **A-QE8-07** | Cửa sổ đồng bộ Offline (`OFFLINE_SYNC_MAX_WINDOW` & `OFFLINE_QR_MAX_AGE`) | Tách biệt hẳn khỏi 13s QR online (`TBD-ATT-01`). Đề xuất: cho phép sync tối đa **24 giờ** sau `attendance_close_at` (và **phải trước** khi job `NO_SHOW` khóa phiên), chỉ cho `OFFLINE_QR` nếu SV đã `REGISTERED` trước khi mở điểm danh (**chờ chốt `TBD-ATT-01`**). | SRS `TBD-ATT-01`, `UC014`, `UC019` (`#9`), `QE-33` |
-| **A-QE8-08** | HTTP Status khi quá hạn hủy 12h & Hủy từ `WAITING_LIST` | Từ chối hủy khi `server_time >= start_at - 12h` với mã lỗi **`409 CANCELLATION_CUTOFF_PASSED`** (thay vì `400` ở `UC011 3a.1`, đồng bộ nhóm 409 của `REGISTRATION_CLOSED`). Cho phép SV đang `WAITING_LIST` tự hủy không áp ngưỡng 12h (hoặc theo cùng ngưỡng nếu `UC011` áp chung). | SRS `UC011`, `REQ-REG-012..014` (`#9`), `QE-40` |
-| **A-QE8-09** | Quy tắc `tier_quotas` chồng lấn & Trạng thái ứng viên `#01` khi bị bỏ qua | Thứ tự cấp phát `wait_order` bằng bộ đếm tuần tự trên `events` (giải quyết tie-breaking `TBD-REG-01`). Quy tắc tổ hợp `AND`/`OR` giữa nhiều pool và việc `#01` giữ chỗ `WAITING_LIST` hay bị loại khi `NO_SHOW` ban / promote sau `registration_deadline` (**chờ chốt `TBD-EVT-01`, `TBD-REG-01`, `TBD-REG-02`**). | SRS `TBD-EVT-01`, `TBD-REG-01`, `TBD-REG-02` (`#9`), Figma |
-| **A-QE8-10** | Chuẩn hóa cấu hình QR (`10s` vs `15s`) & Nâng cấp `qr2` (`nonce`) | Xóa/sửa `app.qr.epoch-seconds: 15` ở `application.yml:61` về `10s` khớp schema `V1` & FE; loại bỏ secret dev hardcode khi chạy prod (`R7`). Nếu `QE-44` yêu cầu `random_nonce` theo `UC015`, dùng phiên bản token `qr2`. | `application.yml:61`, `QrTokenService.java:25`, `SRS UC015`, `QE-44` |
-| **A-QE8-11** | Điều kiện kết thúc verification cho job `NO_SHOW` khi còn `PENDING` / Offline | Job `NO_SHOW` (7 ngày ban, `QE-14`) chỉ chạy sau khi qua cả `attendance_close_at + OFFLINE_SYNC_MAX_WINDOW` và không đánh `NO_SHOW` cho sinh viên đang có `EVIDENCE` ở trạng thái `PENDING` (**chờ chốt `TBD-REG-03`**). | SRS `UC014`, `TBD-REG-03` (`#9`) |
+| **A-QE8-01** | Hạn chế `REQUIRES_NEW` trong luồng nóng (`RegistrationService` & `AttendanceService`) | Loại bỏ `REQUIRES_NEW` lồng bên trong TX giữ row lock: dùng `CheckInResult` commit attempt + attendance + success audit trong **1 TX duy nhất**; rejection audit ghi sau khi TX ngoài kết thúc. | `RegistrationService`, `AttendanceService`, `QE-54` |
+| **A-QE8-02** | Bảo vệ `Idempotency-Key` sai lệch payload | Bổ sung `payload_hash` (`SHA-256`) trên `attendance_attempts` (`V2`); reuse `Idempotency-Key` với payload/method khác -> **`400 VALIDATION_FAILED`** (`IDEMPOTENCY_PAYLOAD_MISMATCH`). | `QE-54`, `QE-33`, `v2-schema-blueprint.md` |
+| **A-QE8-03** | Khóa chống double-register/cancel trên `/registrations` | Hỗ trợ tùy chọn `Idempotency-Key` cho `POST /registrations` và `DELETE /registrations/me` ở Sprint 2. | `src/api/events.ts`, `QE-40` |
+| **A-QE8-04** | Trả `attemptCount` & `remainingAttempts` + sửa `counted=false` ở lần 4 | `ATTEMPT_LIMIT_REACHED` ghi `counted = false` (giữ DB `<= 3`); trả metadata trong `GET /attendance/me` (`QE-98`) và `ApiError.details`. | `QE-54`, `QE-98`, Figma scanner |
+| **A-QE8-05** | HTTP Status cho lần thử thứ 4 (`409`) & Scope 3 lần thử | Chốt **`409 ATTEMPT_LIMIT_REACHED`** (thay `429` ở `SRS v1.0`). Giới hạn 3 lần thử dùng chung cho các kênh tự động (`DYNAMIC_QR`, `GPS`, `OFFLINE_QR`, `OFFLINE_GPS`), giữ `EVIDENCE`/Appeal làm kênh dự phòng riêng (`D-7`). | `error-codes.md`, `SRS v1.1` `UC015 5a` |
+| **A-QE8-06** | Bán kính GPS mặc định & ngưỡng cờ đáng ngờ (`D-7`) | Cấu hình `allowed_radius_meters ∈ [10, 500]` theo từng sự kiện, **mặc định `50m`** (`60m` trên Figma là ví dụ sự kiện); ngoài bán kính trả **`422 GPS_OUT_OF_RANGE`**. Ngưỡng `accuracy`/tốc độ của `suspicious_flag` tinh chỉnh tiếp theo `TBD-ATT-03`. | `SRS v1.1 REQ-EVT-009`, `QE-55` |
+| **A-QE8-07** | Cửa sổ đồng bộ Offline & cấm Offline Prefetch (`D-6`) | Tuyệt đối cấm Offline Prefetch; hỗ trợ Student Offline Store-and-Forward với **`OFFLINE_SYNC_MAX_WINDOW = 24 giờ`** sau `attendance_close_at`, `events.allow_offline_sync`, `is_offline_late_sync`, chỉ cho SV đã `REGISTERED`. | `SRS v1.1` (`TBD-ATT-01` đóng), `QE-33` |
+| **A-QE8-08** | HTTP Status khi quá hạn hủy 12h, miễn `WAITING_LIST` & tái đăng ký (`D-5`) | Hủy `REGISTERED` khi `server_time >= start_at - 12h` trả **`409 CANCELLATION_CUTOFF_PASSED`**; **`WAITING_LIST` miễn mốc 12h**; **`CANCELLED` được đăng ký lại** nếu còn hạn và không bị ban `NO_SHOW`. | `SRS v1.1` `UC011`, `REQ-REG-012`, `QE-40` |
+| **A-QE8-09** | Mô hình `event_pools` + `wait_order` + promote sau deadline (`D-4`, `D-5`) | Dùng `event_pools` (`1 seat = 1 pool`), `events.next_wait_order` → `wait_order`, `FOR UPDATE SKIP LOCKED`, skip `#01` không đủ điều kiện; tiếp tục promote sau `registration_deadline` trước `start_at - 12h`; tăng quota `A-EVT-01` kích hoạt promote ngay. | `quota-rules.md`, `v2-schema-blueprint.md`, `QE-38..40` |
+| **A-QE8-10** | Chuẩn hóa cấu hình QR (`10s`) & nâng cấp `qr2` (`nonce`) | Đã đổi `15s` → `10s` và bật fail-fast secret trên `main`; giữ `qr1` cho Sprint 1–2, nâng `qr2` khi kích hoạt `nonce`. | `application.yml`, `QrTokenService`, `QE-44` |
+| **A-QE8-11** | Job `NO_SHOW` (`D-9`) & Retention `150 ngày` (`D-8`) | Job `NO_SHOW` (`QE-14`, 7 ngày vào `student_restrictions`) chạy sau **`MAX(attendance_close_at + 24h, COALESCE(evidence_deadline, attendance_close_at))`**; bỏ qua `PENDING` Evidence, `WAITING_LIST`, `CANCELLED` và tạm dừng khi có Appeal Vòng 1; nhiều ban chồng nhau lấy **`MAX(current_banned_until, now + 7 days)`**. | `SRS v1.1` (`TBD-REG-03` đóng), `QE-14`, `v2-schema-blueprint.md` |
