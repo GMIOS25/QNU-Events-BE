@@ -1,6 +1,7 @@
-# Thiết kế CSDL (ERD) — Sprint 1
+# Thiết kế CSDL (ERD) — Sprint 1 (`V1`) & Tham chiếu `V2`
 
-> Lược đồ cơ sở dữ liệu quan hệ cho Sprint 1 của hệ thống **QNU-Events**, được ánh xạ trực tiếp từ file migration Flyway [`V1__sprint1_core_schema.sql`](../../src/main/resources/db/migration/V1__sprint1_core_schema.sql).
+> Lược đồ cơ sở dữ liệu quan hệ cho Sprint 1 của hệ thống **QNU-Events**, được ánh xạ trực tiếp từ file migration Flyway [`V1__sprint1_core_schema.sql`](../../src/main/resources/db/migration/V1__sprint1_core_schema.sql).  
+> Phần mở rộng lược đồ đóng băng cho Sprint 2–3 (`CVHT`, `event_pools`, `wait_order`, `attendance_evidences`, `appeals`, `student_restrictions`, `outbox_events`, tổ chức CSV) xem tại [`v2-schema-blueprint.md`](v2-schema-blueprint.md).
 
 ---
 
