@@ -2,7 +2,7 @@
 
 > **Mã tài liệu:** `CONTRACT-IMP-INTAKE-PROGRAM-v1.0`
 > **Liên kết Jira:** `QE-45`, `QE-26`, `QE-62`
-> **Liên kết SRS:** `UC026` (UC6.2), `REQ-DATA-001` → `REQ-DATA-003`, `REQ-DATA-007` → `REQ-DATA-009`, `TBD-DATA-01`
+> **Liên kết SRS:** `UC026` (UC6.2), `REQ-DATA-001` → `REQ-DATA-003`, `REQ-DATA-007` → `REQ-DATA-009`, `TBD-DATA-01` *(Closed `28/11/2026` — xem [`README.md`](README.md) & [`v2-schema-blueprint.md`](../Design/v2-schema-blueprint.md))*
 > **Tệp dữ liệu nguồn QNU:** `khoahoc.csv` (202 chương trình đào tạo theo khóa từ K45 đến K49)
 
 ---

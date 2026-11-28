@@ -36,7 +36,7 @@ D. Ứng dụng QNU Events Frontend, tên gói qnu-events-fe, phiên bản khở
 
 E. Bộ thư viện xử lý QR phía giao diện gồm qrcode.react phiên bản 4.2.0 phục vụ trình chiếu mã QR động cho Ban tổ chức và html5-qrcode phiên bản 2.3.8 phục vụ quét mã bằng camera trên trình duyệt di động của Sinh viên. 
 
-F. Tài liệu Đặc tả Yêu cầu Phần mềm và Đề xuất Dự án gồm QNU_Event_SRS.docx và QNU_Event_Participation_Management_Project_Proposal_v2.docx làm cơ sở truy vết các Use Case, Functional Requirements và Non-Functional Requirements. 
+F. Tài liệu Đặc tả Yêu cầu Phần mềm và Đề xuất Dự án gồm `docs/spec/QNU_Event_SRS.docx` và `docs/spec/QNU_Event_Participation_Management_Project_Proposal_v2.docx` làm cơ sở truy vết các Use Case, Functional Requirements và Non-Functional Requirements. 
 
 # **3.Các vấn đề rủi ro trong phần mềm** 
 

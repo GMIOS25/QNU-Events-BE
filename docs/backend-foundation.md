@@ -1,5 +1,8 @@
 # Ghi chú nền tảng backend
 
+> [!NOTE]
+> **Historical Sprint 0 Bootstrap Baseline (Superseded for Sprint 2+):** Đây là ghi chú khởi tạo nền tảng ban đầu trước khi hoàn thiện Sprint 1 và chốt bộ quy chuẩn `28/11/2026`. Nguồn sự thật hiện hành xem tại [`docs/decisions.md`](decisions.md), [`docs/Design/v2-schema-blueprint.md`](Design/v2-schema-blueprint.md), [`docs/api/error-codes.md`](api/error-codes.md) và [`docs/spec/QNU_Event_SRS.docx`](spec/QNU_Event_SRS.docx) (`SRS v1.1`): đã có JWT/QR/Attendance Sprint 1 trên `main`, chính thức **5 vai trò** (thêm `CVHT` xử lý Appeal Vòng 1, `EVENT_OWNER` Vòng 2 & gỡ No-show), GPS mặc định `50m` (`422 GPS_OUT_OF_RANGE`), Offline Store-and-Forward `24h`, và Evidence Local Private FS retention `150 ngày`.
+
 Nguồn: proposal v2 trong thư mục docs. Phạm vi hiện tại là một khoa, khoảng 3.000 sinh viên. Backend được tổ chức thành một ứng dụng với package theo tính năng để giữ giao dịch và việc triển khai đơn giản.
 
 ## Các yêu cầu cần giữ khi phát triển

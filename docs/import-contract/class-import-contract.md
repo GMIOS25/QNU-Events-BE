@@ -2,7 +2,7 @@
 
 > **Mã tài liệu:** `CONTRACT-IMP-CLASS-v1.0`
 > **Liên kết Jira:** `QE-45`, `QE-26`, `QE-62`
-> **Liên kết SRS:** `UC026` (UC6.2 — Nhập dữ liệu khoa ngành và lớp), `REQ-DATA-001` → `REQ-DATA-003`, `REQ-DATA-007` → `REQ-DATA-010`, `TBD-DATA-01`
+> **Liên kết SRS:** `UC026` (UC6.2 — Nhập dữ liệu khoa ngành và lớp), `REQ-DATA-001` → `REQ-DATA-003`, `REQ-DATA-007` → `REQ-DATA-010`, `TBD-DATA-01` *(Closed `28/11/2026` — xem [`README.md`](README.md) & [`v2-schema-blueprint.md`](../Design/v2-schema-blueprint.md))*
 > **Liên kết Codebase:** Entity [`OrgClass.java`](../../src/main/java/vn/edu/qnu/events/student/OrgClass.java), Repository [`OrgClassRepository.java`](../../src/main/java/vn/edu/qnu/events/student/OrgClassRepository.java), Bảng `org_class` trong [`V1__sprint1_core_schema.sql`](../../src/main/resources/db/migration/V1__sprint1_core_schema.sql)
 > **Tệp dữ liệu nguồn QNU:** `lop.csv` (367 lớp sinh hoạt chính quy từ K46 đến K49)
 

@@ -6,9 +6,9 @@
 - **Tiêu chuẩn áp dụng:** ISO/IEC/IEEE 29119 Software Testing Standard, RFC 7231 (HTTP Semantics), RFC 6238 (TOTP-like Epoch Rotation), FSM Formal Modeling
 - **Môi trường đối soát:** Spring Boot 4.1.2 (Java 21 LTS), PostgreSQL 17, React 19 / TypeScript 5.7
 - **Tài liệu nền tảng:**
-  - `docs/QNU_Event_Participation_Management_Project_Proposal_v2.docx` (BR-ATT-01..10)
-  - `docs/QNU_Event_SRS.docx` (REQ-ATT-001..024, NFR-SEC-010, NFR-PERF-008)
-  - `docs/agent/sprint1-rescue-plan.md` (§8, §9)
+  - [`docs/spec/QNU_Event_Participation_Management_Project_Proposal_v2.docx`](../spec/QNU_Event_Participation_Management_Project_Proposal_v2.docx) (`BR-ATT-01..10`)
+  - [`docs/spec/QNU_Event_SRS.docx`](../spec/QNU_Event_SRS.docx) (`v1.1`: `REQ-ATT-001..024`, `NFR-SEC-010`, `NFR-PERF-008`)
+  - [`docs/api/error-codes.md`](../api/error-codes.md) · [`docs/decisions.md`](../decisions.md) · [`docs/agent/sprint1-rescue-plan.md`](../agent/sprint1-rescue-plan.md) (§8, §9)
 
 ---
 
@@ -65,9 +65,9 @@ stateDiagram-v2
 | **`NOT_CHECKED_IN`** | Quét Dynamic QR | Token hợp lệ, trong cửa sổ, registered, failed attempts $< 3$ | **`ACCEPTED`** | `attendances`: INSERT 1 dòng `status='ACCEPTED'`<br>`attendance_attempts`: INSERT `outcome='ACCEPTED'` | Ghi audit `ATTENDANCE_QR_ACCEPT`, cộng điểm rèn luyện |
 | **`NOT_CHECKED_IN`** | Quét Dynamic QR | Sai mã, hết hạn grace period, sai chữ ký (lần 1 hoặc 2) | **`NOT_CHECKED_IN`** (Attempt = `REJECTED`) | `attendance_attempts`: INSERT `outcome='REJECTED'`, `counted=true`, `reason_code` | Trừ lượt: `remainingAttempts = 3 - failed`, `canRetry = true` |
 | **`NOT_CHECKED_IN`** (đã fail 2 lần) | Quét Dynamic QR | Sai mã lần thứ 3 | **`NOT_CHECKED_IN`** (Attempt = `REJECTED`) | `attendance_attempts`: INSERT `outcome='REJECTED'`, `counted=true` | `remainingAttempts = 0`, `canRetry = false` |
-| **`NOT_CHECKED_IN`** (đã fail 3 lần) | Quét Dynamic QR | Bất kỳ (kể cả mã QR hoàn toàn đúng) | **`NOT_CHECKED_IN`** (Bị khóa) | `attendance_attempts`: INSERT `outcome='REJECTED'`, `counted=false`, code=`ATTEMPT_LIMIT_REACHED` | HTTP 409, cấm điểm danh sự kiện này vĩnh viễn |
-| **`NOT_CHECKED_IN`** | Nộp ảnh minh chứng | Ảnh JPEG/PNG $< 5\text{MB}$, đúng hạn nộp minh chứng | **`PENDING`** | `attendances`: INSERT `status='PENDING'`, `method='EVIDENCE'` | Đưa vào queue chờ Ban cán sự duyệt, chưa cộng điểm |
-| **`PENDING`** | BCS phê duyệt | Người duyệt có vai trò `EVENT_OWNER` / `BCS`, ảnh hợp lệ | **`ACCEPTED`** | `attendances`: UPDATE `status='ACCEPTED'`, `recorded_at=now()` | Kích hoạt ràng buộc duy nhất, cộng điểm rèn luyện |
+| **`NOT_CHECKED_IN`** (đã fail 3 lần) | Quét Dynamic QR | Bất kỳ (kể cả mã QR hoàn toàn đúng) | **`NOT_CHECKED_IN`** (Khóa kênh tự động) | `attendance_attempts`: INSERT `outcome='REJECTED'`, `counted=false`, code=`ATTEMPT_LIMIT_REACHED` | HTTP 409; chặn nhóm kênh tự động (`QR`/`GPS`/`Offline`), vẫn cho nộp `EVIDENCE` dự phòng (`D-7`) |
+| **`NOT_CHECKED_IN`** | Nộp ảnh minh chứng | Ảnh JPEG/PNG $< 5\text{MB}$, đúng hạn `evidence_deadline` | **`PENDING`** | `attendances`: INSERT `status='PENDING'`, `method='EVIDENCE'` | Đưa vào queue chờ Ban cán sự (`CLASS_REPRESENTATIVE`) duyệt; QR/GPS `ACCEPTED` có thể ghi đè (`D-7`) |
+| **`PENDING`** | BCS phê duyệt | Người duyệt giữ role **`CLASS_REPRESENTATIVE` (`BCS`)** đúng lớp phân công (`bcs_class_assignment`), ảnh hợp lệ | **`ACCEPTED`** | `attendances`: UPDATE `status='ACCEPTED'`, `recorded_at=now()` | Kích hoạt ràng buộc duy nhất, cộng điểm rèn luyện (`D-2`) |
 | **`PENDING`** | BCS từ chối | Ảnh không rõ mặt / sai ngữ cảnh | **`REJECTED`** | `attendances`: UPDATE `status='REJECTED'` | Ghi log lý do từ chối, sinh viên tra cứu được trên lịch sử |
 | **`ACCEPTED`** | Quét lại mã QR (bằng key mới) | Đã có record `status='ACCEPTED'` | **`ACCEPTED`** (Attempt = `REJECTED`) | `attendance_attempts`: INSERT `outcome='REJECTED'`, code=`ALREADY_CHECKED_IN` | HTTP 409, giữ nguyên bản ghi attendance gốc |
 | **Bất kỳ (`ACCEPTED` / `REJECTED`)** | Gửi lại cùng `Idempotency-Key` | Trùng bộ ba `(event_id, student_id, idempotency_key)` | **Giữ nguyên trạng thái** | Không ghi nhận thêm bất kỳ record nào | Trả về bản sao HTTP Status & Response Body trong CSDL |
@@ -167,51 +167,51 @@ Gọi $T$ là chu kỳ xoay vòng (10s), $G$ là thời gian ân hạn (3s). Gi�
 * **Thuật toán máy chủ:**
   * Khoảng cách Haversine trên máy chủ:
     $$d = 2R \arcsin \left( \sqrt{\sin^2\left(\frac{\Delta \varphi}{2}\right) + \cos(\varphi_1)\cos(\varphi_2)\sin^2\left(\frac{\Delta \lambda}{2}\right)} \right)$$
-  * Tiêu chí chấp nhận: $d \le \text{event.location\_radius\_meters}$.
-  * MVP Rule BR-ATT-07: Nếu client gửi cờ `isMocked = true` hoặc độ chính xác bất thường ($\text{accuracy} > 100\text{m}$), máy chủ **vẫn chấp nhận** để bảo vệ trải nghiệm, nhưng kích hoạt `suspicious_flag = TRUE` vào bảng audit log.
+  * Tiêu chí chấp nhận: $d \le \text{events.allowed\_radius\_meters}$ (cấu hình $10\text{–}500\text{m}$, mặc định **$50\text{m}$** theo `SRS REQ-EVT-009` — `D-7`).
+  * MVP Rule BR-ATT-07: Nếu **trong bán kính** nhưng client gửi cờ `isMocked = true` hoặc độ chính xác bất thường ($\text{accuracy} > \text{threshold}$ — `TBD-ATT-03`), máy chủ **vẫn chấp nhận** (`ACCEPTED`) nhưng gắn `suspicious_flag = TRUE`. Ngoài bán kính luôn từ chối `422 GPS_OUT_OF_RANGE` (`counted = true`).
 
 | Test ID | Kịch bản kiểm thử | Dữ liệu đầu vào & Tọa độ | Kỳ vọng Kỹ thuật | Kế hoạch thực hiện |
 |---|---|---|---|---|
-| **TC-ATT-06-01** | Tọa độ GPS nằm trong bán kính sự kiện | Tọa độ sinh viên cách tâm sự kiện $25\text{m}$ (radius cấu hình $50\text{m}$) | HTTP 200 `ACCEPTED`, tạo record `attendances(method='GPS', status='ACCEPTED')` | Roadmap Sprint 2 (QE-55) |
-| **TC-ATT-06-02** | Tọa độ GPS nằm ngoài bán kính sự kiện | Tọa độ sinh viên cách tâm sự kiện $120\text{m}$ (radius $50\text{m}$) | HTTP 422 `OUT_OF_GPS_RADIUS`, ghi attempt `counted=true`, không tạo attendance | Roadmap Sprint 2 (QE-55) |
+| **TC-ATT-06-01** | Tọa độ GPS nằm trong bán kính sự kiện | Tọa độ sinh viên cách tâm sự kiện $25\text{m}$ (radius mặc định $50\text{m}$) | HTTP 200 `ACCEPTED`, tạo record `attendances(method='GPS', status='ACCEPTED')` | Roadmap Sprint 2 (QE-55) |
+| **TC-ATT-06-02** | Tọa độ GPS nằm ngoài bán kính sự kiện | Tọa độ sinh viên cách tâm sự kiện $120\text{m}$ (radius $50\text{m}$) | HTTP 422 `GPS_OUT_OF_RANGE`, ghi attempt `counted=true`, không tạo attendance | Roadmap Sprint 2 (QE-55) |
 | **TC-ATT-06-03** | Tọa độ GPS không hợp lệ (NaN / Vượt cực) | Lat: $95.0$, Lng: $200.0$ | HTTP 400 `VALIDATION_FAILED`, ghi attempt `counted=false` | Roadmap Sprint 2 (QE-55) |
 | **TC-ATT-07-01** | GPS giả lập (Mock Location) được chấp nhận kèm cờ cảnh báo | Payload kèm `isMocked: true` hoặc độ chính xác bất thường, khoảng cách $d \le \text{radius}$ | • HTTP 200 `ACCEPTED`<br>• Ghi `attendances(status='ACCEPTED')`<br>• `audit_logs`: Ghi nhận `suspicious_flag: true`, `reason: "MOCK_LOCATION_DETECTED"` | Roadmap Sprint 2 (QE-55) |
 
 ---
 
 #### BR-ATT-08 & BR-ATT-09: Minh chứng Ngoại lệ (Evidence) & Điểm danh Hộ (Proxy)
-* **Quy trình Duyệt thủ công (Human-in-the-loop):**
-  * Lưu trữ: Ảnh upload vào S3/MinIO/Local storage, gắn với bản ghi `attendances(status='PENDING', method='EVIDENCE' / 'PROXY_EVIDENCE')`.
-  * Ràng buộc tệp (REQ-ATT-009): MIME `image/jpeg` hoặc `image/png`, kích thước $< 5\text{MB}$.
-  * Proxy Attendance (BR-ATT-09): Phải chỉ định rõ sinh viên được điểm danh $A$ và sinh viên nộp thay $B$, ảnh chụp phải nhận diện được khuôn mặt cả hai người.
+* **Quy trình Duyệt thủ công (`D-2`, `D-8`):**
+  * Lưu trữ: Ảnh upload qua `EvidenceStoragePort` (mặc định Local Private Filesystem ngoài public root, tên file UUID, retention `150 ngày` từ `events.end_at`, pluggable MinIO/S3), gắn với `attendances(status='PENDING', method='EVIDENCE'/'PROXY_EVIDENCE')` và `attendance_evidences`.
+  * Ràng buộc tệp (REQ-ATT-009): Kiểm tra magic bytes `image/jpeg` hoặc `image/png`, kích thước $< 5\text{MB}$ (`5 * 1024 * 1024` bytes).
+  * Proxy Attendance (BR-ATT-09): Chỉ định rõ sinh viên được điểm danh $A$ và người nộp thay $B$, ảnh chụp nhận diện cả hai người (`submitted_by`, `is_proxy = true`).
 
 | Test ID | Kịch bản kiểm thử | Dữ liệu đầu vào | Kỳ vọng Kỹ thuật | Kế hoạch thực hiện |
 |---|---|---|---|---|
-| **TC-ATT-08-01** | Nộp ảnh minh chứng hợp lệ | File PNG $2.4\text{MB}$, sự kiện đang mở nộp minh chứng | HTTP 201 Created, tạo `attendances(status='PENDING')`, sinh viên chưa được cộng điểm | Roadmap Sprint 2 (QE-42) |
-| **TC-ATT-08-02** | Nộp file sai định dạng hoặc quá dung lượng | File PDF hoặc ảnh JPEG $5.2\text{MB}$ | HTTP 422 `INVALID_EVIDENCE_FILE`, không tạo bản ghi trong `attendances` | Roadmap Sprint 2 (QE-42) |
-| **TC-ATT-08-03** | Ban cán sự phê duyệt (Approve) minh chứng | Event Owner gọi `POST /api/v1/attendances/{id}/approve` | • HTTP 200 OK<br>• Cập nhật `attendances.status = 'ACCEPTED'`<br>• Cộng điểm rèn luyện vào lịch sử sinh viên | Roadmap Sprint 2 (QE-58) |
-| **TC-ATT-08-04** | Ban cán sự từ chối (Reject) minh chứng | Event Owner gọi `POST /api/v1/attendances/{id}/reject` kèm `reason: "Ảnh mờ"` | • HTTP 200 OK<br>• Cập nhật `attendances.status = 'REJECTED'`<br>• Ghi nhận lý do từ chối để sinh viên tra cứu | Roadmap Sprint 2 (QE-58) |
-| **TC-ATT-09-01** | Nộp hồ sơ điểm danh hộ qua minh chứng | Sinh viên B nộp thay cho A kèm ảnh chụp chung | Tạo hồ sơ `attendances` cho A với `method='PROXY_EVIDENCE'`, `status='PENDING'` | Roadmap Sprint 2 (QE-42) |
-| **TC-ATT-09-02** | Ngăn chặn điểm danh hộ qua QR/GPS | Sinh viên B gửi request QR nhưng chèn mã sinh viên A | Bị triệt tiêu: Máy chủ bắt buộc đọc danh tính từ JWT Claims (`CurrentUser.userId`), hoàn toàn bỏ qua client body (Quy tắc R9) | Đã bảo vệ bởi kiến trúc Core Sprint 1 |
+| **TC-ATT-08-01** | Nộp ảnh minh chứng hợp lệ | File PNG $2.4\text{MB}$, trong hạn `evidence_deadline` | HTTP 201/202, tạo `attendances(status='PENDING')` + `attendance_evidences`, chưa cộng điểm | Roadmap Sprint 2 (QE-42) |
+| **TC-ATT-08-02** | Nộp file sai định dạng hoặc quá dung lượng | File PDF hoặc ảnh JPEG $5.2\text{MB}$ | HTTP 422 `INVALID_EVIDENCE_FILE`, không tạo bản ghi trong `attendances` (`counted = false`) | Roadmap Sprint 2 (QE-42) |
+| **TC-ATT-08-03** | Ban cán sự phê duyệt (Approve) minh chứng | **`CLASS_REPRESENTATIVE (BCS)`** đúng lớp phân công gọi `POST /api/v1/attendances/{id}/approve` | • HTTP 200 OK<br>• Cập nhật `attendances.status = 'ACCEPTED'`<br>• Cộng điểm rèn luyện; user ngoài lớp hoặc `EVENT_OWNER`/`SYSTEM_ADMIN` gọi trả `403 FORBIDDEN` (`D-2`) | Roadmap Sprint 2 (QE-43) |
+| **TC-ATT-08-04** | Ban cán sự từ chối (Reject) minh chứng | **`CLASS_REPRESENTATIVE (BCS)`** đúng lớp phân công gọi `POST /api/v1/attendances/{id}/reject` kèm `reason: "Ảnh mờ"` (`<= 255` ký tự) | • HTTP 200 OK<br>• Cập nhật `attendances.status = 'REJECTED'`<br>• Ghi lý do từ chối & đặt `T0 = reviewed_at` cho quyền nộp Appeal Vòng 1 lên `CVHT` | Roadmap Sprint 2 (QE-43) |
+| **TC-ATT-09-01** | Nộp hồ sơ điểm danh hộ qua minh chứng | Sinh viên B nộp thay cho A kèm ảnh chụp chung | Tạo hồ sơ `attendances` cho A (`method='PROXY_EVIDENCE'`, `status='PENDING'`) và `attendance_evidences(submitted_by=B, is_proxy=true)` | Roadmap Sprint 2 (QE-19) |
+| **TC-ATT-09-02** | Ngăn chặn điểm danh hộ qua QR/GPS | Sinh viên B gửi request QR nhưng chèn mã sinh viên A | Bị triệt tiêu: Máy chủ bắt buộc đọc danh tính từ JWT Claims (`CurrentUser.userId`), bỏ qua client body (`R9`) | Đã bảo vệ bởi kiến trúc Core Sprint 1 |
 
 ---
 
-#### BR-ATT-10: Chế Tài No-Show (Sinh viên Vắng mặt Không phép)
+#### BR-ATT-10: Chế Tài No-Show (Sinh viên Vắng mặt Không phép — `D-9`)
 * **Quy trình Chế tài Tự động:**
-  * Định nghĩa No-show: Sinh viên có `registrations(status='REGISTERED')` nhưng không có bất kỳ bản ghi `attendances(status='ACCEPTED')` nào sau khi sự kiện kết thúc và hết thời hạn khiếu nại (Appeal window).
-  * Chế tài: Tự động ghi án kỷ luật cấm đăng ký sự kiện mới trong vòng 07 ngày tính từ thời điểm chốt đối soát.
+  * Định nghĩa No-show: Sinh viên có `registrations(status='REGISTERED')` nhưng không có `attendances(status='ACCEPTED')` và **không** có `EVIDENCE` trạng thái `PENDING` sau mốc **`MAX(attendance_close_at + 24h, COALESCE(evidence_deadline, attendance_close_at))`** (bỏ qua `WAITING_LIST`, `CANCELLED` và sự kiện `CANCELLED`; tạm dừng bộ đếm khi có Appeal Vòng 1 hợp lệ).
+  * Chế tài: Ghi vào **`student_restrictions`** khóa đăng ký sự kiện mới 07 ngày; nếu nhiều án phạt chồng nhau lấy **`banned_until = MAX(current_banned_until, now + 7 days)`**.
 
 | Test ID | Kịch bản kiểm thử | Điều kiện & Kích hoạt | Kỳ vọng Kỹ thuật | Kế hoạch thực hiện |
 |---|---|---|---|---|
-| **TC-ATT-10-01** | Tiến trình quét tự động phát hiện No-show | Cron job đối soát chạy sau khi hết hạn Appeal | • Xác định danh sách sinh viên có đăng ký nhưng thiếu attendance<br>• Tạo bản ghi án phạt: `student_penalties(student_id, banned_until = now() + 7 days)` | Roadmap Sprint 2 (QE-71 / Sanctions) |
-| **TC-ATT-10-02** | Sinh viên đang trong hạn phạt cố tình đăng ký mới | Sinh viên đang chịu án phạt gọi `POST /api/v1/events/{id}/register` | • HTTP 403 Forbidden, `code: "STUDENT_PENALIZED"`<br>• Response trả về thời điểm hết hạn phạt `bannedUntil` | Roadmap Sprint 2 (QE-71) |
-| **TC-ATT-10-03** | Sinh viên đã hết thời hạn 7 ngày phạt | Đăng ký sau thời điểm `bannedUntil` | Cho phép đăng ký sự kiện mới bình thường | Roadmap Sprint 2 (QE-71) |
+| **TC-ATT-10-01** | Tiến trình quét tự động phát hiện No-show | Cron job đối soát chạy sau `MAX(attendance_close_at + 24h, COALESCE(evidence_deadline, attendance_close_at))` | • Xác định danh sách `REGISTERED` vắng (miễn `PENDING` Evidence)<br>• Tạo/cập nhật `student_restrictions(student_id, banned_until = MAX(current, now() + 7 days))` | Roadmap Sprint 3 (QE-14) |
+| **TC-ATT-10-02** | Sinh viên đang trong hạn phạt cố tình đăng ký mới | Sinh viên đang chịu án phạt gọi `POST /api/v1/events/{id}/registrations` | • HTTP 403 Forbidden, `code: "STUDENT_PENALIZED"`<br>• Response trả về thời điểm hết hạn phạt `bannedUntil` | Roadmap Sprint 3 (QE-14) |
+| **TC-ATT-10-03** | Sinh viên đã hết thời hạn 7 ngày phạt (hoặc được `EVENT_OWNER` gỡ sau Appeal R2) | Đăng ký sau thời điểm `bannedUntil` hoặc sau khi gỡ phạt | Cho phép đăng ký sự kiện mới bình thường | Roadmap Sprint 3 (QE-14, QE-60) |
 
 ---
 
 ## 4. MA TRẬN PHÂN LOẠI LỖI & MÃ PHẢN HỒI HTTP (HTTP & ERROR CODES MAPPING)
 
-Bảng chuẩn hóa toàn bộ mã lỗi theo đúng RFC 7231 và định dạng RFC 7807 (Problem Details):
+Bảng chuẩn hóa khớp hoàn toàn với [`docs/api/error-codes.md`](../api/error-codes.md):
 
 | Nhóm lỗi | Mã lỗi (`ErrorCode`) | HTTP Status | Cờ `counted` | Thông điệp hiển thị cho người dùng |
 |---|---|---|:---:|---|
@@ -222,22 +222,23 @@ Bảng chuẩn hóa toàn bộ mã lỗi theo đúng RFC 7231 và định dạng
 | **Trạng thái Sự kiện** | `EVENT_NOT_PUBLISHED` | 409 Conflict | `false` | Sự kiện chưa được công bố. |
 | | `ATTENDANCE_NOT_OPEN`| 409 Conflict | `false` | Chưa đến hoặc đã hết thời gian điểm danh. |
 | **Xung đột Nghiệp vụ**| `ALREADY_CHECKED_IN` | 409 Conflict | `false` | Bạn đã điểm danh sự kiện này rồi. |
-| | `ATTEMPT_LIMIT_REACHED`| 409 Conflict | `false` | Bạn đã vượt quá số lần thử điểm danh cho phép (tối đa 3 lần). |
+| | `ATTEMPT_LIMIT_REACHED`| 409 Conflict | `false` | Bạn đã vượt quá số lần thử xác thực tự động cho phép (tối đa 3 lần). |
 | **Dữ liệu Điểm danh** | `QR_MALFORMED` | 422 Unprocessable | `true` | Mã QR không đúng định dạng chuẩn. |
 | | `QR_BAD_SIGNATURE` | 422 Unprocessable | `true` | Chữ ký mã QR không hợp lệ hoặc đã bị can thiệp. |
 | | `QR_WRONG_EVENT` | 422 Unprocessable | `true` | Mã QR không thuộc về sự kiện này. |
 | | `QR_EXPIRED` | 422 Unprocessable | `true` | Mã QR đã hết hạn (chu kỳ xoay vòng 10 giây). |
 | | `QR_FROM_FUTURE` | 422 Unprocessable | `true` | Mã QR không hợp lệ (thời gian trên thiết bị bị lệch). |
-| | `OUT_OF_GPS_RADIUS` | 422 Unprocessable | `true` | Vị trí hiện tại nằm ngoài bán kính cho phép của sự kiện. |
-| | `INVALID_EVIDENCE` | 422 Unprocessable | `false` | Tệp minh chứng không hợp lệ (sai định dạng hoặc quá 5MB). |
+| | `GPS_OUT_OF_RANGE` | 422 Unprocessable | `true` | Vị trí hiện tại nằm ngoài bán kính cho phép của sự kiện. |
+| | `OFFLINE_SYNC_WINDOW_EXPIRED` | 422 Unprocessable | `true` | Quá cửa sổ đồng bộ ngoại tuyến 24 giờ sau khi đóng điểm danh. |
+| | `INVALID_EVIDENCE_FILE` | 422 Unprocessable | `false` | Tệp minh chứng không hợp lệ (sai định dạng hoặc quá 5MB). |
 
 ---
 
 ## 5. KẾT LUẬN & ĐÁNH GIÁ CHUẨN MỰC SENIOR LEAD
 
 1. **Tính hoàn thiện của Sprint 1:**
-   - Đạt độ phủ tuyệt đối cho **BR-ATT-01 đến BR-ATT-05**: 11 bài kiểm thử tích hợp chuyên sâu, bao quát từ tranh chấp tải đồng thời, cơ chế khóa Advisory Lock cấp vi mô, Idempotent replay, chống timing attack, đến kiểm thử biên cho hạn mức 3 lần thử.
+   - Đạt độ phủ toàn diện cho **BR-ATT-01 đến BR-ATT-05**: **25 bài kiểm thử tích hợp (`AttendanceIT`) + 5 unit tests (`AttendanceServiceTest`) + 13 unit tests (`QrTokenServiceTest`)** xanh trên `main`, bao quát tranh chấp tải đồng thời, Advisory Lock, Idempotent replay, timing attack, biên 3 lần thử và khôi phục trạng thái reload (`/attendance/me` — `QE-98`).
    - Cơ sở dữ liệu và trigger bảo đảm tính bất biến (`attendance_attempts` và `audit_logs`).
-2. **Kế hoạch thực thi Sprint 2:**
-   - Tận dụng triệt để schema đã thiết kế sẵn tại `V1__sprint1_core_schema.sql` (hỗ trợ đầy đủ các status `PENDING`, `REJECTED`, các method `GPS`, `EVIDENCE`, `PROXY_EVIDENCE`).
-   - Hiện thực module Haversine cho BR-ATT-06/07 và màn hình duyệt minh chứng cho Ban cán sự theo chuẩn quy trình đã mô hình hóa trong FSM.
+2. **Kế hoạch thực thi Sprint 2–3:**
+   - Tận dụng schema `V1` và phần mở rộng `V2` trong [`docs/Design/v2-schema-blueprint.md`](../Design/v2-schema-blueprint.md).
+   - Hiện thực Haversine GPS (`50m` mặc định, `422 GPS_OUT_OF_RANGE`), Evidence qua `EvidenceStoragePort` + BCS lớp duyệt (`QE-42`, `QE-43`), Proxy (`QE-19`), Student Offline Store-and-Forward 24h (`D-6`), và Appeal 2 vòng CVHT → EVENT_OWNER (`D-2`, `D-9`).

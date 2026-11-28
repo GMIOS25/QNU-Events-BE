@@ -1,7 +1,7 @@
 # Thiết kế Kiến trúc MVP & Phân ranh giới Module (Architecture & Boundaries) — QNU-Events
 
 > **Jira Key:** `QE-6` (*Thiết kế kiến trúc MVP & boundaries*, 8 SP)  
-> **Trạng thái tài liệu:** Bản thiết kế kiến trúc chuẩn hóa dựa trên hiện trạng Sprint 1 và đặc tả MVP (Sprint 2–3). Các quyết định kỹ thuật chưa có trong SRS được đánh dấu rõ **`ASSUMPTION (chưa duyệt)`** theo quy tắc **R11** (`AGENTS.md`) để nhóm duyệt trước khi đưa vào `docs/decisions.md`.
+> **Trạng thái tài liệu:** ✅ **APPROVED Baseline (`28/11/2026` — Quyết định `D-1` → `D-10`, đồng bộ [`v2-schema-blueprint.md`](../Design/v2-schema-blueprint.md), [`error-codes.md`](../api/error-codes.md) và `SRS v1.1`)**. Chỉ các thông số đo tải/bảo mật hạ tầng bên ngoài (`TBD-ATT-03`, `TBD-NFR-01..05`, `TBD-SEC-01/03/04`, `Q-AUTH-03`) giữ trạng thái `Open` theo `R11`/`R12`.
 
 ---
 
@@ -9,8 +9,8 @@
 
 | Nguồn | Nội dung đối chiếu |
 |---|---|
-| **SRS v1.0 & Proposal v2.0** | `docs/QNU_Event_SRS.docx` (05/11/2026), `docs/QNU_Event_Participation_Management_Project_Proposal_v2.docx` (02/10/2026) — trích xuất xác minh qua `@srs-reader` (`#9`) |
-| **Repo Rules & Plans** | `AGENTS.md`, `docs/backend-foundation.md`, `docs/agent/sprint1-rescue-plan.md`, `docs/decisions.md`, `docs/backlog_solutions.md` |
+| **SRS v1.1 & Proposal v2** | [`docs/spec/QNU_Event_SRS.docx`](../spec/QNU_Event_SRS.docx) (`v1.1`, `28/11/2026`), [`docs/spec/QNU_Event_Participation_Management_Project_Proposal_v2.docx`](../spec/QNU_Event_Participation_Management_Project_Proposal_v2.docx) |
+| **Repo Rules, Decisions & Contracts** | [`AGENTS.md`](../../AGENTS.md), [`docs/backend-foundation.md`](../backend-foundation.md), [`docs/decisions.md`](../decisions.md), [`docs/Design/v2-schema-blueprint.md`](../Design/v2-schema-blueprint.md), [`docs/Design/quota-rules.md`](../Design/quota-rules.md), [`docs/api/error-codes.md`](../api/error-codes.md) |
 | **Schema & API Contract** | `src/main/resources/db/migration/V1__sprint1_core_schema.sql`, `docs/Design/erd.md`, `docs/api/sprint1-contract.md` |
 | **Figma Design Spec** | [`HX4313AoLQX4zNidDz2Ixo`](https://www.figma.com/design/HX4313AoLQX4zNidDz2Ixo/QNU-Event---Attendance-MVP?node-id=0-1&p=f&t=bTVrQcyZXxPCWjyh-0) (`QNU Event - Attendance MVP`: pages `QNU EVENT UI` + `phones`) |
 | **Codebase BE & FE thực tế** | `QNU-Events BE` (`pom.xml`, `src/main/java/vn/edu/qnu/events/**`, `application*.yml`) & `QNU-Events FE` (`package.json`, `src/**`) + đối chiếu kiểm chứng bởi `@tech-audit` (`#8`) |
@@ -35,19 +35,19 @@ flowchart TB
         U_SV["Sinh viên (STUDENT)"]
         U_OWNER["Ban tổ chức (EVENT_OWNER)"]
         U_BCS["Ban cán sự (CLASS_REPRESENTATIVE)"]
-        U_CVHT["Cố vấn học tập (CVHT - Planned)"]
+        U_CVHT["Cố vấn học tập (CVHT - V2)"]
         U_ADMIN["Quản trị hệ thống (SYSTEM_ADMIN)"]
     end
 
     subgraph DeviceCaps["Biên thiết bị trình duyệt (Client Capabilities)"]
         CAM["Camera Browser API (html5-qrcode)"]
-        GPS["Geolocation API (Sprint 2-3 Planned)"]
+        GPS["Geolocation API (Sprint 2 Planned)"]
         OFFLINE["Local Offline Queue (IndexedDB / PWA - Sprint 3 Planned)"]
     end
 
     subgraph FE["Frontend SPA (QNU-Events FE: React 19 + TS + Vite)"]
-        FE_SHELL["App Shell, Router & AuthContext (sessionStorage JWT)"]
-        FE_MODS["Feature Modules: auth, events, registration, attendance, history, planned evidence/appeal/admin"]
+        FE_SHELL["App Shell, Router & AuthContext (sessionStorage S1 -> Refresh Cookie S2)"]
+        FE_MODS["Feature Modules: auth, events, registration, attendance, history, planned evidence/appeal/admin/importer"]
     end
 
     subgraph BE["Backend Modular Monolith (QNU-Events BE: Spring Boot 4.1.2 / Java 21)"]
@@ -56,26 +56,26 @@ flowchart TB
             CMN["common: CurrentUserProvider, GlobalExceptionHandler, ErrorCode, ApiError"]
         end
 
-        subgraph Domains["7 Domain Cốt lõi + Master Data"]
-            M_AUTH["auth: Login, Session, JWT, planned Google OAuth2"]
+        subgraph Domains["7 Domain Cốt lõi + Master Data / Importer"]
+            M_AUTH["auth: Login, Session, JWT, planned Refresh Cookie & Google OAuth2"]
             M_EVT["event: Draft/Preview/Publish, Audience, planned Pools/Lifecycle"]
             M_REG["registration: Atomic Quota, planned Waitlist/Cancel/No-show"]
             M_ATT["attendance: Dynamic QR, 3-Attempts, Idempotency, planned GPS/OfflineSync"]
             M_EVD["evidence: Stub Sprint 1 -> Planned Upload, Proxy, BCS Review"]
-            M_APL["appeal: Stub Sprint 1 -> Planned 2-Tier Appeals"]
+            M_APL["appeal: Stub Sprint 1 -> Planned 2-Tier Appeals (CVHT R1 -> OWNER R2)"]
             M_AUD["audit: Append-Only AuditService"]
-            M_STU["student: OrgClass, HistoryService, planned CSV/Excel Import"]
+            M_STU["student & importer: OrgClass, HistoryService, planned CSV/Excel Import"]
         end
 
         subgraph Async["Side Effects & Background Workers"]
-            OUTBOX["Planned Sprint 2-3: DB Outbox Poller & Schedulers (Notify, No-show, Retention)"]
+            OUTBOX["Planned Sprint 2-3: DB outbox_events Poller & Schedulers (Notify, No-show, Retention)"]
         end
     end
 
     subgraph DataExt["Lưu trữ & Hệ thống Ngoài biên"]
         PG[("PostgreSQL 17 + Flyway (Single ACID Source of Truth)")]
         GOOGLE["External: Google OAuth2 / OIDC (Sprint 3 Planned)"]
-        OBJSTORE["External: Private File Storage - Local/MinIO/S3 (TBD-SEC-02)"]
+        OBJSTORE["Storage: Local Private Filesystem (Default) / MinIO / S3 (D-8)"]
         CSVFILES["External Boundary: University CSV/Excel Files (One-way Import/Export)"]
     end
 
@@ -137,17 +137,17 @@ Theo yêu cầu `OTH-DATA-002` và `Proposal §15.1–§15.2` (`#9` §1.B), ki�
 
 > Lưu ý kiểm chứng thực tế (`AGENTS.md` R1): Bảng dưới đây phân tách rạch ròi giữa **code thực sự đã có trên nhánh `develop`** (đã đọc trực tiếp từng class/SQL) và **phần dự kiến Sprint 2–3** theo SRS/Proposal/Jira.
 
-| # | Domain / Module | BE Package & Artifact Thực tế | FE Feature & Routes | DB Tables Sở hữu (`V1` vs Planned `V2+`) | SRS (`UC` / `REQ`) & Jira | Sprint 1 Implemented | Sprint 2–3 Planned |
+| # | Domain / Module | BE Package & Artifact Thực tế | FE Feature & Routes | DB Tables Sở hữu (`V1` vs `V2` Blueprint) | SRS (`UC` / `REQ`) & Jira | Sprint 1 Implemented (`main`) | Sprint 2–3 Planned |
 |---|---|---|---|---|---|---|---|
-| **1** | **Auth & RBAC** | `vn.edu.qnu.events.auth`: `AppUser`, `AppUserRepository`, `AuthController`, `AuthService`, `AuthSession`, `AuthSessionRepository`, `JwtService`, `SessionJwtValidator`, `LoginRequest`, `LoginResponse`, `UserInfo`, `UserStatus`, `DemoDataSeeder`<br>+ `config.SecurityConfiguration` | `src/features/auth/`: `AuthContext.tsx`, `LoginPage.tsx`, `types.ts`<br>Routes: `/login`, `RequireRole` | **V1:** `app_user`, `user_role`, `auth_session`<br>**V2+ Planned:** `login_attempt_tracker` (hoặc cột lock tạm thời), `admin_role_audit`, `oauth_identity_link` | `UC001–UC003`<br>`REQ-AUTH-001..015`<br>Jira: `QE-64` (S1), `QE-30`, `QE-35`, `QE-36`, `QE-73`, `QE-74`, `QE-7` | Login `loginId + password` (`POST /api/v1/auth/login`), BCrypt(12), `DUMMY_HASH`, JWT HS256 (8h) + DB `auth_session`, `logout` (`204`), `GET /api/v1/auth/me`, kiểm tra `LOCKED` (`403`), `DemoDataSeeder` | Google OAuth2 QNU allowlist (`QE-74`), khóa 5 lần sai/15 phút (`REQ-AUTH-015`), cấp/gỡ role `EVENT_OWNER`/`BCS`/`CVHT` kèm `unit_id` (`QE-35`), reset mật khẩu (`TBD-AUTH-01`), bổ sung role `CVHT` |
-| **2** | **Event** | `vn.edu.qnu.events.event`: `Event`, `EventStatus`, `AttendanceMethod`, `EventController`, `EventService`, `EventRepository`, `EventValidator`, `EventUpsert`, `EventSummary`, `EventDetail`, `PreviewResponse`, `PublishRequest` | `src/features/events/`: `EventsPage.tsx`, `EventDetailPage.tsx`, `EventFormPage.tsx`, `EventQrPage.tsx`, `types.ts`<br>Routes: `/events`, `/events/new`, `/events/:id`, `/events/:id/edit` | **V1:** `events`, `event_audience`<br>**V2+ Planned:** `event_quota_pool` (hoặc tier quotas), `event_gps_config`, `activity_category` | `UC004–UC008`, `UC013`<br>`REQ-EVT-001..024`<br>Jira: `QE-65`, `QE-66`, `QE-31` (S1), `QE-12`, `QE-15`, `QE-32`, `QE-37`, `QE-38` | Create `DRAFT`, update `DRAFT` (`@Version` bắt buộc — `A-001`), `GET /preview`, `POST /publish` (yêu cầu `confirm` + khớp `previewed_version`), `GET /events` (tìm `q`, lọc `activityType` từ `QE-31`), `GET /events/{id}` (lọc lớp ở server, ngoài lớp/nháp → `404`) | Hủy/sửa event đã publish kèm lý do 10–500 ký tự (`UC008`, `QE-15`, `QE-32`), quota nhiều tầng (`QE-12`, `QE-38`), cấu hình GPS center/radius (`QE-55`), lịch tuần/tháng (`UC007`), wizard 5 bước & trường tùy chọn (`banner`, đơn vị) |
-| **3** | **Registration** | `vn.edu.qnu.events.registration`: `Registration`, `RegistrationStatus`, `RegistrationController`, `RegistrationService`, `RegistrationRepository`, `RegistrationResponse`, `MyRegistrationResponse` | `src/features/registration/index.tsx` (`RegistrationSlot` nhúng trong `EventDetailPage`) | **V1:** `registrations` (`uq_registrations_active`)<br>Cập nhật nguyên tử `events.registered_count`<br>**V2+ Planned:** `student_restrictions` (no-show 7 ngày), `waitlist_promotion_log` | `UC009–UC012`, `UC014`<br>`REQ-REG-001..019`<br>Jira: `QE-71` (S1), `QE-8`, `QE-39`, `QE-40`, `QE-14` | `POST /api/v1/events/{id}/registrations` (giữ suất nguyên tử bằng `ON CONFLICT DO NOTHING` + conditional `UPDATE events WHERE registered_count < quota_total`), `GET /registrations/me`, idempotent trả lại suất đã có | Quota nhiều tầng khi đăng ký (`QE-38`), Waiting List FIFO (`QE-39`), hủy đăng ký trước `start_at - 12h` + auto-promote + skip head không hợp lệ (`QE-40`), đánh dấu `NO_SHOW` + chặn đăng ký 7 ngày (`QE-14`) |
-| **4** | **Attendance** | `vn.edu.qnu.events.attendance`: `Attendance`, `AttendanceAttempt`, `AttendanceController`, `AttendanceService`, `AttendanceAttemptService`, `AttendanceRepository`, `AttendanceAttemptRepository`, `QrTokenService`, `EventQrResponse`, `CheckInRequest`, `CheckInResponse` | `src/features/attendance/index.tsx` (`AttendanceSlot`), `src/features/events/EventQrPage.tsx` (`/events/:id/qr`), `src/lib/idempotency.ts` | **V1:** `attendances` (`uq_attendances_valid`), `attendance_attempts` (`UNIQUE (event_id, student_id, idempotency_key)`)<br>**V2+ Planned:** cột GPS (`lat`, `lon`, `accuracy`, `suspicious_flag`), bảng/log `offline_sync_batches` | `UC015–UC019`<br>`REQ-ATT-001..024`, `BR-ATT-01..09`<br>Jira: `QE-56`, `QE-57` (S1), `QE-54`, `QE-44`, `QE-55`, `QE-33`, `QE-76`, `QE-77`, `QE-78` | `GET /api/v1/events/{id}/qr` (HMAC-SHA256 `qr1.<eventId>.<epoch>.<sig>`, default 10s + grace 3s), `POST /api/v1/events/{id}/attendance/qr` (`Idempotency-Key` bắt buộc, replay kết quả cũ, tối đa 3 lần thử `counted=true`, 1 `ACCEPTED`/event), FE camera `html5-qrcode` + dán token dự phòng | Chuẩn hóa 3-attempt & concurrent check-in (`QE-54`), GPS Haversine + flag `suspicious_flag=TRUE` không tự reject (`QE-55`), Offline Queue (`IndexedDB`/SQLite `PENDING_SYNC`) + sync batch revalidation (`QE-33`, `QE-76`, `QE-77`, `QE-78`), đếm live `checkedIn/registered` trên màn chiếu QR |
-| **5** | **Evidence** | `vn.edu.qnu.events.evidence`: **chỉ có `package-info.java`** (rỗng) | **Chưa có** trong `src/features/` | **V1:** Chưa có bảng riêng (chỉ có enum `EVIDENCE`, `PROXY_EVIDENCE` trong `attendances.method` và `PENDING` trong `attendances.status`)<br>**V2+ Planned:** `attendance_evidences`, `proxy_attendance_items`, `bcs_class_assignment`, `retention_archive_log` | `UC017`, `UC020`, `UC029`<br>`REQ-ATT-011..014`, `REQ-REV-001..007`, `REQ-DATA-019..021`<br>Jira: `QE-18`, `QE-19`, `QE-42`, `QE-43`, `QE-47`, `QE-48`, `QE-78` | Không triển khai trong Sprint 1 (chỉ giữ package placeholder) | Upload ảnh minh chứng JPEG/PNG `< 5 MB` vào private storage (`QE-42`), sinh `Attendance` trạng thái `PENDING`, điểm danh thay nhiều người `PROXY_EVIDENCE` (`QE-19`), BCS duyệt/từ chối theo lớp được phân công (`QE-43`), sao lưu & dọn dẹp theo học kỳ (`QE-47`, `QE-48`) |
-| **6** | **Appeal** | `vn.edu.qnu.events.appeal`: **chỉ có `package-info.java`** (rỗng) | **Chưa có** trong `src/features/` | **V1:** Chưa có bảng<br>**V2+ Planned:** `appeals`, `appeal_histories` (hoặc `appeal_attachments`), liên kết `attendances` & `student_restrictions` | `UC022–UC024`<br>`REQ-REV-010..021`<br>Jira: `QE-22`, `QE-41`, `QE-59`, `QE-60` | Không triển khai trong Sprint 1 (chỉ giữ package placeholder) | Khiếu nại Vòng 1 & Vòng 2 (`QE-59`) cho kết quả điểm danh, lỗi sync offline hoặc gỡ hạn chế No-show; CVHT/Admin có thẩm quyền xem xét, cập nhật trạng thái attendance/penalty và ghi audit (`QE-60`) |
-| **7** | **Audit** | `vn.edu.qnu.events.audit`: `AuditLog`, `AuditLogRepository`, `AuditService` | **Chưa có** màn hình tra cứu (chỉ có trong Figma US1.1) | **V1:** `audit_logs` + trigger bất biến `trg_audit_logs_immutable` (`audit_logs_immutable()`) | `UC028`<br>`REQ-EVT-023`, `REQ-ATT-024`, `REQ-DATA-016..017`, `NFR-SEC-012`<br>Jira: `QE-61` (S1), `QE-23` | `AuditService.record(...)` (`REQUIRES_NEW`) gắn vào `EventService` (`EVENT_PUBLISH`, `EVENT_PUBLISH_DENIED`), `SecurityConfiguration` (`EVENT_PUBLISH_DENIED`), `RegistrationService` (`REGISTRATION_CREATE`), `AttendanceService` (`ATTENDANCE_CHECKIN`, `ATTENDANCE_DENIED`); trigger chặn `UPDATE`/`DELETE` | API & UI tra cứu `audit_logs` cho `SYSTEM_ADMIN` (`UC028`, `REQ-DATA-017`), log đầy đủ thay đổi `before/after` cho khóa/gỡ role, duyệt evidence, xử lý appeal, hủy event, retention |
-| **8** | **Student & Master Data** | `vn.edu.qnu.events.student`: `OrgClass`, `OrgClassRepository`, `ClassController`, `ClassResponse`, `HistoryController`, `HistoryService`, `HistoryFilter`, `HistoryItem` | `src/features/history/index.tsx` (`HistoryPage` tại `/history`), `fetchClasses()` trong `src/api/events.ts`<br>(Chưa có UI Master Data) | **V1:** `org_class` (và đọc `registrations` + `attendances` + `events` qua `JdbcTemplate` trong `HistoryService`)<br>**V2+ Planned:** `org_faculty`, `org_major`, `academic_term`, `import_jobs` | `UC021`, `UC025–UC027`<br>`REQ-REV-008..009`, `REQ-DATA-001..015`<br>Jira: `QE-72` (S1), `QE-26`, `QE-45`, `QE-58`, `QE-62`, `QE-63`, `QE-73`, `QE-75` | `GET /api/v1/classes` (`EVENT_OWNER`), `GET /api/v1/me/history` (hỗ trợ phân trang `Page<HistoryItem>` & lọc `academicYear`, `semester`, `attendanceStatus`, `upcoming`, `activityType`), trang `/history` trên FE | Import Khoa/Ngành/Lớp & Sinh viên qua CSV/Excel với preview/validate (`QE-26`, `QE-45`, `QE-62`, `QE-73` dùng `commons-csv` & `poi-ooxml` đã có trong `pom.xml`), Export báo cáo điểm danh (`QE-63`), lịch sử đầy đủ kèm trạng thái Evidence/Appeal (`QE-58`) |
-| **9** | **Shared Kernel & Config** | `vn.edu.qnu.events.common`: `ApiError`, `ApiException`, `CurrentUser`, `CurrentUserProvider`, `ErrorCode`, `GlobalExceptionHandler`<br>`vn.edu.qnu.events.config`: `SecurityConfiguration`, `ClockConfiguration`, `OpenApiConfiguration` | `src/api/client.ts`, `src/app/` (`App.tsx`, `Layout.tsx`, `router.tsx`), `src/components/`, `src/lib/time.ts` | Không sở hữu bảng nghiệp vụ; chỉ cung cấp `Clock`, JSON error envelope, Swagger/OpenAPI Bearer auth, CORS, security filter | Hạ tầng xuyên suốt (`OTH-OPS-001`, `NFR-PERF-008`, `NFR-SEC-*`)<br>Jira: `QE-70`, `QE-64` (S1) | Error envelope thống nhất `ApiError`, `Clock.systemUTC()`, `CurrentUserProvider`, CORS allowlist, fail-closed `anyRequest().denyAll()` | Hạ tầng `outbox_events` + scheduler poller, cấu hình tham số hệ thống (chu kỳ QR, grace, bán kính GPS, hạn appeal/evidence), fail-fast kiểm tra secret ở profile `prod`, hardening rate limiting |
+| **1** | **Auth & RBAC** | `vn.edu.qnu.events.auth`: `AppUser`, `AppUserRepository`, `AuthController`, `AuthService`, `AuthSession`, `AuthSessionRepository`, `JwtService`, `SessionJwtValidator`, `LoginRequest`, `LoginResponse`, `UserInfo`, `UserStatus`, `DemoDataSeeder`<br>+ `config.SecurityConfiguration` | `src/features/auth/`: `AuthContext.tsx`, `LoginPage.tsx`, `types.ts`<br>Routes: `/login`, `RequireRole` | **V1:** `app_user`, `user_role`, `auth_session`<br>**V2 Blueprint:** `user_role` thêm `'CVHT'`; `app_user` thêm `email` (`uq_app_user_email_lower`), `google_sub`, `must_change_password`, `failed_login_attempts`, `locked_until`, `auth_version`, `unit_id`; `auth_session` thêm `refresh_token_hash`, `remember_me` | `UC001–UC003`<br>`REQ-AUTH-001..015`<br>Jira: `QE-64` (S1), `QE-30`, `QE-35`, `QE-36`, `QE-73`, `QE-74` | Login `loginId + password`, BCrypt(12), `DUMMY_HASH`, JWT HS256 (TTL đọc config `28800s`), `auth_session`, `logout` (`204`), `GET /auth/me`, fail-fast secret ngoài `dev`/`demo`/`test`, kiểm tra `LOCKED` (`403`) | Refresh Cookie `HttpOnly` 7 ngày (`QE-30`), Google OAuth2 QNU allowlist (`QE-74`), khóa 5 lần sai/15 phút (`REQ-AUTH-015`), cấp/gỡ role kèm `unit_id` (`QE-35`), reset mật khẩu, check `LOCKED` sau BCrypt, bổ sung `CVHT` |
+| **2** | **Event** | `vn.edu.qnu.events.event`: `Event`, `EventStatus`, `AttendanceMethod`, `EventController`, `EventService`, `EventRepository`, `EventValidator`, `EventUpsert`, `EventSummary`, `EventDetail`, `PreviewResponse`, `PublishRequest` | `src/features/events/`: `EventsPage.tsx`, `EventDetailPage.tsx`, `EventFormPage.tsx`, `EventQrPage.tsx`, `types.ts`<br>Routes: `/events`, `/events/new`, `/events/:id`, `/events/:id/edit` | **V1:** `events`, `event_audience`<br>**V2 Blueprint:** `events` thêm `next_wait_order`, `registration_closed_early`, `allow_offline_sync`, `gps_lat`, `gps_lng`, `allowed_radius_meters` (default `50`), `evidence_deadline`, `cancel_reason`; bảng **`event_pools`** | `UC004–UC008`, `UC013`<br>`REQ-EVT-001..024`<br>Jira: `QE-65`, `QE-66`, `QE-31` (S1), `QE-12`, `QE-15`, `QE-32`, `QE-37`, `QE-38` | Create/Update `DRAFT` (`@Version` bắt buộc — `A-001`), `GET /preview`, `POST /publish`, `GET /events` (tìm `q`, lọc `activityType`), `GET /events/{id}` (lọc lớp ở server, ngoài lớp/nháp → `404`), trả `audienceClasses` & `eligible` (`QE-37`) | Hủy/sửa event đã publish (điều chỉnh `quotaTotal`/`capacity >= used` theo `A-EVT-01` & hủy kèm lý do 10–500 ký tự — `QE-32`), quota nhiều tầng `event_pools` (`QE-12`, `QE-38`), cấu hình GPS center/radius (`QE-55`), lịch `UC007` theo vai trò |
+| **3** | **Registration** | `vn.edu.qnu.events.registration`: `Registration`, `RegistrationStatus`, `RegistrationController`, `RegistrationService`, `RegistrationRepository`, `RegistrationResponse`, `MyRegistrationResponse` | `src/features/registration/index.tsx` (`RegistrationSlot` nhúng trong `EventDetailPage`) | **V1:** `registrations` (`uq_registrations_active`)<br>Cập nhật nguyên tử `events.registered_count`<br>**V2 Blueprint:** `registrations` thêm `pool_id`, `waiting_at`, `wait_order` (`ix_registrations_waitlist`); bảng **`student_restrictions`** | `UC009–UC012`, `UC014`<br>`REQ-REG-001..019`<br>Jira: `QE-71` (S1), `QE-8`, `QE-39`, `QE-40`, `QE-14` | `POST /api/v1/events/{id}/registrations` (`ON CONFLICT DO NOTHING` + `TransactionTemplate` + `UPDATE events WHERE registered_count < quota_total`), `GET /registrations/me`, idempotent `alreadyRegistered: true` | Quota nhiều tầng `event_pools` (`QE-38`), `WAITING_LIST` FIFO theo `wait_order` (`QE-39`), hủy `REGISTERED` trước `start_at - 12h` (`409 CANCELLATION_CUTOFF_PASSED`, miễn `WAITING_LIST`) + auto-promote + tái đăng ký (`QE-40`), job `NO_SHOW` (`QE-14`) |
+| **4** | **Attendance** | `vn.edu.qnu.events.attendance`: `Attendance`, `AttendanceAttempt`, `AttendanceController`, `AttendanceService`, `AttendanceAttemptService`, `AttendanceRepository`, `AttendanceAttemptRepository`, `QrTokenService`, `EventQrResponse`, `CheckInRequest`, `CheckInResponse` | `src/features/attendance/index.tsx` (`AttendanceSlot`), `src/features/events/EventQrPage.tsx` (`/events/:id/qr`), `src/lib/idempotency.ts` | **V1:** `attendances` (`uq_attendances_valid`), `attendance_attempts` (`UNIQUE (event_id, student_id, idempotency_key)`)<br>**V2 Blueprint:** `attendances` thêm `gps_lat`, `gps_lng`, `gps_accuracy`, `suspicious_flag`, `suspicious_reason`, `is_offline_late_sync`; `attendance_attempts` thêm `payload_hash` | `UC015–UC019`<br>`REQ-ATT-001..024`, `BR-ATT-01..09`<br>Jira: `QE-56`, `QE-57` (S1), `QE-54`, `QE-44`, `QE-55`, `QE-33`, `QE-76`, `QE-77`, `QE-78` | `GET /qr` (`qr1`, 10s + grace 3s), `POST /attendance/qr` (`Idempotency-Key`, 3 attempts, 1 `ACCEPTED`), `GET /attendance/me` khôi phục lượt thử khi reload (`QE-98`), FE camera `html5-qrcode` + đếm `x/3` | Chuẩn hóa 1-TX `CheckInResult` & `payload_hash` (`QE-54`), GPS Haversine (`50m` default, `422 GPS_OUT_OF_RANGE`, flag `suspicious_flag=true` khi trong bán kính — `QE-55`), Student Offline Store-and-Forward 24h (`QE-33`, `QE-76..78`), đếm live trên màn chiếu QR |
+| **5** | **Evidence** | `vn.edu.qnu.events.evidence`: **chỉ có `package-info.java`** (rỗng) | **Chưa có** trong `src/features/` | **V1:** enum `EVIDENCE`, `PROXY_EVIDENCE` trong `attendances.method` và `PENDING` trong `attendances.status`<br>**V2 Blueprint:** **`attendance_evidences`**, **`bcs_class_assignment`** | `UC017`, `UC020`, `UC029`<br>`REQ-ATT-011..014`, `REQ-REV-001..007`, `REQ-DATA-019..021`<br>Jira: `QE-18`, `QE-19`, `QE-42`, `QE-43`, `QE-47`, `QE-48`, `QE-78` | Không triển khai trong Sprint 1 | Upload ảnh JPEG/PNG `< 5 MB` qua `EvidenceStoragePort` (Local Private FS mặc định — `QE-42`), `PENDING` bị QR/GPS `ACCEPTED` ghi đè thành `REJECTED`, điểm danh thay `PROXY_EVIDENCE` (`QE-19`), BCS duyệt theo lớp (`QE-43`), retention **`150 ngày`** (`QE-24`/`QE-47`) |
+| **6** | **Appeal** | `vn.edu.qnu.events.appeal`: **chỉ có `package-info.java`** (rỗng) | **Chưa có** trong `src/features/` | **V1:** Chưa có bảng<br>**V2 Blueprint:** **`appeals`** (`round IN (1, 2)`, `t0_anchor_at`, `deadline_at`), **`advisor_class_assignment`**, liên kết `attendances` & `student_restrictions` | `UC022–UC024`<br>`REQ-REV-010..021`<br>Jira: `QE-22`, `QE-41`, `QE-59`, `QE-60` | Không triển khai trong Sprint 1 | Khiếu nại 2 vòng (5 ngày Vòng 1 tại **CVHT** → 3 ngày Phúc khảo Vòng 2 tại **EVENT_OWNER**, trần 30 ngày từ `T0` — `D-2`, `D-9`, `QE-59`, `QE-60`) |
+| **7** | **Audit** | `vn.edu.qnu.events.audit`: `AuditLog`, `AuditLogRepository`, `AuditService` | **Chưa có** màn hình tra cứu (có trong Figma US1.1) | **V1:** `audit_logs` + trigger bất biến `trg_audit_logs_immutable` | `UC028`, `QE-61` (S1), `QE-23` | `AuditService.record(...)` (`EVENT_PUBLISH`, `EVENT_PUBLISH_DENIED`, `REGISTRATION_CREATE`, `ATTENDANCE_*`); trigger chặn `UPDATE`/`DELETE` | API & UI tra cứu `audit_logs` cho `SYSTEM_ADMIN` (`UC028`), log đủ `before/after` cho khóa/gỡ role, duyệt Evidence, Appeal, hủy event, retention, class transfer |
+| **8** | **Student, Master Data & Importer** | `vn.edu.qnu.events.student`: `OrgClass`, `ClassController`, `HistoryController`, `HistoryService` (+ package Sprint 2 **`importer/`**) | `src/features/history/index.tsx` (`HistoryPage`), `fetchClasses()` | **V1:** `org_class`<br>**V2 Blueprint:** **`org_department`**, **`org_specialization`**, **`intake_program`**, **`student_profile`** | `UC021`, `UC025–UC027`<br>Jira: `QE-72` (S1), `QE-26`, `QE-45`, `QE-58`, `QE-62`, `QE-63`, `QE-73`, `QE-75` | `GET /api/v1/classes`, `GET /api/v1/me/history` (`Page<HistoryItem>` lọc nâng cao & khử trùng lặp), trang `/history` trên FE | Chỉ `SYSTEM_ADMIN` import Khoa/Ngành/CTĐT/Lớp/SV CSV (`QE-26`, `QE-45`, `QE-62`, `QE-73`), Export báo cáo (`QE-63`), lịch sử kèm Evidence/Appeal (`QE-58`) |
+| **9** | **Shared Kernel, Outbox & Config** | `vn.edu.qnu.events.common` + `vn.edu.qnu.events.config` (+ package Sprint 2 **`outbox/`**) | `src/api/client.ts`, `src/app/`, `src/components/`, `src/lib/time.ts` | **V2 Blueprint:** **`outbox_events`** (`PENDING`, `PROCESSED`, `DEAD_LETTER`) | `QE-70`, `QE-64`, `QE-14`, `QE-47` | Error envelope `ApiError`, `Clock.systemUTC()`, `CurrentUserProvider`, fail-fast secret ngoài `dev`/`demo`/`test`, `anyRequest().denyAll()` | `outbox_events` + `@Scheduled` poller, cấu hình tham số hệ thống, hardening rate limiting |
 
 ### 2.2 Quy tắc Giao tiếp & Phụ thuộc giữa các Module
 
@@ -159,21 +159,17 @@ Theo yêu cầu `OTH-DATA-002` và `Proposal §15.1–§15.2` (`#9` §1.B), ki�
   - `student/HistoryService` chỉ **đọc tổng hợp (read-only projection)** từ `registrations`, `attendances`, `events` qua `JdbcTemplate`, không ghi đè dữ liệu của các domain khác.
   - `evidence/` và `appeal/` khi triển khai ở Sprint 2–3 sẽ gọi vào cổng service có kiểm soát của `attendance/` và `registration/` để cập nhật kết quả sau duyệt/khiếu nại — **không tự ý bỏ qua ràng buộc `uq_attendances_valid` hay ghi đè audit**.
 
-### 2.3 Quyền sở hữu Mã nguồn theo Agent & Thành viên (`AGENTS.md` R8 & `.github/CODEOWNERS`)
+### 2.3 Quyền sở hữu Mã nguồn từ Sprint 2 theo Agent & Thành viên (`AGENTS.md` R8 & `.github/CODEOWNERS`)
 
-| Agent | Thành viên | Phạm vi BE được phép sửa (`AGENTS.md` + `CODEOWNERS`) | Phạm vi FE & Docs | Quyền hạn đặc biệt & Khoảng trống cần chốt |
+| Agent | Thành viên | Phạm vi BE được phép sửa (`AGENTS.md` + `CODEOWNERS`) | Phạm vi FE & Docs | Vai trò & Nhiệm vụ Sprint 2+ |
 |---|---|---|---|---|
-| **A0** | **Trần Thanh Cường** (`@GMIOS25`) | `config/`, `auth/`, `common/`, `db/migration/V1*`, `*` mặc định trong `CODEOWNERS` | Root FE scaffold, `src/api/client.ts`, `src/app/`, `src/features/auth/`, `.github/`, `docs/agent/` | **R6:** Duy nhất `A0` tạo Flyway migration `V2__...`, `V3__...`. *(Lưu ý thực tế `#8`: các PR mở `#10`, `#11`, `#12` đang tự thêm `V2__event_pools.sql` ngoài `A0` — cần điều phối hợp nhất qua `A0`.)* |
-| **A1** | **Hoàng** (`@hoangkq157`) | `event/` | `src/features/events/` | Chịu trách nhiệm `QE-65`, `QE-66`, và các mở rộng `event` (`QE-12`, `QE-15`, `QE-32`, `QE-37`, `QE-38`) |
-| **A2** | **Dương** (`@YangKlee`) | `registration/`, `src/test/**/e2e/` | `src/features/registration/`, `docs/test/` | Phụ trách giữ suất (`QE-71`), Waitlist/Cancel (`QE-39`, `QE-40`) và QA (`QE-28`) |
-| **A3** | **Đan** (`@Dan28-05`) | `attendance/` | `src/features/attendance/` | Phụ trách Dynamic QR (`QE-56`, `QE-57`), 3-attempt/idempotency (`QE-54`), GPS (`QE-55`), Offline sync (`QE-33`, `QE-76..78`) |
-| **A4** | **Khánh** (`@KHANHSKY0808`) | `audit/`, `student/` (history) | `src/features/history/`, `docs/design/` | Phụ trách lịch sử (`QE-72`, `QE-58`), Audit (`QE-61`), và tài liệu thiết kế/báo cáo (`QE-80`) |
+| **A0** | **Trần Thanh Cường** (`@GMIOS25`) | Duy nhất tạo migration `V2__sprint2_core_extensions.sql` (`R6`), `config/`, `common/`, `auth/` (`QE-30`, `QE-74`), `outbox/`, hạ tầng `admin/` & `EvidenceStoragePort`, `*` mặc định trong `CODEOWNERS` | Root FE scaffold, `src/api/client.ts`, `src/app/`, `src/features/auth/`, `.github/`, `docs/agent/` | Nền tảng, Outbox, Auth hardening (`QE-30`), Google OAuth (`QE-74`), `V2` migration |
+| **A1** | **Nguyễn Huy Hoàng** (`@hoangkq157`) | `event/` (`QE-12`, `QE-32`), quản trị tài khoản & cấp TK SV (`QE-35`, `QE-73`, phối hợp A0), phối hợp A2 trên `registration/` (`QE-39`, `QE-40`) | `src/features/events/` | Quản lý sự kiện (`QE-12`, `QE-32`), tài khoản & phân quyền (`QE-35`, `QE-73`) |
+| **A2** | **Khánh Dương Nguyễn** (`@YangKlee`) | `registration/`, `importer/` (`QE-26`, `QE-62` — package tên `importer` do `import` là từ khóa Java), `src/test/**/e2e/` | `src/features/registration/`, FE import, `docs/test/` | Quota/Waitlist/Cancel/No-show (`QE-39`, `QE-40`, `QE-14`), CSV Import (`QE-26`, `QE-62`), QA (`QE-28`) |
+| **A3** | **Huỳnh Hữu Đan** (`@Dan28-05`) | `attendance/` (`QE-55`, `QE-33`, `QE-76`, `QE-77`), `evidence/` (upload, proxy, BCS review `QE-19`, `QE-42`, `QE-43`) | `src/features/attendance/`, `src/features/evidence/` | GPS (`QE-55`), Offline Sync (`QE-33`, `QE-76..78`), Evidence & BCS review (`QE-19`, `QE-42`, `QE-43`) |
+| **A4** | **Nguyễn Nhật Khánh** (`@KHANHSKY0808`) | `audit/`, `student/` (history `QE-58`), `appeal/` (`QE-59`, `QE-60`), `evidence/` (visibility & retention `QE-24`, `QE-47` — đồng sở hữu `CODEOWNERS` cùng `@Dan28-05`) | `src/features/history/`, `src/features/appeal/`, `docs/` | Lịch sử (`QE-58`), Khiếu nại 2 vòng (`QE-59`, `QE-60`), Retention (`QE-24`, `QE-47`), Tài liệu (`QE-80`) |
 
-> **Khoảng trống Ownership cần nhóm phân công bổ sung cho Sprint 2–3:**  
-> Bảng phạm vi trong `AGENTS.md` và `.github/CODEOWNERS` được thiết kế cho lát cắt Sprint 1 nên **chưa gán CODEOWNERS tường minh** cho:
-> 1. Package `vn.edu.qnu.events.evidence` (`QE-42`, `QE-43`, `QE-19`, `QE-47`) và `FE src/features/evidence/` (BCS & Student).
-> 2. Package `vn.edu.qnu.events.appeal` (`QE-59`, `QE-60`) và `FE src/features/appeal/` (Student & CVHT/Admin).
-> 3. Các màn hình & API quản trị của `SYSTEM_ADMIN` (9 màn `US1.1`, `QE-35`), `student` CSV/Excel import (`QE-26`, `QE-62`, `QE-73`), và hạ tầng `Outbox/Scheduler` (`QE-14`, `QE-47`).
+> **Ghi chú đồng bộ (`28/11/2026`):** `AGENTS.md` và `.github/CODEOWNERS` đã được cập nhật khớp 100% phạm vi Sprint 2 bên trên (bao gồm đồng sở hữu `/evidence/` cho `@Dan28-05 @KHANHSKY0808`, `/importer/` cho `@YangKlee`, `/appeal/` cho `@KHANHSKY0808`, và `/outbox/` cho `@GMIOS25`).
 
 ---
 
@@ -181,7 +177,7 @@ Theo yêu cầu `OTH-DATA-002` và `Proposal §15.1–§15.2` (`#9` §1.B), ki�
 
 ### 3.1 Ngoài phạm vi toàn bộ MVP (Strictly Out-of-Scope)
 
-Căn cứ Proposal v2 (`§0`, `§3.2`, `§11.2`, `§17`), SRS v1.0 (`#9` §1.D) và `docs/backend-foundation.md`, các hạng mục sau **không xây dựng trong MVP**:
+Căn cứ Proposal v2 (`§0`, `§3.2`, `§11.2`, `§17`), `SRS v1.1` (`#9` §1.D) và `docs/backend-foundation.md` (baseline Sprint 0), các hạng mục sau **không xây dựng trong MVP**:
 
 1. **Tính tổng điểm rèn luyện (ĐRL) & quy trình xét duyệt ĐRL cuối kỳ:** MVP chỉ lưu metadata `activity_type` và `activity_points` cho từng sự kiện để phục vụ đối chiếu/xuất dữ liệu sau này; không xây dựng bộ máy tính công thức ĐRL toàn trường hay luồng chốt điểm cuối kỳ của CVHT / Phòng CTSV.
 2. **Tích hợp API 2 chiều trực tiếp với Hệ thống Quản lý Đào tạo / CTSV của trường:** Đẩy sang Phase 2+. MVP chỉ dùng nhập liệu CSV/Excel một chiều (`UC025`, `UC026`) và xuất file có cấu trúc (`UC027`).
@@ -193,7 +189,7 @@ Căn cứ Proposal v2 (`§0`, `§3.2`, `§11.2`, `§17`), SRS v1.0 (`#9` §1.D) 
 ### 3.2 Ngoài phạm vi Sprint 1 (Đã có trong MVP Sprint 2–3, chưa hiện diện ở baseline Sprint 1)
 
 - **Đăng ký nâng cao:** Quota nhiều tầng (`QE-12`, `QE-38`), Waiting List FIFO (`QE-39`), hủy đăng ký trước 12 giờ & auto-promote (`QE-40`), phạt No-show 7 ngày (`QE-14`).
-- **Điểm danh nâng cao:** Chuẩn hóa sâu `QE-54` (hiện đang ở open PR `#9`), GPS & gắn cờ đáng ngờ (`QE-55`), nộp & duyệt Evidence (`QE-42`, `QE-43`), điểm danh hộ theo lô `PROXY_EVIDENCE` (`QE-19`), hàng đợi & đồng bộ Offline (`QE-33`, `QE-76`, `QE-77`, `QE-78`).
+- **Điểm danh nâng cao:** Chuẩn hóa đồng thời `QE-54` (đã hợp nhất advisory lock & `CheckInResult` trên `main`; còn hoàn thiện test đồng thời & bỏ `REQUIRES_NEW` audit trong TX), GPS & gắn cờ đáng ngờ (`QE-55`), nộp & duyệt Evidence (`QE-42`, `QE-43`), điểm danh hộ theo lô `PROXY_EVIDENCE` (`QE-19`), hàng đợi & đồng bộ Offline (`QE-33`, `QE-76`, `QE-77`, `QE-78`).
 - **Khiếu nại & Kiểm toán UI:** Nộp/xử lý khiếu nại 2 vòng (`QE-59`, `QE-60`), giao diện tra cứu `audit_logs` (`UC028` / `REQ-DATA-017`).
 - **Tài khoản & Dữ liệu nền:** Google OAuth2 (`QE-74`), khóa 5 lần nhập sai/15 phút (`REQ-AUTH-015`), cấp/khóa/thu hồi quyền `System Admin` (`QE-35`), import CSV/Excel Khoa-Ngành-Lớp-SV (`QE-26`, `QE-45`, `QE-62`, `QE-73`), export báo cáo (`QE-63`), sao lưu & dọn dẹp Evidence theo học kỳ (`QE-47`, `QE-48`).
 
@@ -201,7 +197,7 @@ Căn cứ Proposal v2 (`§0`, `§3.2`, `§11.2`, `§17`), SRS v1.0 (`#9` §1.D) 
 
 Đối chiếu kiểm chứng Figma trong brief `#3` và `#8`:
 - **Mục điều hướng không có frame thiết kế:** `Hồ sơ của tôi`, `Xuất dữ liệu` (tương ứng nghiệp vụ `UC027` / `QE-63` trong SRS), và `Cấu hình hệ thống` (tương ứng cấu hình tham số hệ thống đề xuất ở `docs/backlog_solutions.md §3.1`) xuất hiện ở thanh điều hướng Figma nhưng chưa có màn hình chi tiết.
-- **Thiếu luồng Auth trên màn hình `01 · login`:** Figma chỉ thiết kế `Tài khoản`, `Mật khẩu`, `Lưu đăng nhập`, nút `Đăng nhập` — **thiếu** nút Google SSO (`QE-74`), Quên/Đặt lại mật khẩu (`TBD-AUTH-01`), màn hình Logout / Session Timeout (`UC003`), và giao diện chuyển vai trò (`Role Switching`) cho user có nhiều hơn 1 role trong `user_role`.
+- **Thiếu luồng Auth trên màn hình `01 · login`:** Figma chỉ thiết kế `Tài khoản`, `Mật khẩu`, `Lưu đăng nhập`, nút `Đăng nhập` — **thiếu** nút Google SSO (`QE-74`), Quên/Đặt lại mật khẩu (`A-AUTH-08` / `QE-30`), màn hình Logout / Session Timeout (`UC003`), và giao diện chuyển vai trò (`Role Switching`) cho user có nhiều hơn 1 role trong `user_role`.
 
 ---
 
@@ -218,12 +214,12 @@ Căn cứ Proposal v2 (`§0`, `§3.2`, `§11.2`, `§17`), SRS v1.0 (`#9` §1.D) 
 - **Hiện trạng Sprint 1:**
   - `SecurityConfiguration` cấu hình `SessionCreationPolicy.STATELESS`, tắt `csrf`/`httpBasic`/`formLogin`/`logout` mặc định, bật `oauth2ResourceServer().jwt(...)`, và kết thúc chuỗi rule bằng **`requests.anyRequest().denyAll()`** (fail-closed).
   - Mật khẩu băm bằng `BCryptPasswordEncoder(12)`. Khi không tìm thấy `loginId`, `AuthService` vẫn chạy `passwordEncoder.matches(request.password(), DUMMY_HASH)` để chống timing attack / user enumeration, trả đồng nhất `401 INVALID_CREDENTIALS` (`REQ-AUTH-004`).
-  - Mỗi lần đăng nhập thành công tạo bản ghi trong `auth_session` (hiện tại TTL cố định 8 giờ trong `AuthService`, *(Assumption A-01)*) và phát JWT HS256 (`JwtService` via Nimbus JOSE).
+  - Mỗi lần đăng nhập thành công tạo bản ghi trong `auth_session` (TTL `8 giờ` cấu hình qua `app.security.jwt-access-token-validity-seconds`, `A-01` Approved; Sprint 2 `QE-30` mở rộng thêm Refresh Cookie 7 ngày theo `A-AUTH-07`) và phát JWT HS256 (`JwtService` via Nimbus JOSE).
   - Mọi request có Bearer token đều qua `JwtDecoder` gồm `JwtTimestampValidator` + `SessionJwtValidator`: kiểm tra chữ ký, `exp`, bản ghi `auth_session` tồn tại (`revoked_at IS NULL`, `expires_at >= now`), và `app_user.status == ACTIVE`. Nhờ vậy `POST /api/v1/auth/logout` thu hồi phiên tức thì (`401 SESSION_REVOKED`) và khóa tài khoản có hiệu lực ở mọi request kế tiếp (`REQ-AUTH-010`).
   - Lỗi 401/403 tại tầng filter được `AuthenticationEntryPoint` và `AccessDeniedHandler` chuẩn hóa thành JSON `ApiError`; riêng truy cập trái phép `POST /api/v1/events/{id}/publish` được `AccessDeniedHandler` ghi audit `EVENT_PUBLISH_DENIED`.
-- **Lỗ hổng & Hardening bắt buộc trước Production (R7, `#8`, `#9`):**
-  1. `JwtService`, `SecurityConfiguration` và `QrTokenService` hiện có **chuỗi fallback secret hardcode** khi `JWT_SECRET` hoặc `QR_SIGNING_SECRET` rỗng/`< 32` ký tự. Với môi trường `prod`/staging, phải cấu hình **fail-fast** từ chối khởi động nếu thiếu biến môi trường secret.
-  2. Chưa cài đặt cơ chế **tạm khóa 15 phút sau 5 lần nhập sai liên tiếp (`REQ-AUTH-015`)** trong `AuthService`. *(Lưu ý: `docs/test/sprint1-test-execution-report.md` §2.2 có mô tả nhầm rằng đã có 423 `ACCOUNT_LOCKED` — kiểm chứng code cho thấy chưa triển khai và `ErrorCode` chưa có mã này.)*
+- **Hardening đã hoàn tất trên `main` (`QE-90`, `ARCH-A07`) & Hạng mục cần bổ sung ở Sprint 2 (`QE-30`):**
+  1. **Đã khắc phục trên `main`:** `SecurityConfiguration.resolveJwtSecret(...)` (`JwtService`) và `QrTokenService` đã loại bỏ fallback secret hardcode ngoài profile `dev`/`demo`/`test`, bắt buộc fail-fast nếu thiếu `JWT_SECRET` / `QR_SIGNING_SECRET` hợp lệ (`>= 32` byte), và `AuthService` đọc TTL từ `app.security.jwt-access-token-validity-seconds`.
+  2. **Cần bổ sung trong `QE-30` (Sprint 2):** Chưa cài đặt cơ chế **tạm khóa 15 phút sau 5 lần nhập sai liên tiếp (`REQ-AUTH-015`)**, luồng Refresh Token 7 ngày `HttpOnly` (`A-AUTH-07`) và kiểm tra `UserStatus.LOCKED` sau `BCrypt` match (`A-AUTH-03`) trong `AuthService`. *(Lưu ý `R1`: `docs/test/sprint1-test-execution-report.md` §2.2 từng mô tả nhầm rằng đã có `423 ACCOUNT_LOCKED` — kiểm chứng code trên `main` cho thấy chưa triển khai và `ErrorCode` không dùng mã này.)*
 
 ### 4.3 Ma trận RBAC & Kiểm tra Phạm vi Dữ liệu (Role ≠ Data Scope)
 
@@ -232,20 +228,20 @@ Theo `docs/backend-foundation.md` và `REQ-AUTH-005..006`, **Role chỉ xác đ�
 | Vai trò (`Proposal` / `SRS` / `V1 DB`) | Biên Endpoint & Chức năng | Kiểm tra Phạm vi Dữ liệu Bắt buộc (Server-Side) | Hành vi khi vi phạm Scope |
 |---|---|---|---|
 | **Sinh viên** (`STUDENT` trong `V1`) | List/Detail event; Đăng ký/Hủy/Waitlist; Điểm danh QR/GPS/Evidence/Proxy/Offline; Xem lịch sử; Gửi Appeal 2 vòng | • `GET /events`, `GET /events/{id}`: chỉ thấy `PUBLISHED` ∧ `student.classId ∈ event_audience`<br>• Mọi hành động đăng ký, điểm danh, lịch sử, appeal gắn cứng với `currentUser.userId()`, không bao giờ đọc được dữ liệu/evidence của SV khác | • Ngoài lớp hoặc `DRAFT` trên `GET /events/{id}`: **`404 NOT_FOUND`** (không lộ sự tồn tại)<br>• Đăng ký ngoài lớp: **`403 NOT_IN_AUDIENCE`**<br>• Điểm danh khi chưa `REGISTERED`: **`403 NOT_REGISTERED`** |
-| **Ban tổ chức** (`EVENT_OWNER` trong `V1`, SRS/Figma: `Admin / Event Owner`) | Tạo/Sửa/Preview/Publish/Hủy event; Xem danh sách lớp (`/api/v1/classes`); Chiếu QR động; Cấu hình GPS & xem flag đáng ngờ; Thúc đẩy Waitlist/Xử lý Appeal (theo phân quyền) | • Chỉ CRUD/Preview/Publish/QR đối với event có `event.owner_id == currentUser.userId()` (Sprint 2–3 mở rộng theo `unit_id` của Admin)<br>• **Không mặc định xem toàn bộ ảnh Evidence** ngoài phạm vi xử lý nghiệp vụ (`Proposal §2`) | • Truy cập detail event của owner khác: **`404 NOT_FOUND`**<br>• Sửa/Preview/Publish/QR event của owner khác: **`403 FORBIDDEN`** |
-| **Ban cán sự** (`CLASS_REPRESENTATIVE` trong `V1`, SRS/Figma: `BCS`) | Duyệt/từ chối Evidence, Proxy Attendance và các ca bán tự động (`QE-43`, `QE-19`) | • Chỉ xem/duyệt sinh viên và minh chứng thuộc **các lớp được phân công** (`bcs_class_assignment`)<br>• Tuyệt đối **không có quyền cộng/trừ điểm** sự kiện hay sửa cấu hình event (`Proposal §2`) | • Truy cập lớp ngoài phân công hoặc gọi endpoint quản trị/sự kiện: **`403 FORBIDDEN`** |
-| **Cố vấn học tập** (`CVHT` trong SRS/Figma — **chưa có trong `V1` CHECK constraint**) | Xem lịch sự kiện theo tuần/tháng (`UC007`); Xem Evidence được ủy quyền (`REQ-DATA-018`); Xem xét/quyết định Appeal (`UC024`, `REQ-REV-014`) | • Chỉ xem/xử lý sinh viên, lớp và appeal trong phạm vi lớp/đơn vị phụ trách (`advisor_class_assignment`); cần migration `V2+` bổ sung role `CVHT` | • Ngoài phạm vi lớp phụ trách: **`403 FORBIDDEN`** (hoặc `404` với chi tiết riêng tư) |
-| **Quản trị hệ thống** (`SYSTEM_ADMIN` trong `V1`) | Quản lý tài khoản, cấp/gỡ role (`UC002`, `QE-35`), Import CSV/Excel (`UC025–026`), Cấu hình hệ thống, Tra cứu Audit (`UC028`), Backup/Retention (`UC029`) | • **Không phải business actor trong luồng điểm danh thông thường (`REQ-DATA-018`)**<br>• Bị từ chối ở endpoint nghiệp vụ của `STUDENT`/`EVENT_OWNER` (đã có `SecurityConfigurationTest` kiểm chứng `SYSTEM_ADMIN` gọi `GET /api/v1/events` → `403`) | • Gọi endpoint nghiệp vụ event/attendance: **`403 FORBIDDEN`** |
+| **Ban tổ chức** (`EVENT_OWNER` trong `V1`, SRS/Figma: `Admin / Event Owner`) | Tạo/Sửa/Preview/Publish/Hủy event; Xem danh sách lớp read-only (`/api/v1/classes`); Chiếu QR động; Cấu hình `event_pools` & GPS (`10–500m`, mặc định `50m`); Xử lý **Phúc khảo Appeal Vòng 2** (quyết định cuối, `UC023–024`) & gỡ chế tài No-show | • Chỉ CRUD/Preview/Publish/QR đối với event có `event.owner_id == currentUser.userId()` (mở rộng theo `unit_id`)<br>• **Không** CRUD/Import dữ liệu nền (Khoa/Ngành/Lớp/SV); **không** mặc định xem toàn bộ ảnh Evidence ngoài phạm vi xử lý Phúc khảo Vòng 2 | • Truy cập detail event của owner khác: **`404 NOT_FOUND`**<br>• Sửa/Preview/Publish/QR event của owner khác hoặc gọi API Import: **`403 FORBIDDEN`** |
+| **Ban cán sự** (`CLASS_REPRESENTATIVE` trong `V1`, SRS/Figma: `BCS`) | **Duyệt/từ chối Evidence & Proxy Evidence (`UC020`/`QE-43`)**, theo dõi ca bán tự động của lớp mình | • Chỉ xem/duyệt sinh viên và minh chứng thuộc **các lớp được phân công** (`bcs_class_assignment`)<br>• Tuyệt đối **không có quyền cộng/trừ điểm**, không sửa event, **không** xử lý Appeal quyết định của chính mình | • Truy cập lớp ngoài phân công hoặc gọi endpoint quản trị/sự kiện: **`403 FORBIDDEN`** |
+| **Cố vấn học tập** (`CVHT` — chính thức ở `V2`) | Xem lịch sự kiện tuần/tháng theo lớp (`UC007`); Xem Evidence liên quan khi giải quyết khiếu nại; **Tiếp nhận & xử lý Khiếu nại Appeal Vòng 1 (`UC022`/`QE-59`)** | • Chỉ xem/xử lý sinh viên, lớp và hồ sơ khiếu nại thuộc **các lớp được phân công cố vấn** (`advisor_class_assignment` trong `V2`)<br>• Không tạo/sửa event, không quyết định Phúc khảo Vòng 2 | • Ngoài phạm vi lớp phụ trách: **`403 FORBIDDEN`** |
+| **Quản trị hệ thống** (`SYSTEM_ADMIN` trong `V1`) | **Duy nhất CRUD & Import CSV/Excel Khoa, Ngành, CTĐT, Lớp, Học kỳ & Sinh viên (`UC025–026`, `QE-26/62/73`)**; quản lý tài khoản/cấp-gỡ role & phân công lớp BCS/CVHT (`QE-35`); cấu hình tham số; tra `audit_logs` (`UC028`); backup/retention (`UC029`) | • **Không phải business reviewer** trong luồng duyệt Evidence/Appeal thường nhật (`Proposal §2`, `D-2`)<br>• Bị từ chối ở endpoint nghiệp vụ của `STUDENT`/`EVENT_OWNER` | • Gọi endpoint nghiệp vụ event/attendance: **`403 FORBIDDEN`** |
 
 ### 4.4 Biên Kiểm soát Concurrency, Crypto & File/Import
 
-- **Chống oversell & duplicate (Sprint 1 hiện có):** `RegistrationService` thực thi trong `@Transactional(rollbackFor = Exception.class)`: `tryInsertRegistration` (`INSERT ... ON CONFLICT ... DO NOTHING` dựa trên partial unique index `uq_registrations_active`) trước, rồi `reserveSeat` (`UPDATE events SET registered_count = registered_count + 1 WHERE id = :eventId AND registered_count < quota_total`). Nếu `reserveSeat` trả `0`, ném `ApiException(CAPACITY_FULL)` để rollback cả bản ghi `registrations`. Khi mở rộng multi-tier quota (`QE-38`), cần quy ước thứ tự khóa nhất quán (Total → Cohort/Faculty → Class) để tránh deadlock *(chi tiết tại `QE-8`)*.
-- **Toàn vẹn QR & Idempotency (Sprint 1 hiện có):** `QrTokenService` ký HMAC-SHA256 trên `qr1.<eventId>.<epoch>` và so sánh hằng thời gian `MessageDigest.isEqual`; không bao giờ lưu hoặc log token QR đầy đủ vào `attendance_attempts.response_body` hay `audit_logs.details` (`AttendanceService` che thành `tokenMasked`). Mọi check-in bắt buộc header `Idempotency-Key` với khóa duy nhất `UNIQUE (event_id, student_id, idempotency_key)`.
+- **Chống oversell & duplicate (`RegistrationService`):** Sprint 1 dùng `tryInsertRegistration` (`uq_registrations_active`) + atomic `UPDATE events WHERE registered_count < quota_total` và `TransactionTemplate` (đã fix `REQUIRES_NEW` pool starvation). Sprint 2–3 mở rộng sang **`event_pools`** (`1 seat = 1 pool`, `registrations.pool_id`), khóa theo thứ tự `events(id) FOR UPDATE` → `registrations FOR UPDATE` → `event_pools ORDER BY priority ASC, id ASC FOR UPDATE` và `FOR UPDATE SKIP LOCKED` trên `wait_order ASC` (`QE-38..40`).
+- **Toàn vẹn QR & Idempotency:** `QrTokenService` ký HMAC-SHA256 trên `qr1.<eventId>.<epoch>` và so sánh hằng thời gian `MessageDigest.isEqual`; không lưu/log token thô (`tokenMasked`). Mọi check-in bắt buộc header `Idempotency-Key` (`UNIQUE (event_id, student_id, idempotency_key)` + `payload_hash` `SHA-256` ở `V2`).
 - **Biên bảo mật Sprint 2–3 (Google SSO, Evidence, GPS, CSV):**
-  - *Google OAuth2 (`QE-74`, `NFR-SEC-001`):* Chỉ xác thực token phía server, kiểm tra `email_verified = true` và đối chiếu **explicit allowlist miền QNU** (`TBD-AUTH-03`, cấm khớp hậu tố tùy tiện cho subdomain lạ), liên kết tới `app_user` đã được `System Admin` cấp trước — **không tự tạo tài khoản mới và không tự cấp quyền Admin từ domain email**.
-  - *Evidence Upload (`QE-42`, `NFR-SEC-*`):* Kiểm tra định dạng bằng nội dung tệp thực tế (magic bytes JPEG/PNG, `< 5 MB`), không tin `Content-Type`/tên file, lưu tại storage riêng tư với khóa UUID ngẫu nhiên (chống path traversal), truy xuất qua URL có chữ ký ngắn hạn hoặc endpoint backend có kiểm tra RBAC + scope lớp.
-  - *CSV/Excel Import & Export (`UC025–027`):* Chặn CSV/Excel formula injection (`=`, `+`, `-`, `@` ở đầu ô) khi export và validate strict schema khi import.
-  - *GPS (`QE-55`, `BR-ATT-07`):* Kiểm tra tọa độ hữu hạn (`lat ∈ [-90, 90]`, `lon ∈ [-180, 180]`, `accuracy >= 0`), tính khoảng cách Haversine trên server; `isMocked` hoặc vượt bán kính/độ chính xác bất thường chỉ gắn cờ `suspicious_flag = TRUE` để Organizer rà soát, không tự động từ chối trong MVP.
+  - *Google OAuth2 (`QE-74`, `D-10`):* Xác thực OIDC JWKS phía server, kiểm tra `email_verified = true` và khớp chính xác miền trong **`APP_GOOGLE_ALLOWED_DOMAINS=st.qnu.edu.vn,qnu.edu.vn`** (cấm `endsWith`), liên kết `app_user` đã cấp trước cho mọi vai trò có email QNU — không tự tạo tài khoản mới.
+  - *Evidence Upload (`QE-42`, `D-8`):* Kiểm tra magic bytes thực tế (JPEG/PNG, `< 5 MB`), lưu qua `EvidenceStoragePort` (Local Private Filesystem mặc định ngoài public root, tên file UUID, sẵn sàng cắm MinIO/S3), truy xuất qua endpoint backend kiểm tra RBAC + scope lớp (`Cache-Control: private, no-store`).
+  - *CSV/Excel Import & Export (`UC025–027`, `D-3`, `D-10`):* Chỉ `SYSTEM_ADMIN` gọi; chặn formula injection (`=`, `+`, `-`, `@` đầu ô); `allowClassTransfer = false` mặc định (Admin chủ động bật cờ mới cho phép kèm audit).
+  - *GPS (`QE-55`, `BR-ATT-07`, `D-7`):* Kiểm tra tọa độ hữu hạn (`lat ∈ [-90, 90]`, `lon ∈ [-180, 180]`, `accuracy >= 0`), tính khoảng cách Haversine trên server đối chiếu `events.allowed_radius_meters ∈ [10, 500]` (mặc định **`50m`**): **ngoài bán kính trả `422 GPS_OUT_OF_RANGE` (`counted = true`)**; chỉ khi **trong bán kính** nhưng `isMocked = true` hoặc `accuracy` bất thường (`TBD-ATT-03`) mới ghi `ACCEPTED` kèm `suspicious_flag = TRUE` để Organizer hậu kiểm.
 
 ---
 
@@ -260,7 +256,7 @@ Trong mã nguồn Sprint 1 hiện tại:
 
 ### 5.2 Kiến trúc Đích Sprint 2–3: Transactional Outbox + Post-Commit Poller
 
-Theo `docs/backend-foundation.md`, `docs/backlog_solutions.md §3.2`, `NFR-QUAL-002` và `NFR-SAFE-004`, hệ thống áp dụng mẫu **Transactional Outbox trên PostgreSQL 17** cho toàn bộ side effects không cần commit độc lập khi rollback *(mẫu này là `ASSUMPTION (chưa duyệt)` về mặt cấu trúc cài đặt cụ thể — §7)*:
+Theo `docs/backend-foundation.md`, `docs/backlog_solutions.md §3.2`, `NFR-QUAL-002` và `NFR-SAFE-004`, hệ thống áp dụng mẫu **Transactional Outbox trên PostgreSQL 17 (`outbox_events`)** cho toàn bộ side effects không cần commit độc lập khi rollback (`ARCH-A02` — Approved `28/11/2026`):
 
 ```mermaid
 sequenceDiagram
@@ -295,79 +291,61 @@ sequenceDiagram
 |---|---|---|---|
 | **1. Audit Logs & Rejected Check-in Attempts** | Sprint 1–3 | • Các ca **từ chối cần tồn tại bất kể rollback** (`QR_*`, `EVENT_PUBLISH_DENIED`, `CAPACITY_FULL`): giữ ghi nhận tách giao dịch nhưng **không giữ khóa quota/row lâu** (ghi nhận sau khi giải phóng hoặc tách trước/sau transaction nghiệp vụ để tránh giữ 2 connection lồng nhau ở tải `P1`)<br>• Các ca **thành công** (`EVENT_PUBLISH`, duyệt Evidence, xử lý Appeal): có thể ghi cùng ACID transaction với domain hoặc qua `outbox_events` | `audit_logs` bất biến nhờ trigger `trg_audit_logs_immutable`; không bao giờ ghi mật khẩu, JWT hay token QR đầy đủ |
 | **2. In-App Notifications** *(Hủy event, thăng hạng Waiting List, kết quả Appeal, thông báo No-show)* | Sprint 2–3 | Ghi `outbox_events` trong cùng ACID transaction → Outbox Poller tạo bản ghi thông báo cho người dùng (`NFR-PERF-007` `[Đề xuất]`: ≥ 95% khả dụng trong `≤ 60s`) | Không gửi thông báo nếu transaction nghiệp vụ rollback; consumer idempotent theo `event_id` của outbox |
-| **3. Đánh giá No-Show & Chặn đăng ký 7 ngày (`UC014`, `QE-14`)** | Sprint 3 | `@Scheduled` batch job chạy theo chu kỳ kiểm tra các sự kiện đã **kết thúc hoàn toàn quy trình xác minh** (không chỉ dựa vào `attendance_close_at` vì còn chờ duyệt `Pending` Evidence và cửa sổ đồng bộ Offline — `TBD-REG-03`) | Chỉ áp dụng cho `status = 'REGISTERED'` chưa có attendance `ACCEPTED`/`PENDING`; bỏ qua `CANCELLED`, `WAITING_LIST`, event `CANCELLED`; ghi audit `before/after` |
-| **4. Sao lưu & Dọn dẹp Evidence theo Học kỳ (`UC029`, `QE-47`, `QE-48`)** | Sprint 3 | `@Scheduled` batch job định kỳ (mốc tham chiếu ~1 học kỳ = 4–5 tháng, `TBD-DATA-03`) | **Loại trừ** các bản ghi đang có khiếu nại (`Appeal`) chưa đóng; **bắt buộc sao lưu sang kho tách biệt và xác minh đọc lại thành công trước khi xóa file online** (`NFR-SAFE-005`); giữ nguyên kết quả attendance & `audit_logs` |
-| **5. Đồng bộ Hàng đợi Offline (`UC019`, `QE-33`, `QE-76..78`)** | Sprint 3 | Client lưu cục bộ (`PENDING_SYNC`), tự gửi khi có mạng với `Idempotency-Key` ổn định; Server xử lý bất đồng bộ/từng mục qua endpoint sync mà không giữ khóa toàn lô | Server xác thực lại toàn bộ điều kiện (QR/GPS/Evidence/window/cửa sổ offline `TBD-ATT-01`), không mặc định `REJECTED` thành thành công khi replay |
+| **3. Đánh giá No-Show & Chặn đăng ký 7 ngày (`UC014`, `QE-14`)** | Sprint 3 | `@Scheduled` batch job chạy sau **`MAX(attendance_close_at + 24h, COALESCE(evidence_deadline, attendance_close_at))`** (`D-9`, đóng `TBD-REG-03`) | Chỉ áp dụng cho `status = 'REGISTERED'` chưa có `ACCEPTED` và không có `EVIDENCE` `PENDING`; tạm dừng khi có Appeal Vòng 1; ban chồng nhau lấy `MAX(current_banned_until, now + 7 days)`; ghi vào `student_restrictions` + audit |
+| **4. Sao lưu & Dọn dẹp Evidence (`UC029`, `QE-24`, `QE-47`)** | Sprint 3 | `@Scheduled` batch job sau **`150 ngày` (5 tháng)** tính từ `events.end_at` (`D-8`, đóng `TBD-DATA-03`) | Loại trừ bản ghi đang có Appeal chưa đóng; **bắt buộc sao lưu và xác minh đọc lại thành công trước khi xóa bản online** (`NFR-SAFE-005`); giữ nguyên kết quả attendance & `audit_logs` |
+| **5. Đồng bộ Hàng đợi Offline (`UC019`, `QE-33`, `QE-76..78`)** | Sprint 3 | Student Store-and-Forward cục bộ (`PENDING_SYNC`) tự đồng bộ trong cửa sổ **`OFFLINE_SYNC_MAX_WINDOW = 24 giờ`** sau `attendance_close_at` (`D-6`) | Server kiểm tra HMAC/Haversine, `events.allow_offline_sync = true`, SV đã `REGISTERED`, gắn cờ `is_offline_late_sync = true` nếu gửi sau `attendance_close_at`; quá 24h trả `422 OFFLINE_SYNC_WINDOW_EXPIRED` |
 
 ---
 
-## 6. Tóm tắt Đối chiếu Figma (`HX4313AoLQX4zNidDz2Ixo`) ↔ Codebase Hiện tại
+## 6. Tóm tắt Đối chiếu Figma (`HX4313AoLQX4zNidDz2Ixo`) ↔ Codebase & Đầu mục Cần Chỉnh Tay trên Figma
 
 ### 6.1 Đối chiếu Design Tokens & Hệ thống Giao diện
 
-| Thuộc tính | Figma `QNU / Admin CRUD` (`HX4313AoLQX4zNidDz2Ixo`) | Codebase FE Hiện tại (`QNU-Events FE` `develop` @ `0fe4a3c`, `#8`) | Trạng thái Alignment |
+| Thuộc tính | Figma `QNU / Admin CRUD` | Codebase FE (`main`) | Trạng thái Alignment |
 |---|---|---|---|
-| **Surface** | `#FFFFFF` | `bg-white` (`#FFFFFF`) | Khớp |
-| **Canvas / Background** | `#F3F8FC` | `#f8fafc` (`bg-slate-50` trong `src/index.css`, `Layout.tsx`) | Lệch token |
-| **Text Primary / Muted** | `#25435E` / `#73899B` | `#0f172a` (`slate-900`) / `slate-500` | Lệch token |
-| **Border** | `#DCE5EE` | `slate-200` | Lệch token |
-| **Primary / Soft / Danger** | `#0789B7` / `#E5F4FC` / `#B64D40` | `blue-600` (`teal-*` ở QR) / `blue-50` / `red-600` | Lệch token |
-| **Typography** | Font `Inter` | `system-ui, -apple-system, ...` (`src/index.css`) | Chưa cấu hình `Inter` |
+| **Surface / Canvas / Border** | `#FFFFFF` / `#F3F8FC` / `#DCE5EE` | Đã đồng bộ shell theo token Figma (`PR #19`) | Khớp |
+| **Text Primary / Muted / Primary / Danger** | `#25435E` / `#73899B` / `#0789B7` / `#B64D40` | Đã đồng bộ trong theme Sprint 1 | Khớp |
+| **Typography** | Font `Inter` | Bổ sung/khóa font `Inter` ở Sprint 2 | Cần hoàn thiện |
 
-### 6.2 Đối chiếu Màn hình theo Vai trò & Sai lệch Codebase Quan sát được
+### 6.2 Hiện trạng Hợp đồng Sprint 1 (`main`) & Đầu mục Bổ sung UI / Figma cho Sprint 2–3
 
-| Vai trò / Module | Màn hình trong Figma (`QNU EVENT UI` + `phones`) | Hiện trạng Codebase (`BE` + `FE`) | Sai lệch / Việc cần làm ở Sprint 2–3 |
-|---|---|---|---|
-| **Login (`01 · login`)** | `Tài khoản`, `Mật khẩu`, checkbox `Lưu đăng nhập`, nút `Đăng nhập` | `LoginPage.tsx` có `loginId`, `password`, `Đăng nhập` + 2 nút nạp nhanh mẫu (`owner01`, `sv001`) | Thiếu checkbox `Lưu đăng nhập` (FE chỉ lưu `sessionStorage`); cả Figma lẫn code hiện chưa có Google SSO / Quên mật khẩu |
-| **SINH VIÊN** | Event list/register/cancel, Calendar, Dynamic QR scan + `Lượt gửi xác nhận: x/3` + Offline Queue modal, GPS, Waiting List (`#03`), Evidence submit, Batch proxy (`Điểm danh thay nhiều người`), History, 2-tier Appeals | Có `EventsPage`, `EventDetailPage` + `RegistrationSlot` (đăng ký) + `AttendanceSlot` (`html5-qrcode` + dán token dự phòng), `HistoryPage` | Thiếu Calendar, Cancel `< 12h`, Waiting List UI, đếm `x/3` attempts, Offline Queue modal, GPS, Evidence, Batch proxy, Appeals. **Lỗi breaking ở `/history` (`#8`):** BE `HistoryController` trả `Page<HistoryItem>`, FE `fetchHistory()` đang đọc `HistoryItem[]` |
-| **ADMIN / EVENT OWNER** | 5-step wizard + preview + publish, Participant management, QR display (có live count `234/312`), GPS config + suspicious review, Waiting List promotion, Appeal handling, Master data CRUD (Khoa/Ngành/Lớp/SV CSV/Học kỳ) | Có `EventFormPage` (form 1 trang 4 phần, hardcode `attendanceMethod: 'DYNAMIC_QR'`), Preview modal, Publish confirm, `EventQrPage` | Thiếu wizard 5 bước, lọc `activityType` trên UI (`BE QE-31` đã có), màn quản lý người tham gia, đếm live `checkedIn/registered` trên `EventQrPage` (và đang hardcode `10s`/`9500ms` thay vì `qrData.rotationSeconds`), GPS/Waitlist/Appeal/Master Data CRUD |
-| **SYSTEM ADMIN** | US1.1: 9 màn hình (DS tài khoản, gán role, mời admin mới `email/role/scope/reason`, chi tiết + audit role, khóa/mở khóa, thu hồi role, thành công, audit log gán/thu hồi) | Chưa có route/UI trên FE; BE chưa có API quản trị user/role | Cần bổ sung API trong `auth/` + `student/` và trang `/admin/**` trên FE |
-| **CVHT & BCS** | `CVHT`: Lịch sự kiện, xử lý appeal; `BCS`: Điểm danh lớp & duyệt evidence | Chưa có BE/FE; `V1` DB có `CLASS_REPRESENTATIVE` nhưng **chưa có `CVHT` trong CHECK constraint `user_role`** | Cần `V2+` schema cho `CVHT`, phân công lớp `BCS`/`CVHT`, và portal riêng trên FE |
-| **Contract & Config Drift khác** | — | `application.yml` & `.env.example` đặt `QR_EPOCH_SECONDS=15` (không được `Event`/`AttendanceService` đọc; entity mặc định `10s`); `RegistrationResponse` BE trả `alreadyRegistered` nhưng FE `types.ts` khai báo `cached` | Đồng bộ lại `application.yml`/`.env.example` về `10s` và sửa type FE (`alreadyRegistered`, `Page<HistoryItem>`) |
+- **Đã khắc phục hoàn tất trên `main` (`26/11/2026`):** BE & FE đã đồng bộ `GET /api/v1/me/history` (`Page<HistoryItem>`), `alreadyRegistered`, `QR_EPOCH_SECONDS = 10`, `GET /api/v1/events/{id}/attendance/me` (`QE-98`), `fail-fast` secret ngoài `dev`/`demo`/`test`, và `TransactionTemplate` trong `RegistrationService`.
+- **3 đầu mục cần người phụ trách UI cập nhật tay trên Figma (`HX4313AoLQX4zNidDz2Ixo`):**
+  1. **Chuyển menu Quản trị Dữ liệu nền & Import SV (`D-3`):** Di chuyển toàn bộ cụm màn CRUD Khoa / Ngành / Lớp / Học kỳ & Import CSV Sinh viên (`UC025–026`) từ nhánh `ADMIN / EVENT OWNER` sang **`SYSTEM_ADMIN`**.
+  2. **Hoàn thiện luồng Auth trên `01 · login` & Shell (`D-10`):** Bổ sung nút *"Đăng nhập với Google (Email QNU)"* (`QE-74`), link *"Quên mật khẩu?"* (`A-AUTH-08` / `QE-30`), và nút Đăng xuất trên Mobile nav (`< 640px`).
+  3. **Ghi chú bán kính GPS (`D-7`):** Ghi chú `60m` trên màn cấu hình/check-in GPS hiện tại chỉ là ví dụ cấu hình cho một sự kiện cụ thể; mặc định hệ thống là **`50m`** (dải `10–500m`).
 
 ---
 
-## 7. Giả định Kiến trúc (`ASSUMPTION (chưa duyệt)`) & Các Quyết định Chờ Stakeholder (R11, R12)
+## 7. Quyết định Kiến trúc Đã Duyệt (`APPROVED 28/11/2026`) & Điểm mở Hạ tầng Còn giữ
 
-### 7.1 Các Giả định Đã Ghi nhận từ Trước (Tham chiếu `docs/decisions.md` & `sprint1-rescue-plan.md`)
+### 7.1 Các Quyết định Nền tảng Đã Duyệt (`A-001`, `A-01..A-06`, `FE-A01` — `28/11/2026`)
 
-| ID | Nội dung giả định | Nguồn gốc | Trạng thái |
+| ID | Tóm tắt quyết định đã chốt | Tham chiếu | Trạng thái |
 |---|---|---|---|
-| **A-001** | `PUT /api/v1/events/{id}` bắt buộc truyền `version` (`null` → `400 VALIDATION_FAILED`, lệch → `409 VERSION_CONFLICT`) | `docs/decisions.md` (`QE-65`) | `ASSUMPTION (chưa duyệt)` |
-| **A-01** | TTL phiên đăng nhập 8 giờ (`28800s`), chưa kích hoạt "Lưu đăng nhập" | `sprint1-rescue-plan.md §6.9` (`TBD-AUTH-01`) | `ASSUMPTION (chưa duyệt)` |
-| **A-02** | Sprint 1 hết chỗ trả `409 CAPACITY_FULL`, chưa bật Waiting List | `sprint1-rescue-plan.md §6.9` (`QE-39`) | `ASSUMPTION (chưa duyệt)` |
-| **A-03** | `registrationDeadline ≤ attendanceCloseAt`; cửa sổ điểm danh cấu hình tự do ở Sprint 1 | `sprint1-rescue-plan.md §6.9` (`TBD-EVT-03`) | `ASSUMPTION (chưa duyệt)` |
-| **A-04** | Chỉ các lỗi `QR_*` mới tính `counted = true` vào giới hạn 3 attempts | `sprint1-rescue-plan.md §6.9` (`TBD-ATT-02`) | `ASSUMPTION (chưa duyệt)` |
-| **A-05** | Grace period QR mặc định = 3 giây theo proposal | `sprint1-rescue-plan.md §6.9` (`TBD-ATT-01`) | `ASSUMPTION (chưa duyệt)` |
-| **A-06** | Ánh xạ role tạm thời Sprint 1: `CLASS_REPRESENTATIVE` = BCS; `EVENT_OWNER` = Admin/Event Owner; `CVHT` chưa có ở Sprint 1 | `sprint1-rescue-plan.md §6.9` (`C5`) | `ASSUMPTION (chưa duyệt)` |
-| **FE-A01** | Lưu JWT access token ở bộ nhớ + `sessionStorage` trên FE ở MVP (chấp nhận rủi ro XSS thay vì cookie `HttpOnly` do chưa triển khai CSRF/BFF) | `sprint1-rescue-plan.md §7 T-05`, `AuthContext.tsx` | `ASSUMPTION (chưa duyệt)` |
+| **A-001** | `PUT /api/v1/events/{id}` bắt buộc truyền `version` (`400 VALIDATION_FAILED` / `409 VERSION_CONFLICT`) | `decisions.md`, `QE-65` | **`APPROVED (28/11/2026)`** |
+| **A-01 & FE-A01** | Sprint 1 giữ 8h + `sessionStorage`; Sprint 2 `QE-30` `"Lưu đăng nhập"` dùng Refresh Cookie `HttpOnly; SameSite=Lax` (7d) + CSRF + max 5 sessions | `D-10`, `A-AUTH-04/07` | **`APPROVED (28/11/2026)`** |
+| **A-02** | Sprint 1 hết suất `409 CAPACITY_FULL`; Sprint 2 bật `WAITING_LIST` theo `event_pools` + `wait_order` (`SKIP LOCKED`) | `D-4`, `quota-rules.md` | **`APPROVED (28/11/2026)`** |
+| **A-03** | `startAt < endAt`, `attendanceOpenAt < attendanceCloseAt`, `registrationDeadline <= attendanceCloseAt`, `evidence_deadline >= attendance_close_at` (`+24h` mặc định), lịch `UC007` theo scope vai trò | `TBD-EVT-03`, `R2` | **`APPROVED (28/11/2026)`** |
+| **A-04** | 3-attempt cap dùng chung kênh tự động (`DYNAMIC_QR`, `GPS`, `OFFLINE_QR`, `OFFLINE_GPS`), `EVIDENCE` riêng; QR/GPS `ACCEPTED` ghi đè `PENDING` Evidence (`SUPERSEDED_BY_ACCEPTED`) | `D-7`, `error-codes.md` | **`APPROVED (28/11/2026)`** |
+| **A-05** | Grace period QR `3s` / epoch `10s`; cấm Offline Prefetch; hỗ trợ Student Store-and-Forward trong `24h` (`allow_offline_sync`) | `D-6`, `dynamic-qr-specification.md` | **`APPROVED (28/11/2026)`** |
+| **A-06** | Chính thức **5 vai trò** (`V2` thêm `CVHT`), phân cấp **BCS → CVHT Vòng 1 → EVENT_OWNER Vòng 2**, chỉ `SYSTEM_ADMIN` CRUD/Import dữ liệu nền | `D-1`, `D-2`, `D-3` | **`APPROVED (28/11/2026)`** |
 
-### 7.2 Các Giả định Kiến trúc Mới từ `QE-6` (Cần đưa vào `docs/decisions.md` để nhóm duyệt — R11)
+### 7.2 Các Quyết định Kiến trúc `QE-6` Đã Duyệt (`ARCH-A01..ARCH-A07` — `28/11/2026`)
 
-| ID | Đề xuất Kiến trúc (`ASSUMPTION (chưa duyệt)`) | Tác động & Lý do |
+| ID | Nội dung Kiến trúc Đã Duyệt | Trạng thái |
 |---|---|---|
-| **ARCH-A01** | Duy trì **Modular Monolith (Spring Boot 4.1.2 + PostgreSQL 17)** làm kiến trúc triển khai duy nhất cho toàn bộ MVP (không tách microservices, không thêm Redis/Kafka) | `ASSUMPTION (chưa duyệt)` — Phù hợp quy mô thí điểm 01 khoa (~3.000 SV); mọi giao dịch atomic quota/attendance thực hiện trực tiếp trên PostgreSQL |
-| **ARCH-A02** | Sử dụng mô hình **Transactional Outbox (`outbox_events` trong PostgreSQL) + `@Scheduled` Worker (`FOR UPDATE SKIP LOCKED`)** cho notifications, no-show evaluation và retention cleanup ở Sprint 2–3 | `ASSUMPTION (chưa duyệt)` — Đảm bảo `NFR-QUAL-002` / `NFR-SAFE-004` (sống sót qua restart, không giữ khóa quota trong external I/O) mà không cần thêm message broker ngoài |
-| **ARCH-A03** | Trừu tượng hóa lưu trữ Evidence qua port nội bộ (`EvidenceStoragePort`), hỗ trợ chuyển đổi Local/MinIO/S3 với bucket riêng tư và URL có thời hạn ngắn | `ASSUMPTION (chưa duyệt)` — Tránh khóa chặt vào một nhà cung cấp trong khi `TBD-SEC-02` chưa chốt |
-| **ARCH-A04** | Bổ sung role `CVHT` vào `user_role` CHECK constraint ở migration `V2+` cùng các bảng phạm vi lớp (`bcs_class_assignment`, `advisor_class_assignment`, `unit`) | `ASSUMPTION (chưa duyệt)` — Cần thiết để hợp nhất `V1` (4 roles) với SRS/Figma (5 roles có `CVHT`) và scoped Admin (`REQ-AUTH-009`) |
-| **ARCH-A05** | Chuẩn hóa 2 sai lệch Sprint 1 theo `docs/api/sprint1-contract.md`: giữ `GET /api/v1/me/history` trả `Page<HistoryItem>` (cập nhật FE `fetchHistory()` & `HistoryPage.tsx`), thống nhất cấu hình QR mặc định về `10s` (thay `QR_EPOCH_SECONDS=15` ở `.env.example`/`application.yml`), và sửa type `alreadyRegistered` trên FE | `ASSUMPTION (chưa duyệt)` — Khắc phục lỗi runtime `/history` trên `develop` (`#8`) |
-| **ARCH-A06** | Tách kết nối / không giữ outer DB connection lồng `REQUIRES_NEW` trên luồng tải cao `P1` (100 req/s); cấu hình lại kích thước HikariCP pool & đo kiểm chứng tại `QE-46` | `ASSUMPTION (chưa duyệt)` — Phòng ngừa cạn kiệt pool `maximum-pool-size: 30` khi nhiều request bị reject đồng thời |
-| **ARCH-A07** | Bắt buộc fail-fast khi thiếu `JWT_SECRET` / `QR_SIGNING_SECRET` ở mọi profile khác `dev`/`test` (loại bỏ fallback dev secret trong `JwtService`, `SecurityConfiguration`, `QrTokenService`) | `ASSUMPTION (chưa duyệt)` — Tuân thủ `AGENTS.md` R7 trước khi đưa lên staging/production |
+| **ARCH-A01** | Duy trì **Modular Monolith (`Spring Boot 4.1.2` + `PostgreSQL 17`)** cho toàn bộ MVP (không Redis/Kafka/microservices) | **`APPROVED (28/11/2026)`** |
+| **ARCH-A02** | Sử dụng **Transactional Outbox (`outbox_events` + `@Scheduled` `FOR UPDATE SKIP LOCKED`)** cho notifications, no-show & retention | **`APPROVED (28/11/2026)`** |
+| **ARCH-A03** | `EvidenceStoragePort` dùng **Local Private Filesystem** làm mặc định (pluggable MinIO/S3), retention **`150 ngày`** từ `events.end_at` | **`APPROVED (28/11/2026)`** |
+| **ARCH-A04** | Bổ sung role **`CVHT`** và `bcs_class_assignment`, `advisor_class_assignment`, `app_user.unit_id` trong `V2__sprint2_core_extensions.sql` | **`APPROVED (28/11/2026)`** |
+| **ARCH-A05** | Chuẩn hóa `/history` (`Page<HistoryItem>`), QR `10s`, `alreadyRegistered` (**đã hoàn tất trên `main`**) | **`APPROVED (28/11/2026)`** |
+| **ARCH-A06** | Không giữ 2 connection HikariCP lồng `REQUIRES_NEW` trên luồng nóng `P1` (`TransactionTemplate` / `CheckInResult`) | **`APPROVED (28/11/2026)`** |
+| **ARCH-A07** | Bắt buộc fail-fast khi thiếu/yếu `JWT_SECRET` / `QR_SIGNING_SECRET` ngoài `dev`/`demo`/`test` (**đã hoàn tất trên `main`**) | **`APPROVED (28/11/2026)`** |
 
-### 7.3 Danh sách Quyết định Còn Mở Chờ Stakeholder (`SRS Appendix C`, R12)
+### 7.3 Điểm mở Hạ tầng & Môi trường Còn giữ (`SRS Appendix C`, `R11`/`R12`)
 
-Các mục dưới đây **chưa được phép tự chốt thành quy tắc chính thức** trong code mà phải lấy xác nhận từ Stakeholder / PO (liên kết tới các ticket `decision-needed`):
-
-1. **Auth & Security (`TBD-AUTH-01..03`, `TBD-SEC-01..04`, `Proposal §18 #4`, `QE-36`):**
-   - Miền email QNU chính thức (`@st.qnu.edu.vn` vs `@qnu.edu.vn`) và quy tắc ánh xạ Google OAuth2 về `app_user` (`TBD-AUTH-03`).
-   - Cách cấp mật khẩu ban đầu, luồng quên/đặt lại mật khẩu, ngữ nghĩa `"Lưu đăng nhập"`, TTL phiên/refresh token (`TBD-AUTH-01`), quy trình mở khóa tài khoản & phân quyền quản trị (`TBD-AUTH-02`), cấu hình MFA cho Admin (`TBD-SEC-04`), và thuật toán/giới hạn rate limit phân tán (`TBD-SEC-01`).
-2. **Event & Registration (`TBD-EVT-01..03`, `TBD-REG-01..03`, `QE-15`, `QE-38`):**
-   - Quy tắc quota `0`, kết hợp multi-tier/overlapping quotas và reserved slots (`TBD-EVT-01`).
-   - Ma trận cho phép sửa/xóa/hủy event sau khi `PUBLISHED` hoặc đã có người đăng ký (`TBD-EVT-02`, `QE-15`).
-   - Quan hệ chặt giữa `registration_deadline`, `start_at`, `end_at`, `attendance_open_at`, `attendance_close_at` và hạn nộp Evidence (`TBD-EVT-03`).
-   - Tie-breaker khi trùng timestamp Waiting List (`TBD-REG-01`), điều kiện thúc đẩy sau khi đóng đăng ký / qua mốc 12 giờ (`TBD-REG-02`), điều kiện đóng quy trình verification để chạy No-show khi còn `Pending`/offline sync và cách cộng dồn nhiều lệnh phạt 7 ngày (`TBD-REG-03`).
-3. **Attendance, Evidence, Appeals & Data (`TBD-ATT-01..03`, `TBD-REV-01..03`, `TBD-DATA-01..03`, `TBD-NFR-01..03`, `QE-41`, `QE-44`, `QE-45`, `QE-53`):**
-   - **Cửa sổ đồng bộ Offline tối đa (`TBD-ATT-01`)** và chính sách xử lý token QR hết hạn khi quay lại online / sync sau khi `att_status = CLOSED`.
-   - Phạm vi áp dụng giới hạn 3 lần thử giữa QR/GPS/Evidence (`TBD-ATT-02`), tiêu chí gắn cờ GPS đáng ngờ & quản lý key bảo vệ payload offline (`TBD-ATT-03`).
-   - Thời hạn nộp Appeal Vòng 1 & Vòng 2, quyền quyết định cuối cùng giữa `CVHT` vs `Admin` (`TBD-REV-01..03`, `QE-41`).
-   - Định dạng/quy tắc validation CSV/Excel chính thức (`TBD-DATA-01..02`, `QE-45`), thời hạn retention & vị trí lưu trữ/sao lưu Evidence (`TBD-DATA-03`, `TBD-SEC-02`), ngưỡng SLA/load test chính thức (`TBD-NFR-01..03`).
+Các quyết định nghiệp vụ/thiết kế (`TBD-AUTH-01..03`, `TBD-EVT-01..03`, `TBD-REG-01..03`, `TBD-ATT-01..02`, `TBD-REV-01..03`, `TBD-DATA-01`, `TBD-DATA-03`, `TBD-SEC-02`) **đã được chốt xong (`28/11/2026`)**. Chỉ giữ trạng thái **`Open`** cho các mục phụ thuộc hạ tầng triển khai thực tế:
+1. **`Q-AUTH-03`:** Thông tin Google Cloud Project, OAuth Consent Screen & `GOOGLE_CLIENT_ID`/`SECRET` cho staging/production.
+2. **`TBD-ATT-03` & `TBD-DATA-02`:** Tinh chỉnh ngưỡng `accuracy`/vận tốc của `suspicious_flag` khi chạy thực địa và thứ tự cột chi tiết của Export Excel (`QE-63`).
+3. **`TBD-NFR-01..05`, `TBD-SEC-01`, `TBD-SEC-03..04`, `TBD-OTH-01`:** Số liệu đo tải thực tế, rà soát pháp lý/an ninh trường, MFA quản trị và hồ sơ bàn giao dung lượng cuối kỳ.

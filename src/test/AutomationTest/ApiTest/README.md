@@ -4,7 +4,7 @@ Bộ kiểm thử API tự động viết bằng **Bruno** (`.bru` — Git-nativ
 
 ---
 
-## 1. Cấu trúc Thư mục (7 Nhóm · 350 Requests)
+## 1. Cấu trúc Thư mục (7 Nhóm · 350 Requests / 359 tệp `.bru` gồm collection, folder & environment)
 
 ```text
 src/test/AutomationTest/ApiTest/

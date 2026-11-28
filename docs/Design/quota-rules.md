@@ -1,8 +1,8 @@
 # Quy tắc Quota nhiều tầng — QE-38
 
-> **Trạng thái: ⏳ CHỜ PRODUCT OWNER / STAKEHOLDER DUYỆT** (AC của QE-38 yêu cầu bảng quyết định được xác nhận).
-> Sau khi duyệt: cập nhật `docs/decisions.md` (mục A-QE8 tương ứng / A-003 trong PR #10) thành **Approved** và ánh xạ vào code QE-12/QE-39/QE-40.
-> Nguồn tổng hợp: Proposal §5.3, SRS (REQ-REG-002..012, UC-03/04/011), review kỹ thuật PR #10/#11/#12 (17/11/2026).
+> **Trạng thái: ✅ APPROVED (28/11/2026 — Quyết định `D-4`, `D-5`, `A-EVT-01`)**  
+> Lược đồ DB tương ứng (`event_pools`, `events.next_wait_order`, `registrations.pool_id`, `registrations.wait_order`) xem tại [`v2-schema-blueprint.md`](v2-schema-blueprint.md) và [`../decisions.md`](../decisions.md).  
+> Nguồn tổng hợp: `SRS v1.1` (`REQ-REG-002..016`, `UC010–013`), `Proposal §5.3`, review kỹ thuật PR `#10/#11/#12`.
 
 ---
 
@@ -13,8 +13,8 @@
 | N1 | `quotaTotal` của sự kiện là **trần tuyệt đối** — không tầng nào được vượt |
 | N2 | Σ `capacity` của mọi pool ≤ `quotaTotal` (chặn ở `EventValidator`) |
 | N3 | `priority`: **số nhỏ hơn = ưu tiên cao hơn**; phân bổ duyệt pool theo thứ tự tăng dần |
-| N4 | Một suất đã cấp thuộc về **đúng một pool** (`registrations.pool_id`) — hoàn suất phải về đúng pool đó (BR-QTA-06) |
-| N5 | Mọi quyết định phân bổ/h hoàn suất thực hiện **nguyên tử ở mức DB** (UPDATE có điều kiện + transaction) — không dựa vào check-then-write |
+| N4 | Một suất đã cấp thuộc về **đúng một pool** (`registrations.pool_id`) — hoàn suất phải về đúng pool đó (`BR-QTA-06`) |
+| N5 | Mọi quyết định phân bổ/hoàn suất thực hiện **nguyên tử ở mức DB** (UPDATE có điều kiện + transaction) — không dựa vào check-then-write |
 
 ## 2. Ý nghĩa trường cấu hình pool (`event_pools`)
 
@@ -37,7 +37,8 @@
 | A5 | Claim pool thành công nhưng quota tổng đầy | **WAITING_LIST** (không trả 409 — sinh viên hợp lệ không bị mất cơ hội) |
 | A6 | Suất `reserved_until` chưa hết hạn | Chưa cấp được (giữ riêng); sau mốc, suất chưa dùng giải phóng về pool |
 | A7 | Sinh viên không thuộc pool nào được cấu hình | 403 `NOT_IN_AUDIENCE` (đã chặn trước đó ở mức audience) |
-| A8 | Đăng ký lặp (cùng sinh viên) | Idempotent — trả registration hiện tại, không tốn suất |
+| A8 | Đăng ký lặp (cùng sinh viên đang `REGISTERED` / `WAITING_LIST`) | Idempotent — trả registration hiện tại, giữ nguyên `wait_order`, không tốn suất |
+| A9 | Sinh viên đã `CANCELLED` trước đó (`D-5`) | **Được phép đăng ký lại** nếu sự kiện còn `PUBLISHED`, trong hạn và không bị `STUDENT_PENALIZED` (chặn 7 ngày) |
 
 ## 4. Ví dụ minh họa
 
@@ -59,30 +60,29 @@ Sự kiện của Khoa CNTT, `quotaTotal = 100`:
 
 | # | Quy tắc |
 |---|---|
-| W1 | Waiting thuộc **đúng pool** (pool ưu tiên cao nhất phù hợp scope); xếp theo `waiting_at` tăng dần |
-| W2 | Có suất освоб phóng ở pool X → promote **đầu hàng chờ của X** trong cùng transaction |
-| W3 | Promote phải khóa hàng an toàn đồng thời: `SELECT ... FOR UPDATE SKIP LOCKED LIMIT 1` — 2 lệnh hủy song song không được promote trùng một người |
-| W4 | Người được promote phải còn `ACTIVE` + đúng scope pool; không đủ điều kiện → skip, lấy người kế tiếp |
-| W5 | "Thông báo" ở Sprint 2 = audit log `WAITING_PROMOTED` (email/push: Sprint 3+) |
+| W1 | Waiting thuộc **đúng pool** (pool ưu tiên cao nhất phù hợp scope); xếp theo bộ đếm tuần tự **`events.next_wait_order` → `registrations.wait_order` tăng dần** (kèm `waiting_at`, loại bỏ hòa timestamp — đóng `TBD-REG-01`) |
+| W2 | Có suất **giải phóng** ở pool X → promote **đầu hàng chờ của X** trong cùng transaction. Vẫn tiếp tục auto-promote cho người đã nằm sẵn trong hàng chờ nếu có suất trống **sau `registration_deadline` miễn trước mốc `startAt - 12h`** và sự kiện chưa `CANCELLED` (`D-5`, đóng `TBD-REG-02`) |
+| W3 | Promote phải khóa hàng an toàn đồng thời: `SELECT ... FROM registrations WHERE event_id = :eid AND pool_id = :pid AND status = 'WAITING_LIST' ORDER BY wait_order ASC FOR UPDATE SKIP LOCKED LIMIT 1` — 2 lệnh hủy song song không được promote trùng một người |
+| W4 | Người được promote phải còn `ACTIVE`, không bị chế tài `NO_SHOW` (`STUDENT_PENALIZED`) và đúng scope pool; không đủ điều kiện → ghi audit skip, lấy người kế tiếp |
+| W5 | Thông báo ở Sprint 2 = audit log `WAITING_PROMOTED` + ghi `outbox_events` (email/in-app notification qua Outbox Poller) |
 
 ## 6. Hủy đăng ký & hoàn suất
 
 | # | Quy tắc |
 |---|---|
-| H1 | Hạn hủy: **trước giờ bắt đầu 12 giờ** — chặn kể từ đúng mốc `startAt − 12h` (dùng `!now.isBefore(deadline)`, theo REQ-REG-012/UC011) |
-| H2 | Hủy khi REGISTERED: hoàn suất về đúng `pool_id` + giảm `registered_count`, rồi promote theo W2-W4 |
-| H3 | Rời WAITING_LIST: **miễn giới hạn 12h** (không làm thay đổi suất đã cấp), không promote |
+| H1 | Hạn hủy cho `REGISTERED`: **trước giờ bắt đầu 12 giờ** — chặn kể từ đúng mốc `startAt − 12h` (`!now.isBefore(deadline)`) với mã lỗi **`409 CANCELLATION_CUTOFF_PASSED`** (`D-5`, [`../api/error-codes.md`](../api/error-codes.md)) |
+| H2 | Hủy khi `REGISTERED`: hoàn suất về đúng `pool_id` (`used - 1`) + giảm `registered_count`, rồi promote theo W2–W4 |
+| H3 | Rời `WAITING_LIST`: **miễn giới hạn 12 giờ** (chỉ chuyển `CANCELLED` & rút khỏi hàng chờ, không chạm quota, không promote — `D-5`) |
 | H4 | Audit `REGISTRATION_CANCEL` (thành công/từ chối) cho mọi thao tác |
 
-## 7. Quota thay đổi sau khi đã có đăng ký
+## 7. Quota thay đổi sau khi đã có đăng ký (`A-EVT-01`)
 
 | Thao tác | Cho phép? |
 |---|---|
-| Tăng capacity pool | Có — miễn Σ capacity ≤ quotaTotal |
-| Giảm capacity pool | Chỉ khi giá trị mới ≥ `used` của pool (BR-QTA-10) |
-| Giảm quotaTotal | Chỉ khi ≥ Σ `used` toàn bộ pool |
-| Tăng quotaTotal | Có (không trần) |
-| reserved_until hết hạn | Suất chưa dùng giải phóng về pool |
+| Tăng `capacity` pool / `quotaTotal` | **Có** (theo ngoại lệ `A-EVT-01`, miễn `Σ capacity ≤ quotaTotal`); **khi tăng sức chứa trên sự kiện có `WAITING_LIST`, phải tự động kích hoạt auto-promote FIFO theo W2–W4 trong cùng giao dịch** |
+| Giảm `capacity` pool | Chỉ khi giá trị mới ≥ `used` của pool (`BR-QTA-10`) |
+| Giảm `quotaTotal` | Chỉ khi ≥ `Σ used` (`registered_count`) toàn bộ pool |
+| `reserved_until` hết hạn | Suất chưa dùng giải phóng về pool (và kích hoạt promote nếu có hàng chờ) |
 
 ## 8. Ma trận case biên & đồng thời
 
@@ -101,8 +101,8 @@ Sự kiện của Khoa CNTT, `quotaTotal = 100`:
 - **QE-12 (PR #10)**: validator bổ sung C7 (scopeRef phải tồn tại `org_class` ∧ ∈ `audienceClassIds`); `EventDetail` trả danh sách pools
 - **QE-39 (PR #11)**: sửa vòng phân bổ theo A2/A3/A5 (hiện đang fall-through sai); query lớp 1 lần trước vòng lặp; hợp đồng API Sprint 2 thêm `status: WAITING_LIST`
 - **QE-40 (PR #12)**: SKIP LOCKED theo W3; eligibility promote theo W4; boundary H1; audit ngoài transaction giữ lock (A-QE8-01)
-- Migration V2 thống nhất do A0 tổng hợp (R6) trước khi rebase chuỗi PR
+- Migration `V2__sprint2_core_extensions.sql` do `A0` tổng hợp (`R6` — [`v2-schema-blueprint.md`](v2-schema-blueprint.md)) trước khi rebase chuỗi PR `#10/#11/#12`.
 
 ---
 
-*Ký duyệt PO/Stakeholder: ____________________ Ngày: ____/____/2026*
+> *Đã phê duyệt thống nhất nhóm ngày 28/11/2026 (`D-4`, `D-5`, `A-EVT-01`) — đồng bộ với [`decisions.md`](../decisions.md) và `SRS v1.1`.*

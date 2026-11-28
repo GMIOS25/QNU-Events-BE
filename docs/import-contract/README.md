@@ -4,8 +4,8 @@
 > Xây dựng dựa trên:
 > - Lược đồ CSDL [`V1__sprint1_core_schema.sql`](../../src/main/resources/db/migration/V1__sprint1_core_schema.sql) và các Entity Java hiện hành (`AppUser`, `OrgClass`).
 > - Bộ dữ liệu thực tế Trường ĐH Quy Nhơn (`khoa.csv`: 52 đơn vị, `nganh.csv`: 116 ngành, `khoahoc.csv`: 202 CTĐT, `lop.csv`: 367 lớp, `student/sv_k46..k49.csv`: 6.435 sinh viên).
-> - Đặc tả SRS v1.0: `UC025` (UC6.1), `UC026` (UC6.2), `REQ-DATA-001` → `REQ-DATA-010`, `NFR-PERF-005`, `NFR-SEC-009`, `NFR-QUAL-012`, `OTH-DATA-001` → `OTH-DATA-003`, `OTH-I18N-001`, và đề xuất đóng mục mở `TBD-DATA-01`.
-> - Đồng bộ kiến trúc xác thực & cấp phát tài khoản (`QE-36` / `QE-73` / `QE-74`): [`auth-and-session-lifecycle.md`](../architecture/auth-and-session-lifecycle.md), [`decisions.md`](../decisions.md), và bộ quy tắc [`AGENTS.md`](../../AGENTS.md) (`R6`, `R7`, `R11`, `R12`).
+> - Đặc tả `SRS v1.1`: `UC025` (UC6.1), `UC026` (UC6.2), `REQ-DATA-001` → `REQ-DATA-010`, `NFR-PERF-005`, `NFR-SEC-009`, `NFR-QUAL-012`, `OTH-DATA-001` → `OTH-DATA-003`, `OTH-I18N-001`, đã chốt `TBD-DATA-01` (`28/11/2026`).
+> - Đồng bộ kiến trúc xác thực, schema & quyết định (`QE-36` / `QE-73` / `QE-74`): [`v2-schema-blueprint.md`](../Design/v2-schema-blueprint.md), [`auth-and-session-lifecycle.md`](../architecture/auth-and-session-lifecycle.md), [`decisions.md`](../decisions.md), và [`AGENTS.md`](../../AGENTS.md) (`R6`, `R7`, `R11`, `R12`).
 
 ---
 
@@ -86,9 +86,9 @@ erDiagram
 
 ---
 
-## 3. Tóm tắt Các Đề xuất Chuẩn hóa cho `TBD-DATA-01` *(Chờ Stakeholder phê duyệt)*
+## 3. Tóm tắt Quy chuẩn Đã Chốt cho `TBD-DATA-01` *(✅ `APPROVED 28/11/2026 — D-3, D-10`)*
 
-| Hạng mục trong `TBD-DATA-01` | Quy định đề xuất trong Hợp đồng này | Căn cứ SRS & Dữ liệu thật QNU |
+| Hạng mục (`TBD-DATA-01` đã đóng) | Quy định chuẩn hóa (`APPROVED 28/11/2026`) | Căn cứ SRS & Dữ liệu thật QNU |
 |---|---|---|
 | **Encoding & Định dạng tệp** | CSV (`UTF-8` có hoặc không có BOM, dấu phẩy `,`, quote `"`) và Excel (`.xlsx`). Bảo toàn tiếng Việt có dấu (Unicode NFC) và số `0` ở đầu (`StudentID`, `IDCard`, `DepartmentCode`). | `REQ-DATA-001`, `NFR-QUAL-012`, `OTH-I18N-001` |
 | **Giới hạn tệp & Hiệu năng** | Tối đa **10 MB**, tối đa **10.000 dòng/lần**. Thời gian xử lý 3.000 dòng sinh viên + lập báo cáo lỗi **≤ 60 giây**. | `NFR-PERF-005`, `TBD-DATA-01` |
